@@ -1,13 +1,4 @@
 {
-  "checkpoint": [
-    {
-      "name": "Test Run",
-      "time_ms": 59000,
-      "stars": 10,
-      "total_stars": 36,
-      "falls": 3,
-      "at": 1790791568
-    }
-  ],
+  "checkpoint": [],
   "uber": []
 }
