@@ -45,7 +45,12 @@
   const TOP = TIERS.length - 1;
   const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 700 };
   const tierR = (k) => R0 + 30 + k * TIER_GAP;
-  const bounceFor = (k) => Math.sqrt(2 * G * (tierR(k + 1) - tierR(k) + OVERSHOOT));
+  // Difficulty: each step up the bouncing gets faster, from 1.01x on the first
+  // trampoline to 2x by the last jump before the Moon. Heights stay the same;
+  // gravity and bounce speed scale together so you get less time to steer.
+  const HARD_START = 1.01, HARD_END = 2;
+  const speedFor = (k) => HARD_START * Math.pow(HARD_END / HARD_START, clamp(k, 0, TOP - 1) / (TOP - 1));
+  const bounceFor = (k) => speedFor(k) * Math.sqrt(2 * G * (tierR(k + 1) - tierR(k) + OVERSHOOT));
 
   // ---- Pixel sprite -----------------------------------------------------------
   const PAL = { h: '#e0433b', k: '#1b1530', s: '#f2c29b', y: '#ffd23f', c: '#3f6fd8', p: '#6b5040', b: '#2a2230' };
@@ -128,7 +133,8 @@
     for (let k = 1; k <= TOP; k++) {
       const R = tierR(k);
       if (TIERS[k].type === 'moon') { mk(k, prevA); break; }
-      const off = (120 + rnd() * 190) * (rnd() < 0.5 ? -1 : 1);
+      // Faster bounces mean less air time, so keep the gap reachable.
+      const off = (100 + (rnd() * 210) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.5 ? -1 : 1);
       const a = prevA + off / R;
       mk(k, a);
       // A star on the natural arc between the last layer and this one.
@@ -156,14 +162,27 @@
     }
     const swirls = [];
     for (let i = 0; i < 26; i++) swirls.push({ a: rnd() * TAU, rf: 0.6 + rnd() * 0.26, len: 0.15 + rnd() * 0.3 });
+    // Mountain ranges behind the ground: [parallax factor, colour, snow, heights]
+    const ranges = [[0.55, '#9fb4d8', '#eef3ff', 150], [0.78, '#6f8fb5', '#dfe8f7', 105], [0.9, '#4d7a6e', null, 60]].map(([f, col, snow, hMax]) => {
+      const n = 480, h = new Array(n).fill(0);
+      const peaks = 26 + Math.floor(rnd() * 10);
+      for (let i = 0; i < peaks; i++) {
+        const c = rnd() * n, width = 8 + rnd() * 22, height = hMax * (0.35 + rnd() * 0.65);
+        for (let j = -Math.ceil(width); j <= Math.ceil(width); j++) {
+          const idx = (Math.round(c) + j + n) % n;
+          h[idx] = Math.max(h[idx], height * (1 - Math.abs(j) / width));
+        }
+      }
+      return { f, col, snow, hMax, h: h.map((v) => Math.round(v / 4) * 4) };
+    });
     const sky = [];
     for (let i = 0; i < 170; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.15 ? 2 : 1, tw: rnd() * TAU });
 
-    return { seed, plats, stars, decor, crust, swirls, sky };
+    return { seed, plats, stars, decor, crust, swirls, sky, ranges };
   }
 
   // ---- State ----------------------------------------------------------------
-  const player = { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0 };
+  const player = { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1 };
   let theta = 0;
   let lastTier = -1;
   let bestTier = -1;
@@ -180,7 +199,7 @@
 
   function reset(seed) {
     world = buildWorld(seed);
-    Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0 });
+    Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1 });
     theta = 0; lastTier = -1; bestTier = -1; playTime = 0; particles = [];
     cam.r = R0;
     updateStarsHud();
@@ -293,6 +312,7 @@
       return;
     }
     player.vr = p.bounce;
+    player.speed = speedFor(p.tier);
     lastTier = p.tier;
     sfx.boing(p.tier);
     burst(-theta, p.R, p.type === 'cloud' || p.type === 'balloon' ? '#ffffff' : '#ffd23f', 10);
@@ -319,19 +339,20 @@
       playTime += dt;
       const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
       if (dir) player.facing = dir;
-      const maxV = player.onGround ? WALK : AIR;
-      player.vx = approach(player.vx, dir * maxV, (player.onGround ? 1800 : 1200) * dt);
+      const sp = player.speed;
+      const maxV = player.onGround ? WALK : AIR * Math.sqrt(sp);
+      player.vx = approach(player.vx, dir * maxV, (player.onGround ? 1800 : 1200 * sp) * dt);
       theta -= (player.vx * dt) / player.r;
       if (player.onGround && Math.abs(player.vx) > 5) player.walkT += dt * (Math.abs(player.vx) / 22);
 
       jumpBuffer -= dt;
       if (player.onGround && jumpBuffer > 0) {
-        player.vr = HOP_V; player.onGround = false; jumpBuffer = 0;
+        player.vr = HOP_V; player.speed = 1; player.onGround = false; jumpBuffer = 0;
         sfx.hop();
       }
       if (!player.onGround) {
         const prev = player.r;
-        player.vr = Math.max(player.vr - G * dt, -1600);
+        player.vr = Math.max(player.vr - G * player.speed * player.speed * dt, -1600 * player.speed);
         player.r += player.vr * dt;
         if (player.vr < 0) {
           for (const p of world.plats) {
@@ -378,7 +399,7 @@
       if (toastTimer <= 0) hud.toast.hidden = true;
     }
     hud.alt.textContent = fmtKm(kmAt(player.r));
-    hud.layer.textContent = layerName();
+    hud.layer.textContent = player.onGround || state !== 'play' ? layerName() : `${layerName()} · bounce ×${player.speed.toFixed(2)}`;
   }
 
   // ---- Drawing --------------------------------------------------------------
@@ -419,6 +440,45 @@
       px(x, st.y * H, st.s, st.s, '#ffffff');
     }
     ctx.globalAlpha = 1;
+  }
+
+  function drawMountains() {
+    if (cy - R0 - 160 > H + 60) return;
+    // Each range turns more slowly than the ground, so it feels further away.
+    for (const m of world.ranges) {
+      const n = m.h.length;
+      const rot = theta * m.f;
+      const pt = (i, extra = 0) => {
+        const a = (i / n) * TAU + rot;
+        const r = R0 - 6 + m.h[i % n] + extra;
+        return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+      };
+      // Only trace the part of the ring near the top of the screen.
+      const span = Math.min(n / 2, Math.ceil((n * (W / 2 + 200)) / (TAU * R0)));
+      const mid = Math.round((((-rot / TAU) % 1) + 1) % 1 * n);
+      ctx.fillStyle = m.col;
+      ctx.beginPath();
+      for (let i = mid - span; i <= mid + span; i++) {
+        const [x, y] = pt((i + n) % n);
+        i === mid - span ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.lineTo(cx, cy);
+      ctx.closePath();
+      ctx.fill();
+      if (m.snow) {
+        ctx.fillStyle = m.snow;
+        for (let i = mid - span; i <= mid + span; i++) {
+          const k = (i + n) % n;
+          if (m.h[k] < m.hMax * 0.7 || m.h[k] < m.h[(k + 1) % n] || m.h[k] < m.h[(k - 1 + n) % n]) continue;
+          // Snow cap on each summit
+          const [x, y] = pt(k);
+          const a = (k / n) * TAU + rot;
+          ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+          ctx.beginPath(); ctx.moveTo(0, -1); ctx.lineTo(-10, 12); ctx.lineTo(-4, 9); ctx.lineTo(0, 13); ctx.lineTo(5, 9); ctx.lineTo(10, 12); ctx.closePath(); ctx.fill();
+          ctx.restore();
+        }
+      }
+    }
   }
 
   function drawEarth() {
@@ -655,6 +715,7 @@
     cx = Math.round(W / 2);
     cy = anchorY + cam.r;
     drawSky();
+    drawMountains();
     drawEarth();
     drawDecor();
     for (const p of world.plats) drawPlatform(p);

@@ -40,4 +40,11 @@ Chrome: ⋮ menu). It then launches full screen with its own icon, like an app.
   to reach the next one. The altimeter maps those tiers to real altitudes
   (clouds to 12 km, balloons to 40 km, the Kármán line at 100 km, the ISS at
   408 km, GPS at 20,200 km, the Moon at 384,400 km).
+- Difficulty ramps up with every step: the first trampoline bounces at 1.01x speed
+  and it builds evenly to 2x by the last jump before the Moon. Bounce heights stay
+  the same, but faster bounces leave less time to steer; the HUD shows the current
+  multiplier. Gaps between platforms shrink a little as it speeds up, so every jump
+  stays possible.
+- Three mountain ranges sit behind the ground and turn more slowly than it
+  (parallax), so they feel further away.
 - `style.css`: HUD, overlays and the touch pad.
