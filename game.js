@@ -591,9 +591,11 @@
     }
 
     player.squash = player.squash > 0 ? Math.max(0, player.squash - dt * 5) : Math.min(0, player.squash + dt * 4);
-    // Re-entry: drop a layer or more and you heat up into a fireball.
-    const fallen = !player.onGround && player.vr < 0 ? (player.apexR || player.r) - player.r : 0;
-    const heatWant = state === 'play' ? clamp((fallen - 320) / 380, 0, 1) : 0;
+    // Re-entry: only a real miss heats you up. It's measured below the platform
+    // you last bounced off, so rebounds and near misses never catch fire.
+    const launchR = player.lastPlat ? player.lastPlat.R : R0;
+    const below = !player.onGround && player.vr < 0 ? launchR - player.r : 0;
+    const heatWant = state === 'play' ? clamp((below - 100) / 400, 0, 1) : 0;
     player.heat = (player.heat || 0) + (heatWant - (player.heat || 0)) * Math.min(1, dt * (heatWant > (player.heat || 0) ? 7 : 10));
     if (player.heat > 0.05 && state === 'play') {
       const n = Math.ceil(player.heat * 4);
