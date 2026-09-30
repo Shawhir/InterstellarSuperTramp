@@ -46,6 +46,9 @@
   const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220 };
   const MOON_R = 110; // the landing Moon's radius; its top is the last bouncy surface
   const tierR = (k) => R0 + 30 + k * TIER_GAP;
+  // Checkpoints: the first layer of each new part of the sky. Once you've landed
+  // on one, a miss above it catches you there instead of dropping you to Earth.
+  const CHECKPOINTS = new Set(TIERS.map((t, k) => (k >= 1 && k < TIERS.length - 1 && t.layer !== TIERS[k - 1].layer ? k : -1)).filter((k) => k > 0));
   // Difficulty: each step up the bouncing gets faster, from 1.01x on the first
   // trampoline to 2x by the last jump before the Moon. Heights stay the same;
   // gravity and bounce speed scale together so you get less time to steer.
@@ -142,7 +145,7 @@
       // Faster bounces mean less air time, so keep the gap reachable.
       const off = (100 + (rnd() * 210) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.5 ? -1 : 1);
       const a = prevA + off / R;
-      mk(k, a);
+      mk(k, a).main = true;
       // A star on the natural arc between the last layer and this one.
       stars.push({ a: prevA + (a - prevA) * 0.62, R: R + 50, taken: false });
       // Spare platforms off to the side, some carrying a bonus star.
@@ -210,6 +213,27 @@
   let shake = 0;
   let fx = { rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
   const tilt = { on: false, axis: 0, zero: null, got: false };
+  let checkpoint = 0;   // highest checkpoint layer reached this run
+  let falls = 0;        // misses this run (caught at a checkpoint or back on Earth)
+  let heightRecordShown = false;
+
+  // ---- Personal bests (kept on this device only) ----------------------------
+  const STORE_KEY = 'supertramp.v1';
+  const MEDAL = { none: 0, bronze: 1, silver: 2, gold: 3 };
+  const MEDAL_NAMES = ['none', 'bronze', 'silver', 'gold'];
+  // Time medals are first guesses; tune them once people have played.
+  const TIME_MEDALS = [[30, 'gold'], [45, 'silver'], [75, 'bronze']];
+  function loadBests() {
+    const blank = { runs: 0, wins: 0, bestTime: null, bestStars: 0, bestTier: -1, timeMedal: 0, starMedal: 0, flawless: false };
+    try { return { ...blank, ...(JSON.parse(localStorage.getItem(STORE_KEY)) || {}) }; } catch (e) { return blank; }
+  }
+  function saveBests() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(bests)); } catch (e) { /* storage unavailable: bests last for this visit */ }
+  }
+  let bests = loadBests();
+  const fmtTime = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  const timeMedal = (t) => (TIME_MEDALS.find(([limit]) => t <= limit) || [0, 'none'])[1];
+  const starMedal = (got, total) => (got >= total ? 'gold' : got >= total * (2 / 3) ? 'silver' : got >= total / 3 ? 'bronze' : 'none');
 
   const keys = { left: false, right: false };
   const touch = window.matchMedia('(pointer: coarse)').matches;
@@ -220,6 +244,7 @@
     Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1 });
     theta = 0; lastTier = -1; bestTier = -1; playTime = 0; particles = [];
     fx = { rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
+    checkpoint = 0; falls = 0; heightRecordShown = false;
     cam.r = R0;
     updateStarsHud();
   }
@@ -328,8 +353,21 @@
       burst(-theta, p.R, '#52e07a', 10, 260);
       ring(-theta, p.R, '#52e07a', 1.6);
     }
+    if (p.main && CHECKPOINTS.has(p.tier) && p.tier > checkpoint) {
+      checkpoint = p.tier;
+      pop('CHECKPOINT', '#52e07a', player.r + 130);
+    }
     if (p.tier > bestTier) {
       bestTier = p.tier;
+      if (bestTier > bests.bestTier) {
+        if (bests.bestTier >= 1 && !heightRecordShown) {
+          heightRecordShown = true;
+          pop('NEW HEIGHT RECORD!', '#ffd23f', player.r + 160);
+          sfx.perfect();
+        }
+        bests.bestTier = bestTier;
+        saveBests();
+      }
       fx.streak = climbed ? fx.streak + 1 : 1;
       if (fx.streak >= 3) pop(`${fx.streak} IN A ROW`, '#ffab3d', player.r + 100);
       const prevLayer = p.tier > 0 ? TIERS[p.tier - 1].layer : null;
@@ -341,6 +379,22 @@
       if (TIERS[p.tier].note) toast(TIERS[p.tier].note);
       else if (p.tier === 0) toast('Boing! Steer toward the arrow to reach the clouds.');
     }
+  }
+
+  // Caught by the last checkpoint: drop back onto its platform from just above.
+  function rescue() {
+    const p = world.plats.find((q) => q.tier === checkpoint && q.main);
+    if (!p) return;
+    falls++;
+    theta = -p.a;
+    player.r = p.R + 170; player.vr = -150; player.vx = 0;
+    player.speed = speedFor(Math.max(0, checkpoint - 1));
+    lastTier = checkpoint - 1; fx.streak = 0; fx.whistled = false; fx.trail = [];
+    cam.r = player.r - 260;
+    fx.flash = 0.25;
+    ring(-theta, player.r, '#52e07a', 1.2);
+    sfx.tier();
+    toast(`Caught at the ${TIERS[checkpoint].layer} checkpoint.`, 2.5);
   }
 
   function update(dt) {
@@ -393,8 +447,10 @@
         if (!fx.whistled && lastTier >= 0 && player.vr < -500 && player.r < tierR(lastTier) - 40) {
           fx.whistled = true; fx.streak = 0; sfx.fall();
         }
+        if (state === 'play' && checkpoint > 0 && player.vr < 0 && player.r < tierR(checkpoint) - 180) rescue();
         if (state === 'play' && player.r <= R0) {
           const hard = player.vr < -900;
+          if (lastTier >= 0) falls++;
           player.r = R0; player.vr = 0; player.onGround = true; player.squash = 1;
           if (lastTier >= 0) { toast('Back on solid ground. Find a trampoline!'); sfx.thud(); addShake(hard ? 12 : 6); ring(-theta, R0, '#c9a27a', 1.4); }
           lastTier = -1; fx.streak = 0; fx.whistled = false;
@@ -958,6 +1014,16 @@
     for (let k = 1; k < TOP; k++) {
       const y = yFor(k);
       px(x - (k === 9 ? 7 : 4), y, k === 9 ? 14 : 8, 2, k <= bestTier ? '#ffd23f' : 'rgba(238,241,255,0.45)');
+      if (CHECKPOINTS.has(k)) {
+        ctx.fillStyle = k <= checkpoint ? '#52e07a' : 'rgba(238,241,255,0.6)';
+        ctx.beginPath(); ctx.moveTo(x + 5, y - 5); ctx.lineTo(x + 12, y - 2); ctx.lineTo(x + 5, y + 1); ctx.fill();
+      }
+    }
+    // Your best height so far, on this device
+    if (bests.bestTier > 0) {
+      const yb = yFor(Math.min(bests.bestTier, TOP));
+      ctx.fillStyle = 'rgba(255,210,63,0.9)';
+      ctx.beginPath(); ctx.moveTo(x - 12, yb - 4); ctx.lineTo(x - 6, yb + 1); ctx.lineTo(x - 12, yb + 6); ctx.fill();
     }
     ctx.font = '7px "Press Start 2P", monospace';
     ctx.textAlign = 'right';
@@ -982,6 +1048,16 @@
     drawEarth();
     drawDecor();
     for (const p of world.plats) drawPlatform(p);
+    for (const p of world.plats) {
+      if (!p.main || !CHECKPOINTS.has(p.tier)) continue;
+      at(p.a + theta, p.R, () => {
+        const col = p.tier <= checkpoint ? '#52e07a' : 'rgba(238,241,255,0.8)';
+        const x = -p.w / 2 + 4, wave = Math.sin(clock * 5 + p.tier) * 2;
+        px(x, -30, 2, 30, '#e8e8f0');
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.moveTo(x + 2, -30); ctx.lineTo(x + 16, -25 + wave); ctx.lineTo(x + 2, -20); ctx.fill();
+      });
+    }
     for (const s of world.stars) drawStar(s);
 
     const feetX = cx, feetY = Math.round(cy - player.r);
@@ -1012,6 +1088,7 @@
     if (snd) { snd.init(); snd.music.start(); }
     tilt.zero = null;
     reset(Math.floor(Math.random() * 1e9));
+    bests.runs++; saveBests();
     state = 'play';
     $('title').hidden = true;
     $('won').hidden = true;
@@ -1028,11 +1105,45 @@
     addShake(10);
     for (let i = 0; i < 5; i++) burst(-theta + (i - 2) * 0.004, player.r, ['#ffd23f', '#52e07a', '#e0433b', '#3f6fd8', '#ffffff'][i], 14, 300);
     sfx.win();
-    const got = world.stars.filter((s) => s.taken).length;
-    const m = Math.floor(playTime / 60), s = Math.floor(playTime % 60);
-    $('won-stats').textContent = `${got} of ${world.stars.length} stars collected in ${m}:${String(s).padStart(2, '0')}.`;
+    const got = world.stars.filter((s) => s.taken).length, total = world.stars.length;
+    const tMedal = timeMedal(playTime), sMedal = starMedal(got, total);
+    const newTime = bests.bestTime === null || playTime < bests.bestTime;
+    const newStars = got > bests.bestStars;
+    bests.wins++;
+    bests.runs = Math.max(bests.runs, bests.wins);
+    bests.bestTier = TOP;
+    if (newTime) bests.bestTime = playTime;
+    if (newStars) bests.bestStars = got;
+    bests.timeMedal = Math.max(bests.timeMedal, MEDAL[tMedal]);
+    bests.starMedal = Math.max(bests.starMedal, MEDAL[sMedal]);
+    if (falls === 0) bests.flawless = true;
+    saveBests();
+    const nextTime = TIME_MEDALS.slice().reverse().find(([limit]) => playTime > limit);
+    $('medals').innerHTML = [
+      medalHtml(tMedal, 'Time', fmtTime(playTime), newTime, nextTime ? `${nextTime[1]} under ${fmtTime(nextTime[0])}` : 'top medal'),
+      medalHtml(sMedal, 'Stars', `${got} / ${total}`, newStars, sMedal === 'gold' ? 'every star' : 'gold for every star'),
+      medalHtml(falls === 0 ? 'gold' : 'none', 'Falls', String(falls), false, falls === 0 ? 'flawless run' : 'gold for none'),
+    ].join('');
+    $('won-stats').textContent = bests.wins === 1 ? 'Your first trip to the Moon.' : newTime ? 'New best time!' : `Your best time is ${fmtTime(bests.bestTime)}.`;
+    renderBests();
     setTimeout(() => { $('won').hidden = false; }, 900);
   }
+
+  function medalHtml(medal, label, value, isNew, hint) {
+    return `<div class="medal ${medal}"><span class="disc" aria-hidden="true"></span><span class="m-label">${label}</span><span class="m-value">${value}${isNew ? ' <b>NEW BEST</b>' : ''}</span><span class="m-hint">${medal === 'none' ? 'no medal · ' : ''}${hint}</span></div>`;
+  }
+  function renderBests() {
+    const el = $('bests');
+    if (!bests.runs && !bests.wins) { el.hidden = true; return; }
+    const parts = [];
+    if (bests.bestTime !== null) parts.push(`best time <b>${fmtTime(bests.bestTime)}</b>`);
+    if (bests.bestStars) parts.push(`most stars <b>${bests.bestStars}</b>`);
+    if (bests.bestTier >= 0) parts.push(`highest <b>${fmtKm(TIERS[Math.min(bests.bestTier, TOP)].km)}</b>`);
+    parts.push(`${bests.wins} of ${bests.runs} runs reached the Moon`);
+    el.innerHTML = `Your records: ${parts.join(' · ')}`;
+    el.hidden = false;
+  }
+  renderBests();
 
   $('start').addEventListener('click', startGame);
   $('again').addEventListener('click', startGame);
@@ -1128,13 +1239,14 @@
 
   // Hot reload support when hosted as an artifact; harmless elsewhere.
   function snapshot() {
-    return { seed: world.seed, state, theta, lastTier, bestTier, playTime, player: { ...player }, taken: world.stars.filter((s) => s.taken).map((s) => s.id) };
+    return { seed: world.seed, state, theta, lastTier, bestTier, playTime, checkpoint, falls, player: { ...player }, taken: world.stars.filter((s) => s.taken).map((s) => s.id) };
   }
   function start(data) {
     resize();
     reset(data && data.seed ? data.seed : 20260930);
     if (data && data.state === 'play') {
       theta = data.theta; lastTier = data.lastTier; bestTier = data.bestTier; playTime = data.playTime;
+      checkpoint = data.checkpoint || 0; falls = data.falls || 0;
       Object.assign(player, data.player);
       cam.r = player.r;
       for (const id of data.taken || []) if (world.stars[id]) world.stars[id].taken = true;

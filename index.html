@@ -42,7 +42,8 @@
     <h1>Interstellar <span>SuperTramp</span></h1>
     <p>The world turns under your feet. Walk to a trampoline, hop on, and bounce from cloud to balloon to satellite until you reach the Moon, 384,400 km up.</p>
     <p>The arrow under your feet points to the next bouncy thing. When it turns <span class="go">green and points down</span>, you are lined up to land.</p>
-    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> walk and steer &nbsp; <kbd>SPACE</kbd> hop. On a phone, use the buttons or tap TILT to steer by tilting. Grab the stars on the way.</p>
+    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> walk and steer &nbsp; <kbd>SPACE</kbd> hop. On a phone, use the buttons or tap TILT to steer by tilting. Grab the stars on the way. Green flags are checkpoints: once you've landed on one, a miss above it catches you there.</p>
+    <p class="bests" id="bests" hidden></p>
     <button id="start" type="button">Start walking</button>
   </div>
 </div>
@@ -50,8 +51,8 @@
 <div class="overlay" id="won" hidden>
   <div class="card">
     <h1>You made it to <span>the Moon</span></h1>
-    <p>384,400 km from home, one bounce at a time.</p>
-    <p id="won-stats"></p>
+    <p id="won-stats">384,400 km from home, one bounce at a time.</p>
+    <div class="medals" id="medals"></div>
     <button id="again" type="button">Bounce again</button>
   </div>
 </div>
