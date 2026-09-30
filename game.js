@@ -385,6 +385,11 @@
   }
 
   // ---- Particles ------------------------------------------------------------
+  // Haptics (Android; iPhones ignore it). Off whenever sound effects are off.
+  const buzz = (pattern) => {
+    try { if (navigator.vibrate && (!snd || snd.sfxOn) && state === 'play') navigator.vibrate(pattern); } catch (e) { /* not allowed */ }
+  };
+
   function burst(a, R, color, n, speed = 160) {
     for (let i = 0; i < n; i++) {
       const ang = Math.random() * Math.PI;
@@ -433,6 +438,7 @@
     const climbed = p.tier > lastTier;
     lastTier = p.tier;
     sfx.boing(p.tier, player.speed);
+    buzz(12);
     const puff = p.type === 'cloud' || p.type === 'balloon' || p.type === 'nlc' ? '#ffffff' : '#ffd23f';
     if (p.type === 'cloud' || p.type === 'nlc') {
       const n = 7 + Math.round(p.hit * 4);
@@ -486,6 +492,7 @@
 
   // A fireball hits the ground: boom, big shake, crater.
   function impact(h) {
+    buzz([60, 40, 120]);
     const a = -theta;
     sfx.boom(h);
     addShake(14 + h * 16);
@@ -893,13 +900,14 @@
     if (a <= 0) return;
     const bands = [['rgba(90,255,170,', 0.18, 0], ['rgba(170,110,255,', 0.3, 2]];
     for (const [col, yf, ph] of bands) {
-      for (let x = 0; x < W; x += 6) {
+      const stripW = lowQuality ? 18 : 6;
+      for (let x = 0; x < W; x += stripW) {
         const wave = Math.sin(x * 0.012 + clock * 0.8 + ph + theta * 3) * 22 + Math.sin(x * 0.031 - clock * 1.3) * 10;
         const h = 60 + Math.sin(x * 0.02 + clock + ph) * 25;
         const g = ctx.createLinearGradient(0, H * yf + wave, 0, H * yf + wave + h);
         g.addColorStop(0, col + '0)'); g.addColorStop(0.5, col + (0.35 * a) + ')'); g.addColorStop(1, col + '0)');
         ctx.fillStyle = g;
-        ctx.fillRect(x, H * yf + wave, 6, h);
+        ctx.fillRect(x, H * yf + wave, stripW, h);
       }
     }
   }
@@ -1650,6 +1658,8 @@
   }
 
   canvas.addEventListener('pointerdown', () => { if (state === 'splash') beginDescend(); });
+  // No long-press menus on the game or its touch buttons (Android)
+  for (const el of [canvas, ...document.querySelectorAll('.pad button, .hud button')]) el.addEventListener('contextmenu', (e) => e.preventDefault());
 
   // ---- Title logo: the tramp hops along the letters ---------------------------
   function startLogo() {
@@ -1722,6 +1732,7 @@
     try { navigator.wakeLock?.request('screen').catch(() => {}); } catch (e) { /* not available */ }
   }
   function win() {
+    buzz([30, 60, 30, 60, 90]);
     state = 'won';
     document.body.classList.remove('playing');
     banner('THE MOON', '384,400 km');
@@ -2026,8 +2037,11 @@
   if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 
   let last = 0;
+  let frameAvg = 1 / 60, lowQuality = false;
   function frame(t) {
     const dt = Math.min(1 / 30, (t - last) / 1000 || 0);
+    // Watch frame times; slow phones get a lighter version of the heavy effects
+    if (dt > 0) { frameAvg = frameAvg * 0.97 + dt * 0.03; if (!lowQuality && frameAvg > 1 / 40 && clock > 3) lowQuality = true; }
     last = t;
     checkSize();
     if (snd) snd.beat();
