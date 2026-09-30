@@ -50,7 +50,7 @@
   // planet, where the next layer's platform is waiting on the far side.
   const RIDES = {
     4: { kind: 'jet', title: 'JET STREAM', fact: 'The jet stream: winds up to 400 km/h, 10 km up. Hold on!' },
-    11: { kind: 'iss', title: 'SPACE STATION', fact: 'The ISS laps the whole Earth every 92 minutes. Ride it round!' },
+    11: { kind: 'iss', title: 'SPACE STATION', fact: 'The ISS laps the whole Earth every 92 minutes, with astronauts living on board.' },
   };
   const RIDE_TIME = 5.5;
   // Checkpoints: the first layer of each new part of the sky. Once you've landed
@@ -82,6 +82,8 @@
   };
   const WALK_CYCLE = ['walk1', 'stand', 'walk2', 'stand'];
 
+  // Spacesuit: white suit and helmet, blue visor, orange stripes
+  const SUIT = { h: '#eef1f7', k: '#3b6fd8', s: '#9fd8ff', y: '#ff7a1a', c: '#f4f6fb', p: '#d6dce8', b: '#7d869a' };
   const HOT = { h: '#fff3b0', k: '#ff7a1a', s: '#ffd36b', y: '#ffffff', c: '#ffb23a', p: '#ff8a2a', b: '#e0433b' };
   function drawSprite(frame, x, y, flip, sy, sx = 1, alpha = 1, pal = PAL) {
     const rows = FRAMES[frame];
@@ -213,7 +215,8 @@
     const sky = [];
     for (let i = 0; i < 170; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.15 ? 2 : 1, tw: rnd() * TAU });
 
-    return { seed, plats, stars, decor, crust, swirls, sky, ranges };
+    const issPlat = plats.find((q) => q.ride && q.ride.kind === 'iss') || null;
+    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat };
   }
 
   // ---- State ----------------------------------------------------------------
@@ -275,7 +278,7 @@
 
   function reset(seed) {
     world = buildWorld(seed);
-    Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1, apexR: R0, lastPlat: null, lastH: 0, heat: 0 });
+    Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1, apexR: R0, lastPlat: null, lastH: 0, heat: 0, suit: false, inside: false });
     theta = 0; lastTier = -1; bestTier = -1; playTime = 0; particles = [];
     fx = { geoms: [], flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
     checkpoint = 0; falls = 0; heightRecordShown = false;
@@ -395,6 +398,7 @@
 
   // ---- Update ---------------------------------------------------------------
   function land(p) {
+    if (p === world.issPlat && !player.suit && p.ride.state === 'near') { dock(p); return; }
     const off = Math.abs(wrap(p.a + theta) * p.R);
     if (player.heat > 0.3) {
       // Put out by the landing: a hiss of steam
@@ -528,7 +532,10 @@
       const d = na - p.a;
       p.a = p.a0 = na;
       if (riding(p)) theta -= d; // carry the tramp along with it
-      if (u >= 1) { r.state = r.to === r.far ? 'far' : 'near'; r.idle = 0; }
+      if (u >= 1) {
+        r.state = r.to === r.far ? 'far' : 'near'; r.idle = 0;
+        if (player.inside && player.lastPlat === p) eject(p);
+      }
     } else if (r.state === 'far') {
       // If you fell off on the way, it heads back to pick you up.
       const away = Math.abs(wrap(p.a + theta)) > Math.PI / 2;
@@ -536,6 +543,37 @@
       if (r.idle > 2) { r.state = 'returning'; r.from = r.far; r.to = r.near; r.t = 0; }
     }
   }
+  // Docking with the Space Station: in you go, out you come in a spacesuit.
+  function dock(p) {
+    player.inside = true;
+    player.lastPlat = p; player.onGround = false;
+    player.vr = 0; player.vx = 0; player.heat = 0; fx.flames = []; fx.trail = [];
+    if (p.tier > lastTier) lastTier = p.tier;
+    if (p.tier > bestTier) { bestTier = p.tier; addScore(500); }
+    startRide(p);
+    banner('DOCKING', 'SPACE STATION');
+    toast('Docked with the Space Station. Suiting up for space…', 4);
+    sfx.airlock();
+    ring(-theta, p.R + 12, '#8fd0ff', 1.2);
+    for (let i = 0; i < 10; i++) fx.puffs.push({ a: -theta, R: p.R + 12, vt: (Math.random() - 0.5) * 160, vr: (Math.random() - 0.2) * 120, r: 4 + Math.random() * 6, t: 0, life: 0.6 + Math.random() * 0.4, nlc: true });
+  }
+  function eject(p) {
+    player.inside = false;
+    player.suit = true;
+    player.speed = speedFor(p.tier);
+    player.r = p.R; player.vr = p.bounce * 1.05;
+    player.apexR = p.R; player.lastH = 0; player.squash = -0.6;
+    lastTier = p.tier;
+    addScore(750);
+    sfx.airlock(); sfx.tier();
+    fx.flash = 0.35;
+    ring(-theta, p.R + 12, '#ffffff', 1.6);
+    for (let i = 0; i < 18; i++) fx.puffs.push({ a: -theta, R: p.R + 14, vt: (Math.random() - 0.5) * 320, vr: 80 + Math.random() * 200, r: 5 + Math.random() * 9, t: 0, life: 0.8 + Math.random() * 0.6, nlc: false });
+    pop('SPACESUIT ON!', '#ff9a3a', player.r + 120);
+    banner('SPACESUIT ON', 'READY FOR DEEP SPACE');
+    toast('A real spacesuit weighs about 145 kg on Earth. Up here, it keeps you alive.', 5);
+  }
+
   function startRide(p) {
     const r = p.ride;
     addScore(250);
@@ -564,7 +602,7 @@
     } else if (state === 'play') {
       playTime += dt;
       const kdir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-      const dir = kdir !== 0 ? kdir : tilt.on ? tilt.axis : 0;
+      const dir = player.inside ? 0 : kdir !== 0 ? kdir : tilt.on ? tilt.axis : 0;
       if (Math.abs(dir) > 0.1) player.facing = Math.sign(dir);
       const sp = player.speed;
       const maxV = player.onGround ? WALK : AIR * Math.sqrt(sp);
@@ -587,7 +625,14 @@
         sfx.hop();
         burst(-theta, R0, '#c9a27a', 5, 80);
       }
-      if (!player.onGround) {
+      if (player.inside) {
+        player.r = player.lastPlat.R + 14; player.vr = 0; player.vx = 0;
+      }
+      // Hit the Space Station (from above or below) to dock and suit up
+      const iss = world.issPlat;
+      if (iss && !player.suit && !player.inside && iss.ride.state === 'near'
+        && Math.abs(wrap(iss.a + theta) * iss.R) < iss.w / 2 + 6 && Math.abs(player.r - (iss.R + 10)) < 34) dock(iss);
+      if (!player.onGround && !player.inside) {
         const prev = player.r;
         player.apexR = Math.max(player.apexR || player.r, player.r);
         player.vr = Math.max(player.vr - G * player.speed * player.speed * dt, -1600 * player.speed);
@@ -1226,12 +1271,25 @@
           ctx.fillRect(-dir * (p.w / 2 + 6) - (dir > 0 ? len : 0), y, len, 2);
         }
       }
+      // Docked: the windows glow while the tramp suits up inside
+      if (r.kind === 'iss' && player.inside && player.lastPlat === p) {
+        for (let i = -1; i <= 1; i++) {
+          const on = Math.sin(clock * 6 + i * 2) > 0;
+          px(i * 11 - 3, 6, 6, 5, on ? '#fff3b0' : '#5a6a8a');
+        }
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#1b1530'; ctx.fillText('SUITING UP', 1, -15);
+        ctx.fillStyle = '#ffd23f'; ctx.fillText('SUITING UP', 0, -16);
+        ctx.textAlign = 'start';
+      }
       // Label so you know this one goes somewhere
       if (r.state === 'near') {
         ctx.font = '8px "Press Start 2P", monospace';
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#1b1530'; ctx.fillText('RIDE', 1, 58);
-        ctx.fillStyle = '#8fd0ff'; ctx.fillText('RIDE', 0, 57);
+        const label = r.kind === 'iss' && !player.suit ? 'DOCK HERE' : 'RIDE';
+        ctx.fillStyle = '#1b1530'; ctx.fillText(label, 1, 58);
+        ctx.fillStyle = '#8fd0ff'; ctx.fillText(label, 0, 57);
         ctx.textAlign = 'start';
       }
     }, 260);
@@ -1386,13 +1444,16 @@
     const stretch = player.onGround ? 0 : clamp(Math.abs(player.vr) / 5000, 0, 0.18);
     const sy = 1 - player.squash * 0.2 + stretch;
     const sx = 1 + player.squash * 0.15 - stretch * 0.6;
-    for (const g of fx.trail) {
+    const hidden = player.inside;
+    for (const g of hidden ? [] : fx.trail) {
       const ph = g.a + theta;
       drawSprite('jump', cx + g.r * Math.sin(ph), cy - g.r * Math.cos(ph), g.flip, 1, 1, g.life * 2);
     }
-    drawGuide(feetX, feetY);
-    drawFire(feetX, feetY);
-    drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx, 1, player.heat > 0.55 ? HOT : PAL);
+    if (!hidden) {
+      drawGuide(feetX, feetY);
+      drawFire(feetX, feetY);
+      drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx, 1, player.heat > 0.55 ? HOT : player.suit ? SUIT : PAL);
+    }
     drawParticles();
     drawFx();
     ctx.restore();
@@ -1968,6 +2029,7 @@
       theta = data.theta; lastTier = data.lastTier; bestTier = data.bestTier; playTime = data.playTime;
       checkpoint = data.checkpoint || 0; falls = data.falls || 0; score = data.score || 0; mult = data.mult || 1; updateScoreHud(); mode = data.mode === 'uber' ? 'uber' : 'checkpoint';
       Object.assign(player, data.player);
+      player.inside = false;
       cam.r = player.r;
       for (const id of data.taken || []) if (world.stars[id]) world.stars[id].taken = true;
       updateStarsHud();

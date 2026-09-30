@@ -180,6 +180,14 @@
       notes.forEach((m, i) => voice({ type: 'square', f: hz(m), t: t + i * 0.08, dur: i === notes.length - 1 ? 0.35 : 0.1, vol: 0.06 }));
       voice({ type: 'triangle', f: hz(notes[0] - 12), t, dur: 0.5, vol: 0.12 });
     },
+    // Airlock: a heavy clunk and a hiss of air
+    airlock() {
+      if (!ok()) return;
+      const t = now();
+      voice({ type: 'sine', f: 90, f1: 45, t, dur: 0.3, vol: 0.5 });
+      voice({ type: 'square', f: 180, f1: 120, t, dur: 0.08, vol: 0.06 });
+      noise({ t: t + 0.08, dur: 0.9, vol: 0.2, type: 'highpass', freq: 2500, freq1: 5000 });
+    },
     sizzle() {
       if (!ok()) return;
       noise({ t: now(), dur: 0.6, vol: 0.25, type: 'highpass', freq: 3000, freq1: 7000 });
