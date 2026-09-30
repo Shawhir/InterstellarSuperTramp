@@ -304,6 +304,7 @@ body.intro .hud, body.intro .toast { opacity: 0; pointer-events: none; }
 .post-row input:focus-visible { outline: 3px solid var(--star); outline-offset: 1px; }
 .card .post-row button { padding: 8px 12px; font-size: 11px; }
 .card .post-status { color: var(--go); }
+.card .skip { justify-self: start; padding: 0; font-family: var(--body); font-size: 17px; color: var(--muted); background: none; border: 0; box-shadow: none; text-decoration: underline; }
 .card .post .linkish { justify-self: start; padding: 0; font-family: var(--body); font-size: 18px; color: var(--muted); background: none; border: 0; box-shadow: none; text-decoration: underline; }
 
 /* Records and medals */
