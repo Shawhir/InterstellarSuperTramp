@@ -466,12 +466,21 @@
 
   // ---- Drawing --------------------------------------------------------------
   let W = 0, H = 0, cx = 0, cy = 0;
+  let lastSize = '';
+  // Phones can report the old size when the rotation event fires, which leaves a
+  // stretched canvas. Checking every frame catches the real size as soon as it lands.
+  function checkSize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (`${canvas.clientWidth}x${canvas.clientHeight}x${dpr}` !== lastSize) resize();
+  }
 
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const cw = canvas.clientWidth, ch = canvas.clientHeight;
-    // Zoom out on narrow screens so the next platform is usually in view.
-    const zoom = clamp(cw / 560, 0.7, 1);
+    lastSize = `${cw}x${ch}x${dpr}`;
+    // Zoom out on narrow or short screens (phones, landscape) so the next
+    // platform is usually in view.
+    const zoom = clamp(Math.min(cw / 560, ch / 640), 0.55, 1);
     W = cw / zoom; H = ch / zoom;
     canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
     ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
@@ -1104,11 +1113,14 @@
   });
 
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 250));
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 
   let last = 0;
   function frame(t) {
     const dt = Math.min(1 / 30, (t - last) / 1000 || 0);
     last = t;
+    checkSize();
     update(dt);
     render();
     requestAnimationFrame(frame);
