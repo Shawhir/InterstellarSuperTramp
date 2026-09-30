@@ -7,88 +7,7 @@
   'use strict';
 
   const canvas = document.getElementById('game');
-  const mainCtx = canvas.getContext('2d');
-  // The world is drawn onto a small canvas (1/PIX size) and scaled up with hard
-  // edges, so everything is made of real chunky pixels. Text stays crisp.
-  const PIX = 3;
-  const lo = document.createElement('canvas');
-  const loCtx = lo.getContext('2d', { willReadFrequently: true });
-  let ctx = mainCtx;
-  // Text drawn in the world goes to the sharp screen on top instead of being
-  // pixelated: remember where it was meant to go and replay it later.
-  const textQueue = [];
-  loCtx.fillText = (t, x, y) => textQueue.push({ m: loCtx.getTransform(), t, x, y, font: loCtx.font, fill: loCtx.fillStyle, align: loCtx.textAlign, alpha: loCtx.globalAlpha });
-
-  // One limited palette for the whole world, like hand-made pixel art. Every
-  // frame is snapped to it, with a 2x2 dither where colours blend.
-  const PALETTE = [
-    // sunset sky, top to horizon
-    '#4b2c5e', '#5e3368', '#763a6c', '#924068', '#b04a5e', '#cc5a4e', '#e06c42', '#ec843c', '#f39e44', '#f8b852', '#fcd06a', '#ffe596',
-    // mountains: orange range, purple range, treeline
-    '#b8473f', '#e27040', '#f59a58', '#6a2f60', '#8a3c6a', '#b0507a', '#221a38', '#2f2448', '#43305a',
-    // grass and dirt
-    '#3f5a1e', '#557a24', '#6f9428', '#93b536', '#b9d24c', '#d8e070', '#3e1a1a', '#5a2622', '#7a3526', '#9a4a30', '#b8683e',
-    // inside the Earth
-    '#a5322a', '#d24a2a', '#f2842e', '#ffb23a', '#ffd45e', '#fff3b0',
-    // space and aurora
-    '#03040c', '#0b1030', '#141a3e', '#1d2a5a', '#2e3f7a', '#52e07a', '#2a9a6a', '#8a6ad8', '#b8e4ff',
-    // neutrals
-    '#ffffff', '#e6e4ec', '#c3c0cc', '#a79fae', '#9aa3b5', '#7d869a', '#5d5563', '#3b3b4f', '#2a2230', '#1b1530',
-    // the tramp, the suit and the fireball
-    '#e0433b', '#f2c29b', '#ffd23f', '#3f6fd8', '#6b5040', '#eef1f7', '#d6dce8', '#9fd8ff', '#3b6fd8', '#ff7a1a', '#ff8a2a', '#ffd36b',
-    // things in the world
-    '#6dff7a', '#8fd0ff', '#2b4fb8', '#6d8cf0', '#d9a93b', '#f5d27a', '#b8403a', '#5a3a28', '#f2e6d0', '#e9c46a', '#c9d7f0',
-    '#f4b6a6', '#ff6fa0', '#b58cff', '#5fd3e8', '#e85fb4', '#efe6cf', '#8a5a3b', '#c9a27a',
-    // cloud trampolines and trees
-    '#ffd9c2', '#fff1de', '#d98a8e', '#b86a7e', '#2f5a3a', '#3f7a3e', '#5f9a40',
-  ].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
-  const pal32 = new Uint32Array(PALETTE.map(([r, g, b]) => (255 << 24) | (b << 16) | (g << 8) | r));
-  const palLut = new Uint8Array(1 << 20).fill(255); // 6 bits per channel x 4 dither cells
-  const DITHER = [-9, 3, 9, -3]; // 2x2 Bayer, as brightness offsets
-  function nearest(r, g, b) {
-    let best = 0, bd = 1e9;
-    for (let i = 0; i < PALETTE.length; i++) {
-      const [pr, pg, pb] = PALETTE[i];
-      const d = 2 * (r - pr) ** 2 + 4 * (g - pg) ** 2 + 3 * (b - pb) ** 2;
-      if (d < bd) { bd = d; best = i; }
-    }
-    return [best, bd];
-  }
-  function paletteFor(key) {
-    const r = ((key >> 14) & 63) * 4 + 2, g = ((key >> 8) & 63) * 4 + 2, b = ((key >> 2) & 63) * 4 + 2;
-    const [plain, d] = nearest(r, g, b);
-    // Colours that are already in the palette stay put: no speckle on sprites.
-    if (d < 400) return plain;
-    const o = DITHER[key & 3];
-    return nearest(clamp(r + o, 0, 255), clamp(g + o, 0, 255), clamp(b + o, 0, 255))[0];
-  }
-  function quantize() {
-    const w = lo.width, h = lo.height;
-    const img = loCtx.getImageData(0, 0, w, h);
-    const px32 = new Uint32Array(img.data.buffer);
-    for (let y = 0; y < h; y++) {
-      const row = y * w, dy = (y & 1) << 1;
-      for (let x = 0; x < w; x++) {
-        const v = px32[row + x];
-        const key = ((v & 0xfc) << 12) | (((v >> 8) & 0xfc) << 6) | ((v >> 16) & 0xfc) | dy | (x & 1);
-        let i = palLut[key];
-        if (i === 255) i = palLut[key] = paletteFor(key);
-        px32[row + x] = pal32[i];
-      }
-    }
-    loCtx.putImageData(img, 0, 0);
-  }
-  function flushText() {
-    const base = mainCtx.getTransform();
-    for (const q of textQueue) {
-      mainCtx.save();
-      mainCtx.setTransform(base.multiply(new DOMMatrix([PIX, 0, 0, PIX, 0, 0])).multiply(q.m));
-      mainCtx.font = q.font; mainCtx.fillStyle = q.fill; mainCtx.textAlign = q.align; mainCtx.globalAlpha = q.alpha;
-      mainCtx.fillText(q.t, q.x, q.y);
-      mainCtx.restore();
-    }
-    textQueue.length = 0;
-  }
+  const ctx = canvas.getContext('2d');
   const $ = (id) => document.getElementById(id);
   const hud = { score: $('score'), mult: $('mult'), alt: $('alt'), layer: $('layer'), stars: $('stars'), toast: $('toast'), music: $('music'), sfx: $('sfx'), tilt: $('tilt') };
 
@@ -170,18 +89,8 @@
     const rows = FRAMES[frame];
     ctx.save();
     ctx.globalAlpha = alpha;
-    const snap = ctx === loCtx ? (v) => Math.round(v / PIX) * PIX : Math.round;
-    ctx.translate(snap(x), snap(y));
+    ctx.translate(Math.round(x), Math.round(y));
     ctx.scale(flip ? -sx : sx, sy);
-    // Dark outline first, so the character pops off any background
-    ctx.fillStyle = '#1b1530';
-    for (let j = 0; j < rows.length; j++) {
-      for (let i = 0; i < rows[j].length; i++) {
-        if (rows[j][i] === '.') continue;
-        ctx.fillRect((i - 7) * SCALE, (j - 15) * SCALE, SCALE * 3, SCALE);
-        ctx.fillRect((i - 6) * SCALE, (j - 16) * SCALE, SCALE, SCALE * 3);
-      }
-    }
     for (let j = 0; j < rows.length; j++) {
       const row = rows[j];
       for (let i = 0; i < row.length; i++) {
@@ -285,38 +194,29 @@
     for (let i = 0; i < 26; i++) swirls.push({ a: rnd() * TAU, rf: 0.6 + rnd() * 0.26, len: 0.15 + rnd() * 0.3 });
     // Mountain ranges behind the ground, farthest first:
     // [sideways parallax, vertical parallax, colour, snow, tallest peak]
-    // [sideways parallax, vertical parallax, shadow side, lit side, tallest peak, bushes?]
     const ranges = [
-      [0.3, 0.55, '#e06c42', '#f39e44', 250],
-      [0.42, 0.64, '#cc5a4e', '#ec843c', 205],
-      [0.55, 0.74, '#b8473f', '#e27040', 170],
-      [0.72, 0.84, '#6a2f60', '#b0507a', 120],
-      [0.88, 0.93, '#221a38', '#43305a', 30, true],
-    ].map(([f, sink, col, lit, hMax, trees]) => {
-      const n = 480, h = new Array(n).fill(0), peak = new Array(n).fill(0), side = new Array(n).fill(0);
-      // The nearest range is a treeline: round bushes instead of sharp peaks
-      const peaks = trees ? 190 : 22 + Math.floor(rnd() * 8);
+      [0.3, 0.55, '#cdd8ee', '#ffffff', 250],
+      [0.42, 0.64, '#b3c3e2', '#f5f8ff', 205],
+      [0.55, 0.74, '#9fb4d8', '#eef3ff', 160],
+      [0.72, 0.84, '#7f9bc2', '#e3ebf8', 115],
+      [0.88, 0.93, '#4d7a6e', null, 60],
+    ].map(([f, sink, col, snow, hMax]) => {
+      const n = 480, h = new Array(n).fill(0);
+      const peaks = 26 + Math.floor(rnd() * 10);
       for (let i = 0; i < peaks; i++) {
-        const c = Math.round(rnd() * n), width = trees ? 2 + rnd() * 2.5 : 10 + rnd() * 22, height = hMax * (0.35 + rnd() * 0.65);
+        const c = rnd() * n, width = 8 + rnd() * 22, height = hMax * (0.35 + rnd() * 0.65);
         for (let j = -Math.ceil(width); j <= Math.ceil(width); j++) {
-          const idx = (c + j + n) % n;
-          const k = Math.abs(j) / width;
-          const v = height * (trees ? Math.sqrt(Math.max(0, 1 - k * k)) : 1 - k);
-          if (v > h[idx]) { h[idx] = v; peak[idx] = c; side[idx] = Math.sign(j); }
+          const idx = (Math.round(c) + j + n) % n;
+          h[idx] = Math.max(h[idx], height * (1 - Math.abs(j) / width));
         }
       }
-      return { f, sink, col, lit, hMax, trees, peak, side, h: h.map((v) => Math.round(v / 3) * 3) };
+      return { f, sink, col, snow, hMax, h: h.map((v) => Math.round(v / 4) * 4) };
     });
-    // Grass blades and dirt specks all the way round
-    const blades = [];
-    for (let i = 0; i < 1100; i++) blades.push({ a: rnd() * TAU, h: 3 + rnd() * 9, c: Math.floor(rnd() * 7) });
-    const specks = [];
-    for (let i = 0; i < 360; i++) specks.push({ a: rnd() * TAU, rf: 0.905 + rnd() * 0.085, w: rnd() < 0.5 ? 6 : 9, c: Math.floor(rnd() * 3) });
     const sky = [];
     for (let i = 0; i < 170; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.15 ? 2 : 1, tw: rnd() * TAU });
 
     const issPlat = plats.find((q) => q.ride && q.ride.kind === 'iss') || null;
-    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat, blades, specks };
+    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat };
   }
 
   // ---- State ----------------------------------------------------------------
@@ -893,18 +793,8 @@
     const zoom = clamp(Math.min(cw / 560, ch / 640), 0.55, 1);
     W = cw / zoom; H = ch / zoom;
     canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
-    mainCtx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
-    mainCtx.imageSmoothingEnabled = false;
-    lo.width = Math.ceil(W / PIX); lo.height = Math.ceil(H / PIX);
-    loCtx.imageSmoothingEnabled = false;
-    buildSkyTex();
-  }
-  // Where a world point lands on screen after the ride zoom (for crisp text drawn on top)
-  let lastZ = 1, lastPivotY = 0;
-  function toScreen(a, R) {
-    const ph = a + theta;
-    const x0 = cx + R * Math.sin(ph), y0 = cy - R * Math.cos(ph);
-    return lastZ < 0.999 ? [cx + (x0 - cx) * lastZ, lastPivotY + (y0 - lastPivotY) * lastZ] : [x0, y0];
+    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
+    ctx.imageSmoothingEnabled = false;
   }
 
   const onScreen = (x, y, m = 220) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
@@ -915,71 +805,17 @@
   }
   function px(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); }
 
-  // The sunset sky is one pixel texture: colour steps from purple overhead
-  // to gold at the horizon, broken up by long streaks of cloud. It wraps
-  // sideways so it can drift as the world turns.
-  const SKY_RAMP = ['#4b2c5e', '#5e3368', '#763a6c', '#924068', '#b04a5e', '#cc5a4e', '#e06c42', '#ec843c', '#f39e44', '#f8b852', '#fcd06a', '#ffe596'];
-  // Darker colours below the sunset ramp: climbing steps the whole sky down
-  // this list, colour by colour, until it's the black of space.
-  const SKY_STEPS = ['#03040c', '#0b1030', '#141a3e', '#1d2a5a', ...SKY_RAMP];
-  const NIGHT = 4; // where the sunset ramp starts in SKY_STEPS
-  let skyIdx = null, skyW = 0, skyH = 0, skyTexs = [];
-  function hash2(x, y) {
-    let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) | 0;
-    h = Math.imul(h ^ (h >>> 13), 1274126177);
-    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-  }
-  function vnoise(x, y, period) {
-    const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
-    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-    const px = (i) => ((i % period) + period) % period;
-    const a = hash2(px(xi), yi), b = hash2(px(xi + 1), yi), c = hash2(px(xi), yi + 1), d = hash2(px(xi + 1), yi + 1);
-    return lerp(lerp(a, b, sx), lerp(c, d, sx), sy);
-  }
-  function buildSkyTex() {
-    const w = Math.max(64, lo.width * 2), h = lo.height;
-    skyW = w; skyH = h; skyTexs = [];
-    skyIdx = new Uint8Array(w * h);
-    const last = SKY_RAMP.length - 1;
-    const cell = 26; // cloud streak length, in pixels
-    const period = Math.round(w / cell);
-    const horizon = h * 0.58;
-    for (let y = 0; y < h; y++) {
-      const t = clamp(y / horizon, 0, 1);
-      for (let x = 0; x < w; x++) {
-        const fxp = (x / w) * period;
-        const n = vnoise(fxp, y / 3.5, period) * 0.6 + vnoise(fxp * 2, y / 1.8 + 40, period * 2) * 0.3 + vnoise(fxp * 4, y / 1.2 + 90, period * 4) * 0.1;
-        // Clouds are brighter than the sky up high and darker near the glow
-        const lift = (n - 0.48) * 5.2 * (t < 0.75 ? 1 : -0.7);
-        skyIdx[y * w + x] = clamp(Math.round(t * last + (n > 0.56 || n < 0.36 ? lift : 0)), 0, last);
-      }
-    }
-  }
-  const hexTo32 = (c) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); return (255 << 24) | (b << 16) | (g << 8) | r; };
-  function skyTexFor(step) {
-    if (skyTexs[step]) return skyTexs[step];
-    const c = document.createElement('canvas');
-    c.width = skyW; c.height = skyH;
-    const g = c.getContext('2d');
-    const img = g.createImageData(skyW, skyH), out = new Uint32Array(img.data.buffer);
-    const cols = SKY_RAMP.map((_, k) => hexTo32(SKY_STEPS[Math.max(0, k + NIGHT - step)]));
-    for (let i = 0; i < out.length; i++) out[i] = cols[skyIdx[i]];
-    g.putImageData(img, 0, 0);
-    return (skyTexs[step] = c);
-  }
   function drawSky() {
     const s = clamp((cam.r - R0) / (tierR(9) - R0), 0, 1);
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // sky is laid down in real pixels
-    const step = Math.round(clamp(s * 1.2, 0, 1) * (SKY_STEPS.length - 1));
-    const tex = skyTexFor(step), w = skyW, lh = lo.height;
-    const ox = Math.floor((((theta * 40 + clock * 0.8) % w) + w) % w);
-    const first = Math.min(w - ox, lo.width);
-    ctx.drawImage(tex, ox, 0, first, lh, 0, 0, first, lh);
-    if (first < lo.width) ctx.drawImage(tex, 0, 0, lo.width - first, lh, first, 0, lo.width - first, lh);
-    ctx.restore();
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, mix('#58b4f0', '#03040c', s));
+    g.addColorStop(1, mix('#d4f0ff', '#101634', Math.min(1, s * 1.1)));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    drawSun(s);
     drawSkyMoon();
     drawAurora();
+    drawFarClouds(s);
     const alpha = clamp((s - 0.25) / 0.5, 0, 1);
     if (alpha <= 0) return;
     for (const q of fx.shooting) {
@@ -995,6 +831,19 @@
       px(x, st.y * H, st.s, st.s, '#ffffff');
     }
     ctx.globalAlpha = 1;
+  }
+
+  function drawSun(s) {
+    const x = W * 0.16, y = H * 0.16 + s * 20;
+    const glow = ctx.createRadialGradient(x, y, 4, x, y, 90);
+    glow.addColorStop(0, `rgba(255,240,170,${0.9 - s * 0.3})`);
+    glow.addColorStop(1, 'rgba(255,240,170,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - 90, y - 90, 180, 180);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(clock * 0.2);
+    for (let i = 0; i < 8; i++) { ctx.rotate(TAU / 8); px(-2, 26 + (i % 2) * 4, 4, 10, 'rgba(255,230,140,0.8)'); }
+    ctx.restore();
+    ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(x, y, 20, 0, TAU); ctx.fill();
   }
 
   // The Moon is one object for the whole climb: a small disc in the sky near
@@ -1061,6 +910,23 @@
         ctx.fillRect(x, H * yf + wave, stripW, h);
       }
     }
+  }
+
+  function drawFarClouds(s) {
+    const a = clamp(1 - s * 2.2, 0, 1);
+    if (a <= 0) return;
+    ctx.globalAlpha = 0.5 * a;
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 7; i++) {
+      const span = W + 240;
+      let x = ((i * 0.37 * span - theta * 90 + clock * 6) % span + span) % span - 120;
+      let y = ((i * 0.53 % 1) * H * 0.6 + (cam.r - R0) * 0.12) % (H * 1.2);
+      const r = 14 + (i % 3) * 6;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, TAU); ctx.arc(x + r, y - r * 0.4, r * 1.1, 0, TAU); ctx.arc(x + r * 2.2, y, r * 0.9, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   function drawSpeedLines() {
@@ -1146,23 +1012,19 @@
         ctx.globalAlpha = 1;
       }, 120);
     }
-  }
-
-  function drawPops() {
     ctx.font = '10px "Press Start 2P", monospace';
     ctx.textAlign = 'center';
     for (const q of fx.pops) {
-      const [x, y] = toScreen(q.a, q.R + q.t * 50);
-      if (x < -80 || x > W + 80 || y < -40 || y > H + 40) continue;
-      const k = q.t / 1.1;
-      let sc = q.t < 0.15 ? 0.6 + (q.t / 0.15) * 0.6 : 1.2 - Math.min(0.2, (q.t - 0.15));
-      if (q.small) sc *= 0.75;
-      ctx.save();
-      ctx.translate(x, y); ctx.scale(sc, sc);
-      ctx.globalAlpha = 1 - k * k;
-      ctx.fillStyle = '#1b1530'; ctx.fillText(q.text, 2, 2);
-      ctx.fillStyle = q.color; ctx.fillText(q.text, 0, 0);
-      ctx.restore();
+      at(q.a + theta, q.R + q.t * 50, () => {
+        const k = q.t / 1.1;
+        let sc = q.t < 0.15 ? 0.6 + (q.t / 0.15) * 0.6 : 1.2 - Math.min(0.2, (q.t - 0.15));
+        if (q.small) sc *= 0.75;
+        ctx.scale(sc, sc);
+        ctx.globalAlpha = 1 - k * k;
+        ctx.fillStyle = '#1b1530'; ctx.fillText(q.text, 2, 2);
+        ctx.fillStyle = q.color; ctx.fillText(q.text, 0, 0);
+        ctx.globalAlpha = 1;
+      }, 80);
     }
     ctx.textAlign = 'start';
   }
@@ -1189,28 +1051,28 @@
 
   function drawMountains() {
     // Distant ranges sink more slowly than the ground as you climb, so going up
-    // reveals more and more of the mountains behind. Each peak has a sunlit face
-    // (the side towards the glow in the middle of the sky) and a shadowed one.
+    // reveals more and more of the mountains behind. They fade out into the haze
+    // (and then the dark) on the way to space.
     const tf = tierFloat(player.r);
     const fade = clamp(1 - (tf - 3) / 4, 0, 1) * clamp((cam.zoom - 0.55) / 0.35, 0, 1);
     if (fade <= 0) return;
     const skyS = clamp((cam.r - R0) / (tierR(9) - R0), 0, 1);
-    const haze = mix('#f39e44', '#03040c', skyS).match(/\d+/g).map(Number);
+    const haze = mix('#58b4f0', '#03040c', skyS).match(/\d+/g).map(Number);
     const tint = (hex, k) => {
       const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
       return `rgb(${c.map((v, i) => Math.round(lerp(v, haze[i], k))).join(',')})`;
     };
     const climb = cam.r - R0;
     ctx.globalAlpha = fade;
-    world.ranges.forEach((m) => {
+    world.ranges.forEach((m, depth) => {
       const my = cy - climb * (1 - m.sink); // this range's own centre, lifted by parallax
       if (my - R0 - m.hMax > view.y1 + 20) return;
       const n = m.h.length;
       const rot = theta * m.f;
-      const hazeK = Math.max(0, (1 - m.sink) * 0.35 - 0.05) + skyS * 0.6;
-      const pt = (i, hh = m.h[((i % n) + n) % n]) => {
+      const hazeK = (1 - m.sink) * 0.7 + skyS * 0.5;
+      const pt = (i) => {
         const a = (i / n) * TAU + rot;
-        const r = R0 - 6 + hh;
+        const r = R0 - 6 + m.h[i % n];
         return [cx + r * Math.sin(a), my - r * Math.cos(a)];
       };
       const span = Math.min(n / 2, Math.ceil((n * ((view.x1 - view.x0) / 2 + 260)) / (TAU * R0)));
@@ -1218,7 +1080,7 @@
       ctx.fillStyle = tint(m.col, hazeK);
       ctx.beginPath();
       for (let i = mid - span; i <= mid + span; i++) {
-        const [x, y] = pt(i);
+        const [x, y] = pt((i + n) % n);
         i === mid - span ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       // Close the shape well below the screen so nothing shows through underneath.
@@ -1226,26 +1088,26 @@
       ctx.lineTo(view.x0 - 400, Math.max(my, view.y1 + 400));
       ctx.closePath();
       ctx.fill();
-      // Sunlit faces: runs of columns whose slope faces the middle of the screen
-      ctx.fillStyle = tint(m.lit, hazeK);
-      const litAt = (i) => {
-        const k = ((i % n) + n) % n;
-        if (!m.side[k] || m.h[k] < 3) return false;
-        const peakX = pt(m.peak[k] + (i - k), 1)[0];
-        return m.side[k] < 0 ? peakX > cx : peakX < cx;
-      };
-      let run = null;
-      const close = (end) => {
-        ctx.beginPath();
-        for (let i = run; i <= end; i++) { const [x, y] = pt(i); i === run ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
-        // Lit face tapers into the shadow a little way down the slope
-        for (let i = end; i >= run; i--) { const [x, y] = pt(i, m.trees ? m.h[((i % n) + n) % n] * 0.45 : m.h[((i % n) + n) % n] * 0.2); ctx.lineTo(x, y); }
-        ctx.closePath(); ctx.fill();
-      };
-      for (let i = mid - span; i <= mid + span + 1; i++) {
-        const on = i <= mid + span && litAt(i);
-        if (on && run === null) run = i;
-        else if (!on && run !== null) { close(i); run = null; }
+      if (m.snow) {
+        ctx.fillStyle = tint(m.snow, hazeK * 0.6);
+        for (let i = mid - span; i <= mid + span; i++) {
+          const k = (i + n) % n;
+          if (m.h[k] < m.hMax * 0.62 || m.h[k] < m.h[(k + 1) % n] || m.h[k] < m.h[(k - 1 + n) % n]) continue;
+          const [x, y] = pt(k);
+          const a = (k / n) * TAU + rot;
+          const sc = 0.8 + (m.hMax / 260) * 0.7;
+          ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(sc, sc);
+          ctx.beginPath(); ctx.moveTo(0, -1); ctx.lineTo(-10, 12); ctx.lineTo(-4, 9); ctx.lineTo(0, 13); ctx.lineTo(5, 9); ctx.lineTo(10, 12); ctx.closePath(); ctx.fill();
+          ctx.restore();
+        }
+      }
+      // A soft mist line along the foot of each range adds depth between layers.
+      if (depth < world.ranges.length - 1) {
+        const g = ctx.createLinearGradient(0, my - R0 - 10, 0, my - R0 + 60);
+        g.addColorStop(0, `rgba(${haze.join(',')},0)`);
+        g.addColorStop(1, `rgba(${haze.join(',')},${0.35 * (1 - skyS)})`);
+        ctx.fillStyle = g;
+        ctx.fillRect(view.x0, my - R0 - 10, view.x1 - view.x0, 70);
       }
     });
     ctx.globalAlpha = 1;
@@ -1253,21 +1115,27 @@
 
   function drawEarth() {
     if (cy - R0 > view.y1 + 60) return;
-    // Atmosphere glow, seen once you're high enough to look back at the planet
-    const skyS = clamp((cam.r - R0) / (tierR(9) - R0), 0, 1);
+    // Atmosphere glow
     const glow = ctx.createRadialGradient(cx, cy, R0, cx, cy, R0 + 90);
-    glow.addColorStop(0, `rgba(140,210,255,${0.45 * skyS})`);
+    glow.addColorStop(0, 'rgba(140,210,255,0.45)');
     glow.addColorStop(1, 'rgba(140,210,255,0)');
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(cx, cy, R0 + 90, 0, TAU); ctx.fill();
 
     const disc = (r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill(); };
-    // Dirt in hard bands, darker the deeper you go
-    disc(R0, '#7a3526');
-    disc(R0 * 0.965, '#5a2622');
-    disc(R0 * 0.93, '#3e1a1a');
-    // Mantle and core in hard pixel-art bands, hotter towards the middle
-    for (const [rf, col] of [[0.9, '#a5322a'], [0.8, '#d24a2a'], [0.68, '#e06c42'], [0.55, '#f2842e'], [0.45, '#ffb23a'], [0.3, '#ffd45e'], [0.18, '#fff3b0']]) disc(R0 * rf, col);
+    disc(R0, '#7a4e33');
+    const crustG = ctx.createRadialGradient(cx, cy, R0 * 0.9, cx, cy, R0);
+    crustG.addColorStop(0, '#5e3a27'); crustG.addColorStop(1, '#94603f');
+    disc(R0, crustG);
+    const mantle = ctx.createRadialGradient(cx, cy, R0 * 0.55, cx, cy, R0 * 0.9);
+    mantle.addColorStop(0, '#f2842e'); mantle.addColorStop(1, '#a5322a');
+    disc(R0 * 0.9, mantle);
+    const outer = ctx.createRadialGradient(cx, cy, R0 * 0.3, cx, cy, R0 * 0.55);
+    outer.addColorStop(0, '#ffd45e'); outer.addColorStop(1, '#ff9a2e');
+    disc(R0 * 0.55, outer);
+    const inner = ctx.createRadialGradient(cx, cy, 0, cx, cy, R0 * 0.3);
+    inner.addColorStop(0, '#ffffff'); inner.addColorStop(1, '#ffe98a');
+    disc(R0 * 0.3, inner);
 
     // Mantle convection swirls, turning with the planet
     ctx.lineWidth = 4;
@@ -1275,12 +1143,6 @@
     for (const sw of world.swirls) {
       const a = sw.a + theta - Math.PI / 2;
       ctx.beginPath(); ctx.arc(cx, cy, sw.rf * R0, a, a + sw.len); ctx.stroke();
-    }
-    // Dirt texture
-    const reach = Math.min(Math.PI, ((view.x1 - view.x0) / R0) * 0.7 + 0.1);
-    for (const d of world.specks) {
-      if (Math.abs(wrap(d.a + theta)) > reach) continue;
-      at(d.a + theta, d.rf * R0, () => px(-d.w / 2, 0, d.w, 3, ['#9a4a30', '#5a2622', '#b8683e'][d.c]), 20);
     }
     // Crust contents
     for (const c of world.crust) {
@@ -1291,26 +1153,11 @@
         else { px(-7, -1, 14, 3, '#efe6cf'); px(-8, -3, 3, 7, '#efe6cf'); px(5, -3, 3, 7, '#efe6cf'); }
       }, 30);
     }
-    // Grass: a dark root line, a green band, then blades with lighter tips
-    ctx.strokeStyle = '#3f5a1e'; ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.arc(cx, cy, R0 - 12, 0, TAU); ctx.stroke();
-    ctx.strokeStyle = '#557a24'; ctx.lineWidth = 12;
+    // Grass
+    ctx.strokeStyle = '#4fb34a'; ctx.lineWidth = 10;
     ctx.beginPath(); ctx.arc(cx, cy, R0 - 5, 0, TAU); ctx.stroke();
-    const BLADE = ['#6f9428', '#93b536', '#6f9428', '#b9d24c', '#93b536', '#557a24', '#d8e070'];
-    ctx.lineWidth = PIX;
-    for (let c = 0; c < BLADE.length; c++) {
-      ctx.strokeStyle = BLADE[c];
-      ctx.beginPath();
-      for (const b of world.blades) {
-        if (b.c !== c) continue;
-        const a = b.a + theta;
-        if (Math.abs(wrap(a)) > reach) continue;
-        const sn = Math.sin(a), cs = Math.cos(a);
-        ctx.moveTo(cx + (R0 - 6) * sn, cy - (R0 - 6) * cs);
-        ctx.lineTo(cx + (R0 + b.h) * sn, cy - (R0 + b.h) * cs);
-      }
-      ctx.stroke();
-    }
+    ctx.strokeStyle = '#7ad65a'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx, cy, R0 - 1, 0, TAU); ctx.stroke();
 
     // Layer labels stay upright while the rock turns past them
     ctx.font = '8px "Press Start 2P", monospace';
@@ -1330,11 +1177,10 @@
       at(d.a + theta, R0 - 2, () => {
         ctx.scale(d.size, d.size);
         if (d.kind === 'tree') {
-          px(-3, -18, 6, 18, '#5a3a28');
-          // Round pixel canopy: shadow side, body, then a sunlit patch
-          px(-12, -39, 24, 21, '#2f5a3a'); px(-15, -33, 30, 12, '#2f5a3a'); px(-9, -45, 18, 6, '#2f5a3a');
-          px(-12, -42, 18, 18, '#3f7a3e'); px(-15, -36, 6, 9, '#3f7a3e');
-          px(-9, -42, 9, 9, '#5f9a40'); px(-6, -45, 6, 3, '#5f9a40');
+          px(-3, -18, 6, 18, '#6b4226');
+          px(-13, -42, 26, 24, ['#2f8f3a', '#3aa047', '#27803a', '#4aa84a'][d.hue]);
+          px(-9, -48, 18, 8, ['#2f8f3a', '#3aa047', '#27803a', '#4aa84a'][d.hue]);
+          px(-9, -38, 6, 6, 'rgba(255,255,255,0.15)');
         } else if (d.kind === 'house') {
           const wall = ['#f2e6d0', '#e9c46a', '#c9d7f0', '#f4b6a6'][d.hue];
           px(-16, -24, 32, 24, wall);
@@ -1366,19 +1212,14 @@
         const spring = Math.exp(-4.5 * p.jig) * Math.cos(17 * p.jig) * p.hit;
         const breath = Math.sin(clock * 1.6 + p.spin) * 0.03;
         ctx.scale(1 + spring * 0.22 + breath, 1 - spring * 0.32 - breath * 0.6);
-        const base = p.type === 'nlc' ? 'rgba(130,200,255,0.85)' : '#ffd9c2';
-        const shade = p.type === 'nlc' ? 'rgba(80,120,255,0.7)' : '#d98a8e';
+        const base = p.type === 'nlc' ? 'rgba(130,200,255,0.85)' : '#ffffff';
+        const shade = p.type === 'nlc' ? 'rgba(80,120,255,0.7)' : '#d7e6f5';
         const bulge = (i) => 1 + spring * 0.18 * (i % 2 ? 1 : -1) + Math.sin(clock * 2.3 + p.spin + i * 1.7) * 0.04;
         const puffs = [[-w * 0.32, 18, 17], [-w * 0.1, 12, 22], [w * 0.14, 14, 20], [w * 0.34, 20, 15]].map(([x, y, r], i) => [x, y, r * bulge(i)]);
         ctx.fillStyle = shade;
         for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x, y + 5, r, 0, TAU); ctx.fill(); }
         ctx.fillStyle = base;
         for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
-        if (p.type === 'cloud') {
-          // Sunlit tops, like the clouds in a pixel-art sunset
-          ctx.fillStyle = '#fff1de';
-          for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x - r * 0.2, y - r * 0.3, r * 0.55, 0, TAU); ctx.fill(); }
-        }
         if (p.type === 'nlc') { ctx.strokeStyle = 'rgba(200,240,255,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-w / 2, 10); ctx.bezierCurveTo(-w / 4, 0, w / 4, 22, w / 2, 8); ctx.stroke(); }
       } else if (p.type === 'balloon') {
         ctx.scale(1 + sq * 0.15, 1 - sq * 0.15);
@@ -1571,13 +1412,10 @@
   }
 
   function render() {
-    if (state === 'splash') { ctx = mainCtx; drawIntro(); return; }
+    if (state === 'splash') { drawIntro(); return; }
     const anchorY = H * (cam.anchor || 0.46);
     cx = Math.round(W / 2);
     cy = anchorY + cam.r;
-    // Pixel pass: the whole world goes onto the small canvas
-    ctx = loCtx;
-    ctx.setTransform(1 / PIX, 0, 0, 1 / PIX, 0, 0);
     drawSky();
     ctx.save();
     if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
@@ -1585,7 +1423,6 @@
     const z = cam.zoom, pivotY = cy - player.r;
     if (z < 0.999) { ctx.translate(cx, pivotY); ctx.scale(z, z); ctx.translate(-cx, -pivotY); }
     view = { x0: cx - cx / z, x1: cx + (W - cx) / z, y0: pivotY - pivotY / z, y1: pivotY + (H - pivotY) / z };
-    lastZ = z; lastPivotY = pivotY;
     drawMountains();
     drawEarth();
     drawDecor();
@@ -1629,12 +1466,6 @@
     drawFx();
     ctx.restore();
     drawSpeedLines();
-    // Scale the pixel canvas up onto the screen, then crisp text on top
-    ctx = mainCtx;
-    quantize();
-    ctx.drawImage(lo, 0, 0, lo.width, lo.height, 0, 0, lo.width * PIX, lo.height * PIX);
-    flushText();
-    drawPops();
     drawBanner();
     if (fx.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${fx.flash * 0.5})`; ctx.fillRect(0, 0, W, H); }
     if (state === 'descend') drawIntroOverlay();
