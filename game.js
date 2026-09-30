@@ -1382,6 +1382,7 @@
   let boardBack = 'title';
   const setStatus = (text) => { const el = $('post-status'); el.textContent = text; el.hidden = !text; };
   function placeText(res, m) {
+    if (res && res.worker) return `Posted as ${res.name}! It shows on the board in a minute or two.`;
     if (res && res.pending) return 'Finish on GitHub: tap Submit new issue. Your run shows on the board a minute or two later.';
     if (!res || !res.rank) return 'Posted.';
     const where = board.kind === 'artifact' ? "this page's" : 'the';
@@ -1397,7 +1398,9 @@
       setStatus(placeText(res, run.mode));
       $('post').hidden = true;
     } catch (e) {
-      setStatus(e && e.message === 'name' ? 'Type a name first (letters and numbers).' : "Couldn't reach the scoreboard. Check your connection and try again.");
+      setStatus(e && e.message === 'name' ? 'Type a name first (letters and numbers).'
+        : e && e.userMessage ? e.userMessage
+        : "Couldn't reach the scoreboard. Check your connection and try again.");
       $('post-btn').disabled = false;
     }
   }
@@ -1412,6 +1415,10 @@
       $('post-btn').disabled = false;
       $('post').hidden = false;
     } else if (board.needsName) {
+      $('post-label').textContent = 'Your name on the scoreboard';
+      $('post-name').hidden = false;
+      $('post-btn').textContent = 'Post score';
+      $('post-gh').hidden = !board.viaWorker;
       let saved = '';
       try { saved = localStorage.getItem(NAME_KEY) || ''; } catch (e) { /* no storage */ }
       $('post-name').value = saved;
@@ -1471,6 +1478,11 @@
       postRun(name);
     });
     $('post-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('post-btn').click(); });
+    $('post-gh').addEventListener('click', () => {
+      if (!lastRun) return;
+      setStatus(placeText(board.postWithGithub(lastRun), lastRun.mode));
+      $('post').hidden = true;
+    });
   }
 
   function medalHtml(medal, label, value, isNew, hint) {
