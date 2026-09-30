@@ -113,6 +113,18 @@
       burnNode.f.frequency.setTargetAtTime(300 + level * 1500, t, 0.08);
       if (level < 0.02) { const n = burnNode; burnNode = null; n.g.gain.setTargetAtTime(0, t, 0.05); n.src.stop(t + 0.4); }
     },
+    // Geom pickup: a bright blip that climbs with the multiplier
+    geom(m) {
+      if (!ok()) return;
+      const t = now(), n = 72 + Math.min(m, 30) * 0.7;
+      voice({ type: 'square', f: hz(n), f1: hz(n + 12), t, dur: 0.08, vol: 0.05 });
+      voice({ type: 'triangle', f: hz(n + 19), t: t + 0.04, dur: 0.1, vol: 0.05 });
+    },
+    multLost() {
+      if (!ok()) return;
+      const t = now();
+      [76, 72, 67, 60].forEach((m, i) => voice({ type: 'square', f: hz(m), t: t + i * 0.07, dur: 0.1, vol: 0.05 }));
+    },
     sizzle() {
       if (!ok()) return;
       noise({ t: now(), dur: 0.6, vol: 0.25, type: 'highpass', freq: 3000, freq1: 7000 });

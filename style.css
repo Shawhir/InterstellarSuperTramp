@@ -176,6 +176,53 @@ body {
 .hud button[aria-pressed="false"] { color: var(--muted); border-style: dashed; }
 .pad button.on { border-color: var(--star); color: var(--star); }
 .pad .jump { width: 96px; font-size: 11px; }
+/* Title logo: each letter of SUPERTRAMP takes its turn on the trampoline */
+.card h1.logo span { color: inherit; }
+.card h1.logo .logo-top { color: #8fd0ff; }
+.card h1.logo .logo-top i { color: var(--star); }
+.card h1.logo .logo-main { color: var(--star); }
+.card h1.logo .logo-main span:nth-child(n+6) { color: #eef1ff; }
+.card h1.logo .logo-tag { color: var(--muted); font-weight: normal; }
+.card h1.logo .logo-top { font-weight: normal; }
+.card .geom-word { color: #6dff7a; }
+#title .card { gap: 12px; }
+#title .card p { font-size: 20px; }
+@media (max-width: 480px) { #title .card p { font-size: 17px; } #title .card { gap: 10px; } .logo-tag { font-size: 16px; } }
+@media (pointer: coarse) { #title .card .keys { display: none; } }
+.card h1.logo { display: grid; justify-items: center; gap: 8px; margin: 0 0 4px; text-align: center; }
+.logo-top { font-family: var(--display); font-size: 11px; letter-spacing: 0.5em; color: #8fd0ff; padding-left: 0.5em; }
+.logo-top i { font-style: normal; color: var(--star); display: inline-block; animation: twinkle 1.6s ease-in-out infinite; }
+.logo-top i:last-child { animation-delay: 0.8s; }
+.logo-main { display: flex; justify-content: center; font-family: var(--display); font-size: clamp(22px, 7.4vw, 36px); line-height: 1; color: var(--star); padding-top: 14px; }
+.logo-main span {
+  display: inline-block;
+  text-shadow: 2px 2px 0 #e0433b, 4px 4px 0 #1b1530, 5px 5px 0 rgba(0, 0, 0, 0.4);
+  animation: letterhop 2.4s cubic-bezier(0.3, 0, 0.4, 1) infinite;
+  animation-delay: calc(var(--i) * 0.09s);
+}
+.logo-main span:nth-child(n+6) { color: #eef1ff; }
+.logo-tag { font-family: var(--body); font-size: 19px; color: var(--muted); }
+@keyframes letterhop {
+  0%, 30%, 100% { transform: translateY(0) scale(1, 1); }
+  8% { transform: translateY(2px) scale(1.15, 0.8); }
+  16% { transform: translateY(-14px) scale(0.92, 1.1); }
+  24% { transform: translateY(0) scale(1.08, 0.9); }
+}
+@keyframes twinkle { 0%, 100% { opacity: 1; transform: scale(1) rotate(0); } 50% { opacity: 0.35; transform: scale(0.7) rotate(45deg); } }
+@media (prefers-reduced-motion: reduce) { .logo-main span, .logo-top i { animation: none; } }
+
+/* Score and multiplier (Geometry Wars style) */
+.scoreline { display: flex; align-items: baseline; gap: 10px; text-shadow: 2px 2px 0 var(--night); }
+.score { font-family: var(--display); font-size: 20px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.mult { font-family: var(--display); font-size: 16px; color: #6dff7a; display: inline-block; transform-origin: left center; }
+.mult.bump { animation: multbump 0.3s ease-out; }
+@keyframes multbump { 0% { transform: scale(1); } 40% { transform: scale(1.5); } 100% { transform: scale(1); } }
+.card .won-score { font-family: var(--display); font-size: 26px; color: var(--ink); }
+.card .won-score b { font-size: 10px; font-weight: normal; color: var(--go); vertical-align: middle; }
+.title-board { display: grid; gap: 6px; }
+.tb-head { font-family: var(--display); font-size: 10px; letter-spacing: 0.06em; color: #6dff7a; text-transform: uppercase; }
+.board-list.compact li { font-size: 19px; padding: 0 6px; }
+
 /* Mode picker */
 .modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .card .modes .mode {
@@ -260,6 +307,8 @@ body {
   .hud { top: calc(env(safe-area-inset-top, 0px) + 8px); left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); }
   .alt { font-size: 13px; }
   .layer { font-size: 17px; }
+  .score { font-size: 15px; }
+  .mult { font-size: 12px; }
   .stars { font-size: 12px; }
   .hud button { font-size: 8px; padding: 5px 6px; }
   .pad { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
@@ -269,6 +318,8 @@ body {
   .overlay { place-items: start center; padding-block: 12px; }
   .card { max-width: 620px; padding: 14px 16px; gap: 8px; }
   .card h1 { font-size: 16px; }
+  .logo-main { font-size: 24px; padding-top: 8px; }
+  .logo-tag { font-size: 16px; }
   .card p { font-size: 17px; }
   .card button { padding: 10px 14px; font-size: 11px; }
   .card .modes .mode { padding: 8px 10px; }
@@ -276,4 +327,4 @@ body {
 }
 @media (max-width: 380px) { .modes { grid-template-columns: 1fr; } }
 
-@media (prefers-reduced-motion: reduce) { .toast { transition: none; } .stars.pop { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } .stars.pop, .mult.bump { animation: none; } }

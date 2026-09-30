@@ -9,7 +9,7 @@
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const $ = (id) => document.getElementById(id);
-  const hud = { alt: $('alt'), layer: $('layer'), stars: $('stars'), toast: $('toast'), music: $('music'), sfx: $('sfx'), tilt: $('tilt') };
+  const hud = { score: $('score'), mult: $('mult'), alt: $('alt'), layer: $('layer'), stars: $('stars'), toast: $('toast'), music: $('music'), sfx: $('sfx'), tilt: $('tilt') };
 
   // ---- Tuning ---------------------------------------------------------------
   const R0 = 480;           // Earth radius in pixels
@@ -231,8 +231,10 @@
   // Juice: screen shake, landing rings, floating text, afterimages, banners
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let shake = 0;
-  let fx = { flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
+  let fx = { geoms: [], flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
   const tilt = { on: false, axis: 0, zero: null, got: false };
+  let score = 0;        // points this run, each award multiplied by mult
+  let mult = 1;         // Geometry Wars-style multiplier: +1 per geom, back to x1 on a miss
   let checkpoint = 0;   // highest checkpoint layer reached this run
   let falls = 0;        // misses this run (caught at a checkpoint or back on Earth)
   let heightRecordShown = false;
@@ -275,8 +277,10 @@
     world = buildWorld(seed);
     Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1, apexR: R0, lastPlat: null, lastH: 0, heat: 0 });
     theta = 0; lastTier = -1; bestTier = -1; playTime = 0; particles = [];
-    fx = { flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
+    fx = { geoms: [], flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
     checkpoint = 0; falls = 0; heightRecordShown = false;
+    score = 0; mult = 1; fx.geoms = [];
+    updateScoreHud();
     cam.r = R0;
     updateStarsHud();
   }
@@ -292,9 +296,41 @@
     hud.toast.style.opacity = '1';
     toastTimer = secs;
   }
+  const fmtScore = (n) => Math.round(n).toLocaleString('en-GB');
+  function updateScoreHud(bump) {
+    if (!hud.score) return;
+    hud.score.textContent = fmtScore(score);
+    hud.mult.textContent = `x${mult}`;
+    if (bump) { hud.mult.classList.remove('bump'); void hud.mult.offsetWidth; hud.mult.classList.add('bump'); }
+  }
+  function addScore(pts, a, R) {
+    const gained = Math.round(pts * mult);
+    score += gained;
+    updateScoreHud();
+    if (a !== undefined) fx.pops.push({ a, R, text: `+${fmtScore(gained)}`, color: '#eef1ff', t: 0, small: true });
+    return gained;
+  }
+  function addMult(a, R) {
+    mult += 1;
+    sfx.geom(mult);
+    if (a !== undefined) fx.pops.push({ a, R: R + 18, text: `x${mult}`, color: '#6dff7a', t: 0 });
+    updateScoreHud(true);
+  }
+  function loseMult() {
+    if (mult > 1) { pop(`x${mult} LOST`, '#ff5a4a', player.r + 150); sfx.multLost(); }
+    mult = 1;
+    updateScoreHud(true);
+  }
+  // Green geoms burst out on big moments and drift about; grab them before they fade.
+  function spawnGeoms(n, a, R) {
+    for (let i = 0; i < n; i++) {
+      fx.geoms.push({ a: a + ((Math.random() - 0.5) * 60) / R, R: R + 30 + Math.random() * 40, vt: (Math.random() - 0.5) * 260, vr: 60 + Math.random() * 160, t: 0, life: 5 + Math.random(), spin: Math.random() * TAU });
+    }
+  }
+
   function updateStarsHud(popIt) {
     const got = world.stars.filter((s) => s.taken).length;
-    hud.stars.textContent = `★ ${got} / ${world.stars.length}`;
+    hud.stars.textContent = `◆ ${got} / ${world.stars.length}`;
     if (popIt) { hud.stars.classList.remove('pop'); void hud.stars.offsetWidth; hud.stars.classList.add('pop'); }
   }
   function kmAt(r) {
@@ -404,7 +440,10 @@
     burst(-theta, p.R, puff, 12, 200);
     ring(-theta, p.R, puff);
     addShake(2 + player.speed * 1.5);
+    addScore(10 * (p.tier + 1), -theta, p.R + 60);
     if (off < 10 && p.tier > 0) {
+      addScore(100);
+      spawnGeoms(3, -theta, p.R);
       pop('PERFECT!', '#52e07a');
       sfx.perfect();
       burst(-theta, p.R, '#52e07a', 10, 260);
@@ -415,6 +454,8 @@
       pop('CHECKPOINT', '#52e07a', player.r + 130);
     }
     if (p.tier > bestTier) {
+      addScore(500);
+      spawnGeoms(p.tier > 0 && TIERS[p.tier].layer !== TIERS[p.tier - 1].layer ? 5 : 2, -theta, p.R);
       bestTier = p.tier;
       if (bestTier > rec().bestTier) {
         if (rec().bestTier >= 1 && !heightRecordShown) {
@@ -463,6 +504,7 @@
     if (!p) return;
     player.heat = 0; fx.flames = [];
     falls++;
+    loseMult();
     theta = -p.a;
     player.r = p.R + 170; player.vr = -150; player.vx = 0;
     player.apexR = player.r; player.lastPlat = null; player.lastH = 0;
@@ -496,6 +538,7 @@
   }
   function startRide(p) {
     const r = p.ride;
+    addScore(250);
     r.state = 'moving'; r.from = r.near; r.to = r.far; r.t = 0;
     banner('AROUND THE WORLD', r.title);
     toast(r.fact, 5);
@@ -560,7 +603,7 @@
         if (state === 'play' && mode === 'checkpoint' && checkpoint > 0 && player.vr < 0 && player.r < tierR(checkpoint) - 180) rescue();
         if (state === 'play' && player.r <= R0) {
           const hard = player.vr < -900;
-          if (lastTier >= 0) falls++;
+          if (lastTier >= 0) { falls++; loseMult(); }
           player.r = R0; player.vr = 0; player.onGround = true; player.squash = 1;
           if (player.heat > 0.3) impact(player.heat);
           else if (lastTier >= 0) { toast('Back on solid ground. Find a trampoline!'); sfx.thud(); addShake(hard ? 12 : 6); ring(-theta, R0, '#c9a27a', 1.4); }
@@ -571,23 +614,44 @@
         }
       }
 
-      // Stars
+      // Stars are green geoms: pulled in when you're close, +1 multiplier each.
       const bodyR = player.r + 24;
+      const pull = (g, range) => {
+        const ph = g.a + theta;
+        const dx = g.R * Math.sin(ph), dy = g.R * Math.cos(ph) - bodyR;
+        const d = Math.hypot(dx, dy);
+        if (d < range) {
+          const k = Math.min(1, dt * (4 + (1 - d / range) * 10));
+          g.R += (bodyR - g.R) * k;
+          g.a += wrap(-theta - g.a) * k;
+        }
+        return d;
+      };
       for (const s of world.stars) {
         if (s.taken) continue;
-        const ph = s.a + theta;
-        const dx = s.R * Math.sin(ph), dy = s.R * Math.cos(ph) - bodyR;
-        const reach = s.big ? 90 : 30;
-        if (dx * dx + dy * dy < reach * reach) {
+        const d = pull(s, s.big ? 200 : 150);
+        if (d < (s.big ? 60 : 28)) {
           s.taken = true;
-          const got = world.stars.filter((q) => q.taken).length;
-          sfx.star(got);
-          burst(s.a, s.R, '#ffd23f', 18, 170);
-          ring(s.a, s.R, '#ffd23f', 0.8);
-          fx.pops.push({ a: s.a, R: s.R + 20, text: '+1 ★', color: '#ffd23f', t: 0 });
+          sfx.star(mult);
+          burst(s.a, s.R, '#6dff7a', 16, 170);
+          ring(s.a, s.R, '#6dff7a', 0.8);
+          addMult(s.a, s.R);
+          addScore(25);
           updateStarsHud(true);
         }
       }
+      for (const g of fx.geoms) {
+        g.t += dt;
+        g.R += g.vr * dt; g.a += (g.vt * dt) / g.R;
+        g.vr *= 1 - dt * 2.2; g.vt *= 1 - dt * 2.2;
+        if (pull(g, 170) < 26) {
+          g.t = g.life;
+          burst(g.a, g.R, '#6dff7a', 8, 120);
+          addMult(g.a, g.R);
+          addScore(25);
+        }
+      }
+      fx.geoms = fx.geoms.filter((g) => g.t < g.life);
     }
 
     player.squash = player.squash > 0 ? Math.max(0, player.squash - dt * 5) : Math.min(0, player.squash + dt * 4);
@@ -899,7 +963,8 @@
     for (const q of fx.pops) {
       at(q.a + theta, q.R + q.t * 50, () => {
         const k = q.t / 1.1;
-        const sc = q.t < 0.15 ? 0.6 + (q.t / 0.15) * 0.6 : 1.2 - Math.min(0.2, (q.t - 0.15));
+        let sc = q.t < 0.15 ? 0.6 + (q.t / 0.15) * 0.6 : 1.2 - Math.min(0.2, (q.t - 0.15));
+        if (q.small) sc *= 0.75;
         ctx.scale(sc, sc);
         ctx.globalAlpha = 1 - k * k;
         ctx.fillStyle = '#1b1530'; ctx.fillText(q.text, 2, 2);
@@ -1171,22 +1236,33 @@
     }, 260);
   }
 
+  function drawGeom(a, R, size, spin, alpha) {
+    at(a + theta, R, () => {
+      ctx.globalAlpha = alpha;
+      const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, size * 2.2);
+      glow.addColorStop(0, 'rgba(109,255,122,0.55)');
+      glow.addColorStop(1, 'rgba(109,255,122,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(0, 0, size * 2.2, 0, TAU); ctx.fill();
+      ctx.rotate(spin);
+      ctx.strokeStyle = '#6dff7a'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(0, -size); ctx.lineTo(size * 0.7, 0); ctx.lineTo(0, size); ctx.lineTo(-size * 0.7, 0); ctx.closePath(); ctx.stroke();
+      ctx.fillStyle = 'rgba(190,255,196,0.9)';
+      ctx.beginPath(); ctx.moveTo(0, -size * 0.45); ctx.lineTo(size * 0.3, 0); ctx.lineTo(0, size * 0.45); ctx.lineTo(-size * 0.3, 0); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    }, 40);
+  }
   function drawStar(s) {
     if (s.taken) return;
-    at(s.a + theta, s.R, () => {
-      const bob = Math.sin(clock * 3 + s.id) * 4;
-      ctx.translate(0, bob);
-      const glow = 0.25 + 0.15 * Math.sin(clock * 4 + s.id);
-      ctx.fillStyle = `rgba(255,210,63,${glow})`; ctx.beginPath(); ctx.arc(0, 0, 18, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#ffd23f';
-      ctx.beginPath();
-      for (let i = 0; i < 10; i++) {
-        const r = i % 2 ? 5 : 12, ang = (i / 10) * TAU - Math.PI / 2;
-        ctx.lineTo(Math.cos(ang) * r, Math.sin(ang) * r);
-      }
-      ctx.closePath(); ctx.fill();
-      px(-2, -4, 3, 3, '#fff7d6');
-    }, 40);
+    const bob = Math.sin(clock * 3 + s.id) * 4;
+    drawGeom(s.a, s.R + bob, s.big ? 14 : 10, clock * 2 + s.id, 1);
+  }
+  function drawGeoms() {
+    for (const g of fx.geoms) {
+      const left = g.life - g.t;
+      const blink = left < 1.5 ? (Math.sin(g.t * 30) > 0 ? 1 : 0.25) : 1;
+      drawGeom(g.a, g.R, 8, g.spin + clock * 4, blink);
+    }
   }
 
   function arrowShape(color, dir) {
@@ -1298,6 +1374,7 @@
       });
     }
     for (const s of world.stars) drawStar(s);
+    drawGeoms();
 
     const feetX = cx, feetY = Math.round(cy - player.r);
     let frame = 'stand';
@@ -1346,11 +1423,15 @@
     addShake(10);
     for (let i = 0; i < 5; i++) burst(-theta + (i - 2) * 0.004, player.r, ['#ffd23f', '#52e07a', '#e0433b', '#3f6fd8', '#ffffff'][i], 14, 300);
     sfx.win();
+    const timeBonus = Math.max(0, Math.round((180 - playTime) * 100));
+    addScore(10000 + timeBonus);
     const got = world.stars.filter((s) => s.taken).length, total = world.stars.length;
     const tMedal = timeMedal(playTime), sMedal = starMedal(got, total);
     const R = rec();
     const newTime = R.bestTime === null || playTime < R.bestTime;
     const newStars = got > R.bestStars;
+    const newScore = score > (R.bestScore || 0);
+    if (newScore) R.bestScore = score;
     R.wins++;
     R.runs = Math.max(R.runs, R.wins);
     R.bestTier = TOP;
@@ -1362,14 +1443,16 @@
     saveBests();
     const nextTime = TIME_MEDALS.slice().reverse().find(([limit]) => playTime > limit);
     $('won-mode').textContent = MODES[mode].name;
-    lastRun = { mode, timeMs: playTime * 1000, stars: got, total, falls };
+    lastRun = { mode, timeMs: playTime * 1000, stars: got, total, falls, score: Math.round(score) };
     offerPost();
     $('medals').innerHTML = [
       medalHtml(tMedal, 'Time', fmtTime(playTime), newTime, nextTime ? `${nextTime[1]} under ${fmtTime(nextTime[0])}` : 'top medal'),
-      medalHtml(sMedal, 'Stars', `${got} / ${total}`, newStars, sMedal === 'gold' ? 'every star' : 'gold for every star'),
+      medalHtml(sMedal, 'Geoms', `${got} / ${total}`, newStars, sMedal === 'gold' ? 'every geom' : 'gold for every geom'),
       medalHtml(falls === 0 ? 'gold' : 'none', 'Falls', String(falls), false, falls === 0 ? 'flawless run' : 'gold for none'),
     ].join('');
-    $('won-stats').textContent = R.wins === 1 ? 'Your first trip to the Moon.' : newTime ? 'New best time!' : `Your best time is ${fmtTime(R.bestTime)}.`;
+    $('won-score').textContent = fmtScore(score);
+    $('won-score-new').hidden = !newScore;
+    $('won-stats').textContent = `Includes a Moon bonus of ${fmtScore(10000 + timeBonus)} x${mult}. ` + (R.wins === 1 ? 'Your first trip to the Moon.' : newTime ? 'New best time!' : `Your best time is ${fmtTime(R.bestTime)}.`);
     renderBests();
     setTimeout(() => { $('won').hidden = false; }, 900);
   }
@@ -1428,8 +1511,7 @@
       postRun(''); // claude.ai page: posted under your own profile name
     }
   }
-  function renderBoardRows(rows) {
-    const list = $('board-list');
+  function renderBoardRows(rows, list = $('board-list')) {
     list.textContent = '';
     if (!rows.length) {
       const li = document.createElement('li');
@@ -1441,11 +1523,21 @@
     rows.forEach((r, i) => {
       const li = document.createElement('li');
       if (r.isMe) li.className = 'me';
-      const cells = [['rank', `#${i + 1}`], ['who', r.name], ['time', fmtTime(r.timeMs / 1000)], ['stars-col', `★${r.stars}/${r.total}`]];
+      const cells = [['rank', `#${i + 1}`], ['who', r.name], ['stars-col', fmtScore(r.score || 0)], ['time', fmtTime(r.timeMs / 1000)]];
       for (const [cls, text] of cells) { const span = document.createElement('span'); span.className = cls; span.textContent = text; li.append(span); }
       list.append(li);
     });
   }
+  // The top five, right on the title screen
+  async function loadTitleBoard() {
+    if (!board || board.kind === 'none') return;
+    $('title-board').hidden = false;
+    $('tb-mode').textContent = MODES[mode].short;
+    const list = $('tb-list');
+    list.innerHTML = '<li class="note">Loading…</li>';
+    try { renderBoardRows(await board.top(mode, 5), list); } catch (e) { list.innerHTML = '<li class="note">Couldn\'t load the scoreboard.</li>'; }
+  }
+
   async function loadBoard() {
     document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.board === boardMode)));
     const list = $('board-list');
@@ -1455,7 +1547,7 @@
   function openBoard(from) {
     boardBack = from;
     boardMode = mode;
-    $('board-where').textContent = `${board.where()}. Fastest Moon landings; ties go to more stars.`;
+    $('board-where').textContent = `${board.where()}. Highest scores reaching the Moon; ties go to the faster run.`;
     $(from).hidden = true;
     $('board').hidden = false;
     loadBoard();
@@ -1463,12 +1555,13 @@
   if (board) {
     board.ready.then((kind) => {
       if (kind === 'none') return;
+      loadTitleBoard();
       $('open-board').hidden = false;
       $('won-board').hidden = false;
     });
     $('open-board').addEventListener('click', () => openBoard('title'));
     $('won-board').addEventListener('click', () => openBoard('won'));
-    $('close-board').addEventListener('click', () => { $('board').hidden = true; $(boardBack).hidden = false; });
+    $('close-board').addEventListener('click', () => { $('board').hidden = true; $(boardBack).hidden = false; if (boardBack === 'title') loadTitleBoard(); });
     document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => { boardMode = t.dataset.board; loadBoard(); }));
     $('post-btn').addEventListener('click', () => {
       if (board.viaGithub) { postRun(''); return; }
@@ -1493,8 +1586,8 @@
       const R = bests[m], el = $(`bests-${m}`);
       if (!R.runs && !R.wins) { el.textContent = 'No runs yet.'; continue; }
       const parts = [];
-      if (R.bestTime !== null) parts.push(`best <b>${fmtTime(R.bestTime)}</b>`);
-      if (R.bestStars) parts.push(`<b>${R.bestStars}</b> stars`);
+      if (R.bestScore) parts.push(`best <b>${fmtScore(R.bestScore)}</b>`);
+      if (R.bestTime !== null) parts.push(`fastest <b>${fmtTime(R.bestTime)}</b>`);
       if (R.bestTier >= 0 && R.bestTier < TOP) parts.push(`highest <b>${fmtKm(TIERS[R.bestTier].km)}</b>`);
       parts.push(`Moon ${R.wins}/${R.runs}`);
       el.innerHTML = parts.join(' · ');
@@ -1509,6 +1602,7 @@
     state = 'title';
     $('won').hidden = true;
     renderBests();
+    loadTitleBoard();
     $('title').hidden = false;
   });
   const setToggle = (btn, label, on) => { btn.textContent = `${label} ${on ? 'ON' : 'OFF'}`; btn.setAttribute('aria-pressed', String(on)); };
@@ -1570,6 +1664,7 @@
       // On the title screen, left/right picks the mode that Space will start.
       mode = KEYMAP[e.code] === 'left' ? 'checkpoint' : 'uber';
       renderBests();
+      loadTitleBoard();
       e.preventDefault();
     } else if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
     else if (JUMP.has(e.code)) {
@@ -1610,14 +1705,14 @@
 
   // Hot reload support when hosted as an artifact; harmless elsewhere.
   function snapshot() {
-    return { seed: world.seed, state, theta, lastTier, bestTier, playTime, checkpoint, falls, mode, player: { ...player, lastPlat: null }, taken: world.stars.filter((s) => s.taken).map((s) => s.id) };
+    return { seed: world.seed, state, theta, lastTier, bestTier, playTime, checkpoint, falls, mode, score, mult, player: { ...player, lastPlat: null }, taken: world.stars.filter((s) => s.taken).map((s) => s.id) };
   }
   function start(data) {
     resize();
     reset(data && data.seed ? data.seed : 20260930);
     if (data && data.state === 'play') {
       theta = data.theta; lastTier = data.lastTier; bestTier = data.bestTier; playTime = data.playTime;
-      checkpoint = data.checkpoint || 0; falls = data.falls || 0; mode = data.mode === 'uber' ? 'uber' : 'checkpoint';
+      checkpoint = data.checkpoint || 0; falls = data.falls || 0; score = data.score || 0; mult = data.mult || 1; updateScoreHud(); mode = data.mode === 'uber' ? 'uber' : 'checkpoint';
       Object.assign(player, data.player);
       cam.r = player.r;
       for (const id of data.taken || []) if (world.stars[id]) world.stars[id].taken = true;
