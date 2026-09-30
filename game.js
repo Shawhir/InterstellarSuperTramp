@@ -1946,6 +1946,7 @@
     const dt = Math.min(1 / 30, (t - last) / 1000 || 0);
     last = t;
     checkSize();
+    if (snd) snd.beat();
     update(dt);
     render();
     requestAnimationFrame(frame);

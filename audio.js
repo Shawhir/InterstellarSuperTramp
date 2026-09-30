@@ -20,6 +20,17 @@
   // Otherwise iOS keeps "media" audio alive in the background while the browser
   // throttles the music timer, which comes out as stuttering notes.
   let musicWasPlaying = false;
+  let dozing = false;
+  // Heartbeat from the game loop. If frames stop (page closed, hidden or frozen
+  // without telling us), the watchdog below silences everything.
+  let lastBeat = performance.now();
+  function beat() {
+    lastBeat = performance.now();
+    if (dozing && !document.hidden) { dozing = false; unsleep(); }
+  }
+  setInterval(() => {
+    if (!dozing && ac && performance.now() - lastBeat > 600) { dozing = true; sleep(); }
+  }, 250);
   function sleep() {
     musicWasPlaying = musicWasPlaying || music.playing;
     music.stop();
@@ -228,6 +239,7 @@
       if (echo) echo.gain.setTargetAtTime(this.space * 0.8, ac.currentTime, 0.5);
     },
     tick() {
+      if (document.hidden || performance.now() - lastBeat > 600) { sleep(); dozing = true; return; }
       if (!musicOn) { this.next = ac.currentTime + 0.05; return; }
       const bpm = 112 + (this.speed - 1) * 40 - this.space * 12;
       const sixteenth = 60 / bpm / 4;
@@ -266,8 +278,12 @@
   window.addEventListener('pagehide', sleep);
   window.addEventListener('pageshow', () => { if (!document.hidden) unsleep(); });
 
+  window.addEventListener('freeze', sleep);
+  window.addEventListener('blur', () => { if (document.hidden) sleep(); });
+
   window.SuperTrampAudio = {
     init,
+    beat,
     sfx,
     music,
     get musicOn() { return musicOn; },
