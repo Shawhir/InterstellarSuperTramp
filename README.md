@@ -50,8 +50,10 @@ says so if that happens.
   the same, but faster bounces leave less time to steer; the HUD shows the current
   multiplier. Gaps between platforms shrink a little as it speeds up, so every jump
   stays possible.
-- Three mountain ranges sit behind the ground and turn more slowly than it
-  (parallax), so they feel further away.
+- Five mountain ranges sit behind the ground and turn more slowly than it
+  (parallax), so they feel further away. They also sink more slowly than the
+  ground as you climb, so the first few bounces reveal the far ranges behind,
+  before they fade into the haze on the way to space.
 - `audio.js`: every sound is synthesised with the Web Audio API, no audio files.
   Bounces climb a pentatonic scale as you go higher; the chiptune soundtrack shifts
   from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow

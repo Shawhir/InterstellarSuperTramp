@@ -163,8 +163,15 @@
     }
     const swirls = [];
     for (let i = 0; i < 26; i++) swirls.push({ a: rnd() * TAU, rf: 0.6 + rnd() * 0.26, len: 0.15 + rnd() * 0.3 });
-    // Mountain ranges behind the ground: [parallax factor, colour, snow, heights]
-    const ranges = [[0.55, '#9fb4d8', '#eef3ff', 150], [0.78, '#6f8fb5', '#dfe8f7', 105], [0.9, '#4d7a6e', null, 60]].map(([f, col, snow, hMax]) => {
+    // Mountain ranges behind the ground, farthest first:
+    // [sideways parallax, vertical parallax, colour, snow, tallest peak]
+    const ranges = [
+      [0.3, 0.55, '#cdd8ee', '#ffffff', 250],
+      [0.42, 0.64, '#b3c3e2', '#f5f8ff', 205],
+      [0.55, 0.74, '#9fb4d8', '#eef3ff', 160],
+      [0.72, 0.84, '#7f9bc2', '#e3ebf8', 115],
+      [0.88, 0.93, '#4d7a6e', null, 60],
+    ].map(([f, sink, col, snow, hMax]) => {
       const n = 480, h = new Array(n).fill(0);
       const peaks = 26 + Math.floor(rnd() * 10);
       for (let i = 0; i < peaks; i++) {
@@ -174,7 +181,7 @@
           h[idx] = Math.max(h[idx], height * (1 - Math.abs(j) / width));
         }
       }
-      return { f, col, snow, hMax, h: h.map((v) => Math.round(v / 4) * 4) };
+      return { f, sink, col, snow, hMax, h: h.map((v) => Math.round(v / 4) * 4) };
     });
     const sky = [];
     for (let i = 0; i < 170; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.15 ? 2 : 1, tw: rnd() * TAU });
@@ -626,42 +633,67 @@
   }
 
   function drawMountains() {
-    if (cy - R0 - 160 > H + 60) return;
-    // Each range turns more slowly than the ground, so it feels further away.
-    for (const m of world.ranges) {
+    // Distant ranges sink more slowly than the ground as you climb, so going up
+    // reveals more and more of the mountains behind. They fade out into the haze
+    // (and then the dark) on the way to space.
+    const tf = tierFloat(player.r);
+    const fade = clamp(1 - (tf - 3) / 4, 0, 1);
+    if (fade <= 0) return;
+    const skyS = clamp((player.r - R0) / (tierR(9) - R0), 0, 1);
+    const haze = mix('#58b4f0', '#03040c', skyS).match(/\d+/g).map(Number);
+    const tint = (hex, k) => {
+      const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      return `rgb(${c.map((v, i) => Math.round(lerp(v, haze[i], k))).join(',')})`;
+    };
+    const climb = cam.r - R0;
+    ctx.globalAlpha = fade;
+    world.ranges.forEach((m, depth) => {
+      const my = cy - climb * (1 - m.sink); // this range's own centre, lifted by parallax
+      if (my - R0 - m.hMax > H + 20) return;
       const n = m.h.length;
       const rot = theta * m.f;
-      const pt = (i, extra = 0) => {
+      const hazeK = (1 - m.sink) * 0.7 + skyS * 0.5;
+      const pt = (i) => {
         const a = (i / n) * TAU + rot;
-        const r = R0 - 6 + m.h[i % n] + extra;
-        return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
+        const r = R0 - 6 + m.h[i % n];
+        return [cx + r * Math.sin(a), my - r * Math.cos(a)];
       };
-      // Only trace the part of the ring near the top of the screen.
-      const span = Math.min(n / 2, Math.ceil((n * (W / 2 + 200)) / (TAU * R0)));
+      const span = Math.min(n / 2, Math.ceil((n * (W / 2 + 260)) / (TAU * R0)));
       const mid = Math.round((((-rot / TAU) % 1) + 1) % 1 * n);
-      ctx.fillStyle = m.col;
+      ctx.fillStyle = tint(m.col, hazeK);
       ctx.beginPath();
       for (let i = mid - span; i <= mid + span; i++) {
         const [x, y] = pt((i + n) % n);
         i === mid - span ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
-      ctx.lineTo(cx, cy);
+      // Close the shape well below the screen so nothing shows through underneath.
+      ctx.lineTo(W + 400, Math.max(my, H + 400));
+      ctx.lineTo(-400, Math.max(my, H + 400));
       ctx.closePath();
       ctx.fill();
       if (m.snow) {
-        ctx.fillStyle = m.snow;
+        ctx.fillStyle = tint(m.snow, hazeK * 0.6);
         for (let i = mid - span; i <= mid + span; i++) {
           const k = (i + n) % n;
-          if (m.h[k] < m.hMax * 0.7 || m.h[k] < m.h[(k + 1) % n] || m.h[k] < m.h[(k - 1 + n) % n]) continue;
-          // Snow cap on each summit
+          if (m.h[k] < m.hMax * 0.62 || m.h[k] < m.h[(k + 1) % n] || m.h[k] < m.h[(k - 1 + n) % n]) continue;
           const [x, y] = pt(k);
           const a = (k / n) * TAU + rot;
-          ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+          const sc = 0.8 + (m.hMax / 260) * 0.7;
+          ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(sc, sc);
           ctx.beginPath(); ctx.moveTo(0, -1); ctx.lineTo(-10, 12); ctx.lineTo(-4, 9); ctx.lineTo(0, 13); ctx.lineTo(5, 9); ctx.lineTo(10, 12); ctx.closePath(); ctx.fill();
           ctx.restore();
         }
       }
-    }
+      // A soft mist line along the foot of each range adds depth between layers.
+      if (depth < world.ranges.length - 1) {
+        const g = ctx.createLinearGradient(0, my - R0 - 10, 0, my - R0 + 60);
+        g.addColorStop(0, `rgba(${haze.join(',')},0)`);
+        g.addColorStop(1, `rgba(${haze.join(',')},${0.35 * (1 - skyS)})`);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, my - R0 - 10, W, 70);
+      }
+    });
+    ctx.globalAlpha = 1;
   }
 
   function drawEarth() {
