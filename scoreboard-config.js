@@ -6,7 +6,7 @@
 window.SUPERTRAMP_SCOREBOARD = {
   // Address of the Cloudflare Worker in worker/ (lets players post with just a
   // name). Leave empty to post through GitHub issues instead.
-  workerUrl: '',
+  workerUrl: 'https://supertrampscores.mkmquinn.workers.dev',
   supabaseUrl: '',
   supabaseAnonKey: '',
 };
