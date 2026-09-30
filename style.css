@@ -176,6 +176,28 @@ body {
 .hud button[aria-pressed="false"] { color: var(--muted); border-style: dashed; }
 .pad button.on { border-color: var(--star); color: var(--star); }
 .pad .jump { width: 96px; font-size: 11px; }
+/* Intro and menu entrance */
+body.intro .hud, body.intro .toast { opacity: 0; pointer-events: none; }
+.hud { transition: opacity 0.6s; }
+.overlay.fade-in { animation: fadein 0.8s ease-out both; }
+.overlay.fade-in .card { animation: cardin 0.8s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+@keyframes fadein { from { opacity: 0; } }
+@keyframes cardin { from { transform: translateY(40px) scale(0.96); } }
+/* Stars streaming past behind the menu card */
+#title .card { position: relative; overflow: hidden; isolation: isolate; }
+#title .card::before {
+  content: ""; position: absolute; inset: -50%; z-index: -1; pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.8) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 60% 70%, rgba(190,230,255,0.8) 50%, transparent 51%),
+    radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.6) 50%, transparent 51%),
+    radial-gradient(2px 2px at 30% 85%, rgba(255,230,160,0.7) 50%, transparent 51%),
+    radial-gradient(1px 1px at 45% 45%, rgba(255,255,255,0.7) 50%, transparent 51%);
+  background-size: 180px 180px, 260px 260px, 140px 140px, 320px 320px, 210px 210px;
+  animation: starrush 6s linear infinite;
+}
+@keyframes starrush { to { background-position: -180px 180px, -260px 260px, -140px 140px, -320px 320px, -210px 210px; } }
+
 /* Title logo: each letter of SUPERTRAMP takes its turn on the trampoline */
 .card h1.logo span { color: inherit; }
 .card h1.logo .logo-top { color: #8fd0ff; }
@@ -223,7 +245,7 @@ body {
   100% { transform: none; }
 }
 @keyframes twinkle { 0%, 100% { opacity: 1; transform: scale(1) rotate(0); } 50% { opacity: 0.35; transform: scale(0.7) rotate(45deg); } }
-@media (prefers-reduced-motion: reduce) { .logo-main span, .card h1.logo .logo-main span.squash, .logo-top i, .press-start { animation: none; } }
+/* The title's small character animations stay on even with reduced motion; screen shake and speed lines are what that setting turns off. */
 
 /* Score and multiplier (Geometry Wars style) */
 .scoreline { display: flex; align-items: baseline; gap: 10px; text-shadow: 2px 2px 0 var(--night); }

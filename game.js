@@ -548,6 +548,7 @@
 
   function update(dt) {
     clock += dt;
+    if (state === 'splash' || state === 'descend') { updateIntro(dt); return; }
     for (const p of world.plats) {
       if (p.sway) p.a = p.a0 + p.sway * Math.sin(clock * p.freq + p.phase);
       if (p.ride) updateRide(p, dt);
@@ -753,7 +754,7 @@
   function px(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); }
 
   function drawSky() {
-    const s = clamp((player.r - R0) / (tierR(9) - R0), 0, 1);
+    const s = clamp((cam.r - R0) / (tierR(9) - R0), 0, 1);
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, mix('#58b4f0', '#03040c', s));
     g.addColorStop(1, mix('#d4f0ff', '#101634', Math.min(1, s * 1.1)));
@@ -1002,7 +1003,7 @@
     const tf = tierFloat(player.r);
     const fade = clamp(1 - (tf - 3) / 4, 0, 1) * clamp((cam.zoom - 0.55) / 0.35, 0, 1);
     if (fade <= 0) return;
-    const skyS = clamp((player.r - R0) / (tierR(9) - R0), 0, 1);
+    const skyS = clamp((cam.r - R0) / (tierR(9) - R0), 0, 1);
     const haze = mix('#58b4f0', '#03040c', skyS).match(/\d+/g).map(Number);
     const tint = (hex, k) => {
       const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -1345,6 +1346,7 @@
   }
 
   function render() {
+    if (state === 'splash') { drawIntro(); return; }
     const anchorY = H * (cam.anchor || 0.46);
     cx = Math.round(W / 2);
     cy = anchorY + cam.r;
@@ -1397,8 +1399,196 @@
     drawSpeedLines();
     drawBanner();
     if (fx.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${fx.flash * 0.5})`; ctx.fillRect(0, 0, W, H); }
-    drawRail();
+    if (state === 'descend') drawIntroOverlay();
+    else drawRail();
   }
+
+  // ---- Intro: a comet writes the title in space; tap to fall to Earth --------
+  const intro = { t: 0, letters: [], parts: [], warp: [], passT: 0, dT: 0, startR: 0, ready: 0 };
+  const INTRO_LINES = [
+    { text: 'INTERSTELLAR', scale: 0.4, row: -1, colors: ['#8fd0ff'] },
+    { text: 'SUPERTRAMP', scale: 1, row: 0, colors: ['#ffd23f', '#ffd23f', '#ffd23f', '#ffd23f', '#ffd23f', '#eef1ff'] },
+  ];
+  const PASS = 2.6;      // seconds for the comet to cross the screen
+  const DESCEND = 2.6;   // seconds for the fall to Earth
+  for (let i = 0; i < 140; i++) intro.warp.push({ a: Math.random() * TAU, d: Math.random(), v: 0.15 + Math.random() * 0.5 });
+
+  function introLayout() {
+    const big = Math.max(20, Math.min(W * 0.085, 72));
+    const out = [];
+    for (const line of INTRO_LINES) {
+      const size = Math.round(big * line.scale);
+      ctx.font = `${size}px "Press Start 2P", monospace`;
+      const cw = ctx.measureText('M').width * 1.06;
+      const total = cw * line.text.length;
+      const y = H * 0.42 + line.row * big * 1.25;
+      [...line.text].forEach((ch, i) => out.push({ ch, size, x: W / 2 - total / 2 + cw * (i + 0.5), y, color: line.colors[Math.min(i, line.colors.length - 1)] }));
+    }
+    return out;
+  }
+  const cometY = (x) => H * 0.42 + Math.sin((x / W) * Math.PI * 1.2 - 0.5) * H * 0.1 + 12;
+  const cometX = (k) => lerp(-0.2 * W, 1.25 * W, k);
+  const easeBack = (k) => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
+
+  function updateIntro(dt) {
+    intro.t += dt;
+    const lay = introLayout();
+    while (intro.letters.length < lay.length) intro.letters.push({ emitT: null, fx: 0, fy: 0, glint: -9 });
+    // Comet passes: the first one writes the title off its tail, later ones make it glint
+    intro.passT += dt;
+    const period = PASS + 2.2;
+    if (intro.passT > period) intro.passT -= period;
+    const k = intro.passT / PASS;
+    if (k <= 1) {
+      const hx = cometX(k), hy = cometY(hx);
+      for (let i = 0; i < 7; i++) {
+        intro.parts.push({ x: hx, y: hy, vx: -(60 + Math.random() * 160), vy: (Math.random() - 0.5) * 70, life: 0.6 + Math.random() * 0.9, t: 0, s: 2 + Math.random() * 3, c: ['#ffffff', '#bfe8ff', '#8fd0ff', '#b58cff'][i % 4] });
+      }
+      lay.forEach((L, i) => {
+        const st = intro.letters[i];
+        if (hx - 50 > L.x) {
+          if (st.emitT === null) {
+            st.emitT = intro.t; st.fx = hx - 50; st.fy = cometY(hx - 50);
+            for (let j = 0; j < 8; j++) intro.parts.push({ x: st.fx, y: st.fy, vx: (Math.random() - 0.5) * 160, vy: (Math.random() - 0.5) * 160, life: 0.5 + Math.random() * 0.5, t: 0, s: 2 + Math.random() * 2, c: L.color });
+          } else if (intro.t - st.glint > 1 && intro.t - st.emitT > 1.5) st.glint = intro.t;
+        }
+      });
+    }
+    for (const p of intro.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 1 - dt * 0.8; }
+    intro.parts = intro.parts.filter((p) => p.t < p.life);
+    if (!intro.ready && intro.letters.every((l) => l.emitT !== null && intro.t - l.emitT > 0.9)) intro.ready = intro.t;
+    for (const w of intro.warp) { w.d += w.v * dt * (state === 'descend' ? 3 : 1); if (w.d > 1) { w.d = 0; w.a = Math.random() * TAU; } }
+
+    if (state === 'descend') {
+      intro.dT += dt;
+      const p = clamp(intro.dT / DESCEND, 0, 1);
+      const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+      cam.r = lerp(intro.startR, R0, e);
+      cam.anchor = 0.46;
+      if (p >= 1) finishDescend();
+    }
+  }
+
+  function drawWarp(alpha) {
+    // Stars streaming out from the middle, like flying through space
+    const cx0 = W / 2, cy0 = H * 0.42, maxR = Math.hypot(W, H) * 0.6;
+    ctx.lineCap = 'round';
+    for (const w of intro.warp) {
+      const r1 = Math.pow(w.d, 2.2) * maxR, r0 = Math.max(0, r1 - 6 - w.d * 40);
+      ctx.strokeStyle = `rgba(220,235,255,${alpha * Math.min(1, w.d * 2.5)})`;
+      ctx.lineWidth = 1 + w.d * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx0 + Math.cos(w.a) * r0, cy0 + Math.sin(w.a) * r0);
+      ctx.lineTo(cx0 + Math.cos(w.a) * r1, cy0 + Math.sin(w.a) * r1);
+      ctx.stroke();
+    }
+  }
+
+  function drawIntroText(alpha, lift) {
+    const lay = introLayout();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    lay.forEach((L, i) => {
+      const st = intro.letters[i];
+      if (!st || st.emitT === null) return;
+      const k = clamp((intro.t - st.emitT) / 0.9, 0, 1);
+      const e = easeBack(k);
+      const x = lerp(st.fx, L.x, e);
+      const y = lerp(st.fy, L.y, e) + Math.sin(intro.t * 2 + i * 0.6) * 3 * k - lift;
+      const sc = 0.25 + 0.75 * e;
+      const gl = clamp(1 - (intro.t - st.glint) / 0.35, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = alpha * Math.min(1, k * 3);
+      ctx.translate(x, y); ctx.scale(sc, sc);
+      ctx.font = `${L.size}px "Press Start 2P", monospace`;
+      if (L.size > 30) { ctx.fillStyle = '#1b1530'; ctx.fillText(L.ch, 4, 4); ctx.fillStyle = '#e0433b'; ctx.fillText(L.ch, 2, 2); }
+      ctx.fillStyle = gl > 0 ? mix(L.color, '#ffffff', gl) : L.color;
+      ctx.fillText(L.ch, 0, 0);
+      ctx.restore();
+    });
+    ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
+  }
+
+  function drawComet(alpha) {
+    for (const p of intro.parts) {
+      ctx.globalAlpha = alpha * (1 - p.t / p.life);
+      ctx.fillStyle = p.c;
+      ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
+    }
+    ctx.globalAlpha = 1;
+    const k = intro.passT / PASS;
+    if (k > 1 || alpha <= 0) return;
+    const hx = cometX(k), hy = cometY(hx);
+    const g = ctx.createRadialGradient(hx, hy, 2, hx, hy, 34);
+    g.addColorStop(0, `rgba(255,255,255,${alpha})`);
+    g.addColorStop(0.35, `rgba(170,225,255,${0.7 * alpha})`);
+    g.addColorStop(1, 'rgba(120,160,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(hx, hy, 34, 0, TAU); ctx.fill();
+  }
+
+  function drawIntro() {
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#02030a'); bg.addColorStop(1, '#0b1030');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    // a faint nebula
+    const neb = ctx.createRadialGradient(W * 0.7, H * 0.3, 10, W * 0.7, H * 0.3, W * 0.6);
+    neb.addColorStop(0, 'rgba(120,70,200,0.18)'); neb.addColorStop(1, 'rgba(120,70,200,0)');
+    ctx.fillStyle = neb; ctx.fillRect(0, 0, W, H);
+    for (const st of world.sky) {
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(clock * 2 + st.tw);
+      px(st.x * W, st.y * H, st.s, st.s, '#ffffff');
+    }
+    ctx.globalAlpha = 1;
+    drawWarp(0.9);
+    // Home, far below: the rim of the Earth glowing at the bottom
+    const er = W * 1.4, ey = H + er * 0.93;
+    const atm = ctx.createRadialGradient(W / 2, ey, er * 0.98, W / 2, ey, er * 1.06);
+    atm.addColorStop(0, 'rgba(120,200,255,0.55)'); atm.addColorStop(1, 'rgba(120,200,255,0)');
+    ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(W / 2, ey, er * 1.06, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#1d4f8f'; ctx.beginPath(); ctx.arc(W / 2, ey, er, 0, TAU); ctx.fill();
+    drawComet(1);
+    drawIntroText(1, 0);
+    if (intro.ready && intro.t - intro.ready > 0.3 && Math.floor(intro.t * 1.8) % 2 === 0) {
+      ctx.font = `${W < 480 ? 10 : 13}px "Press Start 2P", monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffd23f';
+      ctx.fillText(touch ? 'TAP TO START' : 'CLICK OR PRESS SPACE', W / 2, H * 0.68);
+      ctx.textAlign = 'start';
+    }
+  }
+
+  function drawIntroOverlay() {
+    // During the fall the title and comet fly up and fade as the world arrives
+    const p = clamp(intro.dT / DESCEND, 0, 1);
+    const a = clamp(1 - p * 1.8, 0, 1);
+    if (a <= 0) return;
+    drawWarp(a * 0.9);
+    ctx.save(); ctx.translate(0, -p * H * 0.8);
+    drawComet(a);
+    ctx.restore();
+    drawIntroText(a, p * H * 0.8);
+  }
+
+  function beginDescend() {
+    if (state !== 'splash') return;
+    state = 'descend';
+    intro.dT = 0;
+    intro.startR = tierR(11);
+    cam.r = intro.startR;
+    if (snd) { snd.init(); snd.music.start(); snd.sfx.whoosh(); }
+  }
+
+  function finishDescend() {
+    state = 'title';
+    cam.r = R0;
+    document.body.classList.remove('intro');
+    const t = $('title');
+    t.hidden = false;
+    t.classList.remove('fade-in'); void t.offsetWidth; t.classList.add('fade-in');
+    if (typeof loadTitleBoard === 'function') loadTitleBoard();
+  }
+
+  canvas.addEventListener('pointerdown', () => { if (state === 'splash') beginDescend(); });
 
   // ---- Title logo: the tramp hops along the letters ---------------------------
   function startLogo() {
@@ -1422,30 +1612,34 @@
       el.addEventListener('animationend', () => el.classList.remove('squash'), { once: true });
     };
     let at = 0, step = 1, t0 = performance.now() + 1100; // wait for the letters to drop in
+    let flip = false, ends = 0;
     const HOP = 480;
-    if (reduceMotion) {
-      paint('stand');
-      const p = spot(letters[0]);
-      c.style.transform = `translate(${p.x - c.offsetWidth / 2}px, ${p.y - c.offsetHeight}px)`;
-      return;
-    }
     function tick(now) {
       requestAnimationFrame(tick);
       if ($('title').hidden || !c.offsetWidth) return;
-      let u = (now - t0) / HOP;
+      let u = (now - t0) / (flip ? HOP * 2.2 : HOP);
       if (u >= 1) {
-        at += step;
-        if (at === letters.length - 1 || at === 0) step = -step; // bounce back at each end
+        if (flip) flip = false;
+        else {
+          at += step;
+          if (at === letters.length - 1 || at === 0) {
+            step = -step; // turn round at each end
+            ends++;
+            flip = ends % 2 === 0 || Math.random() < 0.35; // and now and then a big flip
+          }
+        }
         land(letters[at]);
+        if (flip) sfx.hop();
         t0 = now; u = 0;
       }
       u = Math.max(0, u);
-      const a = spot(letters[at]), b = spot(letters[at + step]);
+      const a = spot(letters[at]), b = flip ? a : spot(letters[at + step]);
       const x = lerp(a.x, b.x, u), base = lerp(a.y, b.y, u);
       const h = c.offsetHeight, w = c.offsetWidth;
-      const y = base - h + 4 - Math.sin(u * Math.PI) * h * 0.9;
+      const y = base - h + 4 - Math.sin(u * Math.PI) * h * (flip ? 2.4 : 0.9);
+      const spin = flip ? (u < 0.12 ? 0 : u > 0.88 ? 360 : ((u - 0.12) / 0.76) * 360) * -step : 0;
       paint(u > 0.08 && u < 0.92 ? 'jump' : 'stand');
-      c.style.transform = `translate(${x - w / 2}px, ${y}px) scaleX(${step < 0 ? -1 : 1})`;
+      c.style.transform = `translate(${x - w / 2}px, ${y}px) rotate(${spin}deg) scaleX(${step < 0 ? -1 : 1})`;
     }
     requestAnimationFrame(tick);
   }
@@ -1647,7 +1841,8 @@
   }
   renderBests();
 
-  document.querySelectorAll('.mode').forEach((btn) => btn.addEventListener('click', () => { mode = btn.dataset.mode; startGame(); }));
+  const jingle = () => { if (snd) { snd.init(); snd.sfx.jingle(mode); } };
+  document.querySelectorAll('.mode').forEach((btn) => btn.addEventListener('click', () => { mode = btn.dataset.mode; jingle(); startGame(); }));
   $('again').addEventListener('click', startGame);
   $('change-mode').addEventListener('click', () => {
     state = 'title';
@@ -1720,7 +1915,9 @@
     } else if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
     else if (JUMP.has(e.code)) {
       e.preventDefault();
-      if (state === 'title' || (state === 'won' && !$('won').hidden)) { if (!e.repeat) startGame(); return; }
+      if (state === 'splash') { if (!e.repeat) beginDescend(); return; }
+      if (state === 'descend') return;
+      if (state === 'title' || (state === 'won' && !$('won').hidden)) { if (!e.repeat) { jingle(); startGame(); } return; }
       if (!e.repeat) jumpBuffer = 0.15;
     }
   });
@@ -1761,6 +1958,11 @@
   function start(data) {
     resize();
     reset(data && data.seed ? data.seed : 20260930);
+    if (!data || !data.state) {
+      state = 'splash';
+      $('title').hidden = true;
+      document.body.classList.add('intro');
+    }
     if (data && data.state === 'play') {
       theta = data.theta; lastTier = data.lastTier; bestTier = data.bestTier; playTime = data.playTime;
       checkpoint = data.checkpoint || 0; falls = data.falls || 0; score = data.score || 0; mult = data.mult || 1; updateScoreHud(); mode = data.mode === 'uber' ? 'uber' : 'checkpoint';
