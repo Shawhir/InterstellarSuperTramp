@@ -88,32 +88,43 @@ says so if that happens.
 
 The scoreboard lists the fastest Moon landings for each mode, best run per player.
 
-- **On the claude.ai artifact** it works straight away, using the artifact's own
-  shared storage. Names come from people's claude.ai profiles, and only people
-  the page is shared with (at Contributor level or above) can post.
-- **On the public site** it switches on once it has a free Supabase database:
-  1. Create a free project at https://supabase.com.
-  2. In the project's **SQL Editor**, run:
+- **On the public site (GitHub Pages)** the board is `scores.json` in this repo.
+  After landing on the Moon, **Post on GitHub** opens a pre-filled issue; the
+  player taps **Submit new issue** (a free GitHub account is needed to post, not to
+  view). The **Record a score** workflow (`.github/workflows/score.yml`) checks the
+  run, keeps each GitHub user's best per mode in `scores.json`, replies with the
+  rank, closes the issue and republishes the site. Names are GitHub usernames, so
+  nobody can post as someone else.
+- **On the claude.ai artifact** it uses the artifact's own shared storage. Names
+  come from people's claude.ai profiles, and only people the page is shared with
+  (at Contributor level or above) can post.
 
-     ```sql
-     create table public.scores (
-       id bigint generated always as identity primary key,
-       name text not null check (char_length(name) between 1 and 16),
-       mode text not null check (mode in ('checkpoint', 'uber')),
-       time_ms integer not null check (time_ms between 5000 and 3600000),
-       stars integer not null check (stars between 0 and 100),
-       total_stars integer not null check (total_stars between 1 and 100),
-       falls integer not null default 0 check (falls between 0 and 1000),
-       created_at timestamptz not null default now()
-     );
-     alter table public.scores enable row level security;
-     create policy "Anyone can read scores" on public.scores for select using (true);
-     create policy "Anyone can add a score" on public.scores for insert with check (true);
-     ```
+Scores are sent from the player's browser, so a determined cheater could post a
+fake time; the workflow rejects impossible numbers, and an owner can delete a line
+from `scores.json` by hand.
 
-  3. In **Project Settings → API**, copy the **Project URL** and the
-     **anon public** key into `scoreboard-config.js` and push. The anon key is
-     meant to be public; the policies above only allow reading and adding scores.
+### Optional: Supabase instead of GitHub issues
 
-Scores are sent by the player's browser, so a determined cheater could post a fake
-time. That's normal for a small browser game.
+To let people post without a GitHub account, use a free Supabase database:
+
+1. Create a project at https://supabase.com.
+2. In its **SQL Editor**, run:
+
+   ```sql
+   create table public.scores (
+     id bigint generated always as identity primary key,
+     name text not null check (char_length(name) between 1 and 16),
+     mode text not null check (mode in ('checkpoint', 'uber')),
+     time_ms integer not null check (time_ms between 5000 and 3600000),
+     stars integer not null check (stars between 0 and 100),
+     total_stars integer not null check (total_stars between 1 and 100),
+     falls integer not null default 0 check (falls between 0 and 1000),
+     created_at timestamptz not null default now()
+   );
+   alter table public.scores enable row level security;
+   create policy "Anyone can read scores" on public.scores for select using (true);
+   create policy "Anyone can add a score" on public.scores for insert with check (true);
+   ```
+
+3. Copy the **Project URL** and **anon public** key from **Project Settings → API**
+   into `scoreboard-config.js` and push. Players then type a nickname instead.

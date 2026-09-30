@@ -4,6 +4,9 @@
 //    claude.ai profiles; nothing but their opaque id is stored.
 //  - "supabase": a free Supabase table, for the public web version. Switched
 //    on by filling in scoreboard-config.js (see README). Players pick a nickname.
+//  - "github": the public site on GitHub Pages. The board is scores.json in the
+//    repo; posting opens a pre-filled GitHub issue that the "Record a score"
+//    workflow turns into a scores.json entry under the player's GitHub name.
 // Otherwise the scoreboard is off and the game keeps its on-device records.
 // Exposes window.SuperTrampBoard.
 (() => {
@@ -11,7 +14,8 @@
 
   const cfg = window.SUPERTRAMP_SCOREBOARD || {};
   const TABLE = cfg.table || 'scores';
-  const board = { kind: 'none', ready: null, needsName: false };
+  const board = { kind: 'none', ready: null, needsName: false, viaGithub: false };
+  const REPO = cfg.githubRepo || 'Shawhir/InterstellarSuperTramp';
   let db = null, user = null, myId = null;
 
   const clean = (name) => String(name || '').replace(/[^\p{L}\p{N} _.'-]/gu, '').trim().slice(0, 16);
@@ -33,7 +37,8 @@
     try {
       if (await initArtifact()) { board.kind = 'artifact'; return board.kind; }
     } catch (e) { /* fall through */ }
-    if (initSupabase()) { board.kind = 'supabase'; board.needsName = true; }
+    if (initSupabase()) { board.kind = 'supabase'; board.needsName = true; return board.kind; }
+    if (location.hostname.endsWith('github.io') || cfg.github) { board.kind = 'github'; board.viaGithub = true; }
     return board.kind;
   })();
 
@@ -70,6 +75,34 @@
     return { rank: i >= 0 ? i + 1 : null, of: top.length };
   }
 
+  // ---- GitHub: read scores.json, post by opening a pre-filled issue ----------
+  async function ghTop(mode) {
+    const res = await fetch(`scores.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`scoreboard ${res.status}`);
+    const all = await res.json();
+    return (all[mode] || []).map((r) => ({ name: r.name, timeMs: r.time_ms, stars: r.stars, total: r.total_stars, falls: r.falls }));
+  }
+  function ghSubmit(run) {
+    const secs = Math.floor(run.timeMs / 1000);
+    const t = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+    const label = run.mode === 'uber' ? 'Uber Tramp' : 'Checkpoint';
+    const data = { mode: run.mode, time_ms: Math.round(run.timeMs), stars: run.stars, total_stars: run.total, falls: run.falls, v: 1 };
+    const body = [
+      `Tap **Submit new issue** below to post this run to the Interstellar SuperTramp scoreboard. It's recorded under your GitHub username, and this issue closes itself with your rank.`,
+      '',
+      `${label} mode · ${t} · ${run.stars}/${run.total} stars · ${run.falls} falls`,
+      '',
+      '<!-- supertramp-score -->',
+      '```json',
+      JSON.stringify(data),
+      '```',
+    ].join('\n');
+    const url = `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(`Scoreboard: ${t} in ${label} mode`)}&body=${encodeURIComponent(body)}`;
+    const win = window.open(url, '_blank', 'noopener');
+    if (!win) location.href = url;
+    return { pending: true };
+  }
+
   // ---- Artifact db: scores/<viewer id> holds that person's best per mode ------
   async function artTop(mode) {
     const snap = await db.collection('scores').get();
@@ -101,18 +134,21 @@
     await board.ready;
     if (board.kind === 'artifact') return (await artTop(mode)).slice(0, limit);
     if (board.kind === 'supabase') return (await sbTop(mode, 200)).slice(0, limit);
+    if (board.kind === 'github') return (await ghTop(mode)).slice(0, limit);
     return [];
   };
   board.submit = async (run) => {
     await board.ready;
     if (board.kind === 'artifact') return artSubmit(run);
     if (board.kind === 'supabase') return sbSubmit(run);
+    if (board.kind === 'github') return ghSubmit(run);
     return null;
   };
   board.cleanName = clean;
   board.where = () => (board.kind === 'artifact'
     ? 'Everyone who opens this page on claude.ai'
-    : board.kind === 'supabase' ? 'Everyone playing online' : '');
+    : board.kind === 'supabase' ? 'Everyone playing online'
+      : board.kind === 'github' ? 'Everyone playing online, posted through GitHub' : '');
 
   window.SuperTrampBoard = board;
 })();

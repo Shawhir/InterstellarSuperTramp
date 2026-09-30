@@ -1286,6 +1286,7 @@
   let boardBack = 'title';
   const setStatus = (text) => { const el = $('post-status'); el.textContent = text; el.hidden = !text; };
   function placeText(res, m) {
+    if (res && res.pending) return 'Finish on GitHub: tap Submit new issue. Your run shows on the board a minute or two later.';
     if (!res || !res.rank) return 'Posted.';
     const where = board.kind === 'artifact' ? "this page's" : 'the';
     return `${res.kept ? 'Your earlier run is still your best: ' : ''}#${res.rank} of ${res.of} on ${where} ${MODES[m].short} board.`;
@@ -1308,7 +1309,13 @@
     setStatus('');
     $('post').hidden = true;
     if (!board || board.kind === 'none') return;
-    if (board.needsName) {
+    if (board.viaGithub) {
+      $('post-label').textContent = 'Post this run to the online scoreboard. It opens GitHub, where you tap Submit (free GitHub account needed).';
+      $('post-name').hidden = true;
+      $('post-btn').textContent = 'Post on GitHub';
+      $('post-btn').disabled = false;
+      $('post').hidden = false;
+    } else if (board.needsName) {
       let saved = '';
       try { saved = localStorage.getItem(NAME_KEY) || ''; } catch (e) { /* no storage */ }
       $('post-name').value = saved;
@@ -1361,6 +1368,7 @@
     $('close-board').addEventListener('click', () => { $('board').hidden = true; $(boardBack).hidden = false; });
     document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => { boardMode = t.dataset.board; loadBoard(); }));
     $('post-btn').addEventListener('click', () => {
+      if (board.viaGithub) { postRun(''); return; }
       const name = board.cleanName($('post-name').value);
       $('post-name').value = name;
       try { if (name) localStorage.setItem(NAME_KEY, name); } catch (e) { /* no storage */ }
