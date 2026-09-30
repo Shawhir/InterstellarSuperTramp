@@ -1,6 +1,15 @@
 {
   "checkpoint": [
     {
+      "name": "Rosie Q",
+      "score": 572820,
+      "time_ms": 295388,
+      "stars": 24,
+      "total_stars": 33,
+      "falls": 29,
+      "at": 1790799977
+    },
+    {
       "name": "Katherine",
       "score": 516650,
       "time_ms": 82111,
