@@ -66,9 +66,10 @@ says so if that happens.
 - Replay hooks: personal records (best time, most stars, highest point, runs) are
   saved on the device and shown on the title screen, with a gold marker on the
   journey rail at your best height and a NEW HEIGHT RECORD pop when you pass it.
-  Checkpoints (green flags) sit at the start of each new part of the sky; once
-  you've landed on one, a miss above it catches you there instead of dropping you
-  to Earth. Each Moon landing awards medals for time (gold under 0:30, silver
+  Two modes, chosen on the title screen, each with its own records and medals:
+  **Checkpoint** (green flags at the start of each new part of the sky; once you've
+  landed on one, a miss above it catches you there) and **Uber Tramp** (no
+  checkpoints: any miss drops you all the way back to Earth). Each Moon landing awards medals for time (gold under 0:30, silver
   under 0:45, bronze under 1:15, first guesses to tune), stars (all, two thirds,
   a third) and falls (gold for none).
 - `style.css`: HUD, overlays and the touch pad.
