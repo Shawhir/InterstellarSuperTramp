@@ -84,7 +84,9 @@ says so if that happens.
 - Around-the-world rides: the jet stream (about 10 km) and the Space Station
   (408 km) carry you halfway round the planet while the camera pulls out to show
   the Earth turning below; the next layer's platform waits on the far side. If
-  you fall off, the ride goes back to fetch you.
+  you fall off, the ride goes back to fetch you. Hitting the Space Station docks
+  you inside: it carries you round the world while you suit up, then the airlock
+  launches you out in a spacesuit, worn for the rest of the space section.
 - Re-entry: miss and fall below the platform you bounced off, and the tramp
   heats up into a fireball (glow from 100px below it, full fire by 500px) with a
   flame trail and a rising roar. Hit the ground like that for a KABOOM: big screen
