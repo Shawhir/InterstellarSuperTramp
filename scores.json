@@ -1,15 +1,5 @@
 {
-  "checkpoint": [
-    {
-      "name": "Score Test",
-      "score": 12345,
-      "time_ms": 63000,
-      "stars": 7,
-      "total_stars": 36,
-      "falls": 4,
-      "at": 1790796180
-    }
-  ],
+  "checkpoint": [],
   "uber": [
     {
       "name": "Marcus Aureliua",
