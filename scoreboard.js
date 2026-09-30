@@ -56,7 +56,7 @@
   const sbUrl = (q) => `${cfg.supabaseUrl.replace(/\/$/, '')}/rest/v1/${TABLE}${q}`;
 
   async function sbTop(mode, limit) {
-    const res = await fetch(sbUrl(`?select=name,time_ms,stars,total_stars,falls&mode=eq.${mode}&order=time_ms.asc,stars.desc&limit=${limit}`), { headers: sbHeaders() });
+    const res = await fetch(sbUrl(`?select=name,score,time_ms,stars,total_stars,falls&mode=eq.${mode}&order=score.desc,time_ms.asc&limit=${limit}`), { headers: sbHeaders() });
     if (!res.ok) throw new Error(`scoreboard ${res.status}`);
     const rows = await res.json();
     // Best run per name
@@ -65,13 +65,13 @@
       const key = r.name.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ name: r.name, timeMs: r.time_ms, stars: r.stars, total: r.total_stars, falls: r.falls });
+      out.push({ name: r.name, score: r.score || 0, timeMs: r.time_ms, stars: r.stars, total: r.total_stars, falls: r.falls });
     }
     return out;
   }
 
   async function sbSubmit(run) {
-    const body = { name: clean(run.name), mode: run.mode, time_ms: Math.round(run.timeMs), stars: run.stars, total_stars: run.total, falls: run.falls };
+    const body = { name: clean(run.name), mode: run.mode, score: run.score || 0, time_ms: Math.round(run.timeMs), stars: run.stars, total_stars: run.total, falls: run.falls };
     if (!body.name) throw new Error('name');
     const res = await fetch(sbUrl(''), { method: 'POST', headers: { ...sbHeaders(), Prefer: 'return=minimal' }, body: JSON.stringify(body) });
     if (!res.ok) throw new Error(`scoreboard ${res.status}`);
@@ -85,13 +85,15 @@
     const res = await fetch(`scores.json?t=${Date.now()}`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`scoreboard ${res.status}`);
     const all = await res.json();
-    return (all[mode] || []).map((r) => ({ name: r.name, timeMs: r.time_ms, stars: r.stars, total: r.total_stars, falls: r.falls }));
+    return (all[mode] || [])
+      .map((r) => ({ name: r.name, score: r.score || 0, timeMs: r.time_ms, stars: r.stars, total: r.total_stars, falls: r.falls }))
+      .sort((a, b) => b.score - a.score || a.timeMs - b.timeMs);
   }
   function ghSubmit(run) {
     const secs = Math.floor(run.timeMs / 1000);
     const t = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
     const label = run.mode === 'uber' ? 'Uber Tramp' : 'Checkpoint';
-    const data = { mode: run.mode, time_ms: Math.round(run.timeMs), stars: run.stars, total_stars: run.total, falls: run.falls, v: 1 };
+    const data = { mode: run.mode, score: run.score || 0, time_ms: Math.round(run.timeMs), stars: run.stars, total_stars: run.total, falls: run.falls, v: 2 };
     const body = [
       `Tap **Submit new issue** below to post this run to the Interstellar SuperTramp scoreboard. It's recorded under your GitHub username, and this issue closes itself with your rank.`,
       '',
@@ -116,7 +118,7 @@
       res = await fetch(cfg.workerUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, mode: run.mode, time_ms: Math.round(run.timeMs), stars: run.stars, total_stars: run.total, falls: run.falls }),
+        body: JSON.stringify({ name, mode: run.mode, score: run.score || 0, time_ms: Math.round(run.timeMs), stars: run.stars, total_stars: run.total, falls: run.falls }),
       });
     } catch (e) {
       throw new Error('network');
@@ -137,9 +139,9 @@
     const rows = [];
     for (const d of snap.docs) {
       const m = d.data() && d.data()[mode];
-      if (m && typeof m.timeMs === 'number') rows.push({ id: d.id, timeMs: m.timeMs, stars: m.stars, total: m.total, falls: m.falls });
+      if (m && typeof m.timeMs === 'number') rows.push({ id: d.id, score: m.score || 0, timeMs: m.timeMs, stars: m.stars, total: m.total, falls: m.falls });
     }
-    rows.sort((a, b) => a.timeMs - b.timeMs || b.stars - a.stars);
+    rows.sort((a, b) => b.score - a.score || a.timeMs - b.timeMs);
     const people = user && rows.length ? await user.profiles(rows.map((r) => r.id)) : {};
     return rows.map((r) => ({ ...r, name: (people[r.id] && people[r.id].name) || 'Someone', isMe: r.id === myId }));
   }
@@ -150,8 +152,8 @@
     const cur = await ref.get();
     const body = cur.exists ? { ...cur.data() } : {};
     const prev = body[run.mode];
-    const entry = { timeMs: Math.round(run.timeMs), stars: run.stars, total: run.total, falls: run.falls, at: Date.now() };
-    const better = !prev || entry.timeMs < prev.timeMs || (entry.timeMs === prev.timeMs && entry.stars > prev.stars);
+    const entry = { score: run.score || 0, timeMs: Math.round(run.timeMs), stars: run.stars, total: run.total, falls: run.falls, at: Date.now() };
+    const better = !prev || entry.score > (prev.score || 0) || (entry.score === (prev.score || 0) && entry.timeMs < prev.timeMs);
     if (better) { body[run.mode] = entry; await ref.set(body); }
     const top = await artTop(run.mode);
     const i = top.findIndex((r) => r.isMe);

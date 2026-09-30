@@ -58,6 +58,7 @@ def main():
         mode = run["mode"]
         entry = {
             "name": name,
+            "score": int(run.get("score", 0)),
             "time_ms": int(run["time_ms"]),
             "stars": int(run["stars"]),
             "total_stars": int(run["total_stars"]),
@@ -70,7 +71,8 @@ def main():
             or not 5000 <= entry["time_ms"] <= 3600000 \
             or not 1 <= entry["total_stars"] <= 100 \
             or not 0 <= entry["stars"] <= entry["total_stars"] \
-            or not 0 <= entry["falls"] <= 1000:
+            or not 0 <= entry["falls"] <= 1000 \
+            or not 0 <= entry["score"] <= 50000000:
         finish(False, "Those numbers don't look like a real run, so I haven't recorded it.")
 
     path = os.environ.get("SCORES_FILE", "scores.json")
@@ -78,7 +80,8 @@ def main():
     rows = scores.setdefault(mode, [])
 
     def key(r):
-        return (r["time_ms"], -r["stars"])
+        # Highest score first; ties go to the faster run
+        return (-r.get("score", 0), r["time_ms"])
 
     same = lambda r: r["name"].lower() == name.lower()
     prev = next((r for r in rows if same(r)), None)
@@ -96,9 +99,9 @@ def main():
     secs = entry["time_ms"] // 1000
     t = f"{secs // 60}:{secs % 60:02d}"
     if improved:
-        msg = f"Recorded {name}: {t} with {entry['stars']}/{entry['total_stars']} stars, #{rank} of {len(scores[mode])} on the {label} board. It shows in the game in a minute or two."
+        msg = f"Recorded {name}: {entry['score']:,} points in {t}, #{rank} of {len(scores[mode])} on the {label} board. It shows in the game in a minute or two."
     else:
-        msg = f"Nice run ({t}), but {name}'s best on the {label} board is still faster, so the board keeps that one. #{rank} of {len(scores[mode])}."
+        msg = f"Nice run ({entry['score']:,} points), but {name}'s best on the {label} board is higher, so the board keeps that one. #{rank} of {len(scores[mode])}."
     finish(True, msg, changed=improved, name=name)
 
 

@@ -86,12 +86,17 @@ says so if that happens.
   flame trail and a rising roar. Hit the ground like that for a KABOOM: big screen
   shake, flash, shockwave, flying dirt and a smoking crater. Land on a platform
   instead and it goes out in a hiss of steam.
+- Score and multiplier, Geometry Wars style: bounces, PERFECT landings, new
+  layers, rides and the Moon (plus a time bonus) earn points, all multiplied.
+  The stars are green geoms: they drift to you when you're close and each adds +1
+  to the multiplier; PERFECT landings and new layers burst out extra geoms that
+  fade after a few seconds. Any miss resets the multiplier to x1.
 - `scoreboard.js`: shared scoreboard of fastest Moon landings per mode (see below).
 - `style.css`: HUD, overlays and the touch pad.
 
 ## Online scoreboard
 
-The scoreboard lists the fastest Moon landings for each mode, best run per name.
+The scoreboard lists the highest scores reaching the Moon for each mode (ties go to the faster run), best run per name.
 It lives in `scores.json` in this repo; the **Record a score** workflow
 (`.github/workflows/score.yml`, checks in `.github/scripts/record_score.py`) adds
 runs to it and republishes the site. Runs reach it in one of two ways:
@@ -149,6 +154,7 @@ Scores can live in a free Supabase database instead of this repo:
      stars integer not null check (stars between 0 and 100),
      total_stars integer not null check (total_stars between 1 and 100),
      falls integer not null default 0 check (falls between 0 and 1000),
+     score integer not null default 0 check (score between 0 and 50000000),
      created_at timestamptz not null default now()
    );
    alter table public.scores enable row level security;

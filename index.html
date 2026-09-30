@@ -22,6 +22,7 @@
 
 <div class="hud">
   <div class="hud-block">
+    <div class="scoreline"><span class="score" id="score">0</span> <span class="mult" id="mult">x1</span></div>
     <div class="alt" id="alt">0 m</div>
     <div class="layer" id="layer">On the ground</div>
   </div>
@@ -39,10 +40,11 @@
 
 <div class="overlay" id="title">
   <div class="card">
-    <h1>Interstellar <span>SuperTramp</span></h1>
-    <p>The world turns under your feet. Walk to a trampoline, hop on, and bounce from cloud to balloon to satellite until you reach the Moon, 384,400 km up.</p>
-    <p>The arrow under your feet points to the next bouncy thing. When it turns <span class="go">green and points down</span>, you are lined up to land.</p>
-    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> walk and steer &nbsp; <kbd>SPACE</kbd> hop. On a phone, use the buttons or tap TILT to steer by tilting. Grab the stars on the way.</p>
+    <h1 class="logo" aria-label="Interstellar SuperTramp">
+      <span class="logo-top" aria-hidden="true"><i>✦</i> INTERSTELLAR <i>✦</i></span>
+      <span class="logo-main" aria-hidden="true"><span style="--i:0">S</span><span style="--i:1">U</span><span style="--i:2">P</span><span style="--i:3">E</span><span style="--i:4">R</span><span style="--i:5">T</span><span style="--i:6">R</span><span style="--i:7">A</span><span style="--i:8">M</span><span style="--i:9">P</span></span>
+      <span class="logo-tag" aria-hidden="true">Earth to Moon · 384,400 km · one bounce at a time</span>
+    </h1>
     <div class="modes">
       <button class="mode" type="button" data-mode="checkpoint">
         <span class="mode-name">Checkpoint</span>
@@ -55,7 +57,14 @@
         <span class="mode-best" id="bests-uber">No runs yet.</span>
       </button>
     </div>
-    <button id="open-board" class="secondary" type="button" hidden>Scoreboard</button>
+    <div class="title-board" id="title-board" hidden>
+      <div class="tb-head">Top scores · <span id="tb-mode">Checkpoint</span></div>
+      <ol class="board-list compact" id="tb-list"></ol>
+    </div>
+    <button id="open-board" class="secondary" type="button" hidden>Full scoreboard</button>
+    <p>The world turns under your feet. Hop on a trampoline and bounce from cloud to balloon to satellite, all the way to the Moon.</p>
+    <p>Grab <span class="geom-word">green geoms</span> to grow your score multiplier. A miss resets it. When the arrow under your feet turns <span class="go">green and points down</span>, you're lined up to land.</p>
+    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> steer &nbsp; <kbd>SPACE</kbd> hop &nbsp; On a phone: the buttons, or TILT.</p>
   </div>
 </div>
 
@@ -63,6 +72,7 @@
   <div class="card">
     <h1>You made it to <span>the Moon</span></h1>
     <p class="won-mode" id="won-mode"></p>
+    <p class="won-score"><span id="won-score">0</span> <b id="won-score-new" hidden>NEW BEST</b></p>
     <p id="won-stats">384,400 km from home, one bounce at a time.</p>
     <div class="medals" id="medals"></div>
     <div class="post" id="post" hidden>
