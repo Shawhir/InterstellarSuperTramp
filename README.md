@@ -77,4 +77,43 @@ says so if that happens.
   halves the extra height until it is back to the normal bounce.
 - Clouds wobble like jelly when you land (squash, overshoot, settle), breathe
   gently while idle, and throw off soft puffs.
+- Around-the-world rides: the jet stream (about 10 km) and the Space Station
+  (408 km) carry you halfway round the planet while the camera pulls out to show
+  the Earth turning below; the next layer's platform waits on the far side. If
+  you fall off, the ride goes back to fetch you.
+- `scoreboard.js`: shared scoreboard of fastest Moon landings per mode (see below).
 - `style.css`: HUD, overlays and the touch pad.
+
+## Online scoreboard
+
+The scoreboard lists the fastest Moon landings for each mode, best run per player.
+
+- **On the claude.ai artifact** it works straight away, using the artifact's own
+  shared storage. Names come from people's claude.ai profiles, and only people
+  the page is shared with (at Contributor level or above) can post.
+- **On the public site** it switches on once it has a free Supabase database:
+  1. Create a free project at https://supabase.com.
+  2. In the project's **SQL Editor**, run:
+
+     ```sql
+     create table public.scores (
+       id bigint generated always as identity primary key,
+       name text not null check (char_length(name) between 1 and 16),
+       mode text not null check (mode in ('checkpoint', 'uber')),
+       time_ms integer not null check (time_ms between 5000 and 3600000),
+       stars integer not null check (stars between 0 and 100),
+       total_stars integer not null check (total_stars between 1 and 100),
+       falls integer not null default 0 check (falls between 0 and 1000),
+       created_at timestamptz not null default now()
+     );
+     alter table public.scores enable row level security;
+     create policy "Anyone can read scores" on public.scores for select using (true);
+     create policy "Anyone can add a score" on public.scores for insert with check (true);
+     ```
+
+  3. In **Project Settings → API**, copy the **Project URL** and the
+     **anon public** key into `scoreboard-config.js` and push. The anon key is
+     meant to be public; the policies above only allow reading and adding scores.
+
+Scores are sent by the player's browser, so a determined cheater could post a fake
+time. That's normal for a small browser game.

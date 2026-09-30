@@ -22,7 +22,7 @@ jobs:
       - name: Copy the game onto gh-pages
         run: |
           mkdir /tmp/site
-          cp index.html audio.js game.js style.css manifest.webmanifest icon.svg icon-*.png /tmp/site/
+          cp index.html scoreboard-config.js scoreboard.js audio.js game.js style.css manifest.webmanifest icon.svg icon-*.png /tmp/site/
           touch /tmp/site/.nojekyll
           git fetch origin gh-pages
           git switch gh-pages

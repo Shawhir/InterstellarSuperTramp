@@ -46,6 +46,13 @@
   const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220 };
   const MOON_R = 110; // the landing Moon's radius; its top is the last bouncy surface
   const tierR = (k) => R0 + 30 + k * TIER_GAP;
+  // Around-the-world rides: land on one and it carries you halfway round the
+  // planet, where the next layer's platform is waiting on the far side.
+  const RIDES = {
+    4: { kind: 'jet', title: 'JET STREAM', fact: 'The jet stream: winds up to 400 km/h, 10 km up. Hold on!' },
+    11: { kind: 'iss', title: 'SPACE STATION', fact: 'The ISS laps the whole Earth every 92 minutes. Ride it round!' },
+  };
+  const RIDE_TIME = 5.5;
   // Checkpoints: the first layer of each new part of the sky. Once you've landed
   // on one, a miss above it catches you there instead of dropping you to Earth.
   const CHECKPOINTS = new Set(TIERS.map((t, k) => (k >= 1 && k < TIERS.length - 1 && t.layer !== TIERS[k - 1].layer ? k : -1)).filter((k) => k > 0));
@@ -145,9 +152,20 @@
       // Faster bounces mean less air time, so keep the gap reachable.
       const off = (100 + (rnd() * 210) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.5 ? -1 : 1);
       const a = prevA + off / R;
-      mk(k, a).main = true;
+      const mp = mk(k, a);
+      mp.main = true;
       // A star on the natural arc between the last layer and this one.
       stars.push({ a: prevA + (a - prevA) * 0.62, R: R + 50, taken: false });
+      let nextA = a;
+      if (RIDES[k]) {
+        const dir = rnd() < 0.5 ? -1 : 1;
+        mp.ride = { ...RIDES[k], near: a, far: a + Math.PI * dir, from: a, to: a, t: 0, state: 'near', idle: 0 };
+        mp.sway = 0;
+        if (RIDES[k].kind === 'jet') mp.w = 190;
+        // Stars strung along the route, collected as you ride past
+        for (const f of [0.2, 0.4, 0.6, 0.8]) stars.push({ a: a + Math.PI * dir * f, R: R + 200, taken: false, big: true });
+        nextA = mp.ride.far;
+      }
       // Spare platforms off to the side, some carrying a bonus star.
       const extras = k < 9 ? 2 : 1;
       for (let i = 0; i < extras; i++) {
@@ -155,7 +173,7 @@
         mk(k, ea);
         if (rnd() < 0.55) stars.push({ a: ea, R: R + 150, taken: false });
       }
-      prevA = a;
+      prevA = nextA;
     }
     stars.forEach((s, i) => { s.id = i; });
 
@@ -205,7 +223,8 @@
   let state = 'title';
   let playTime = 0;
   let particles = [];
-  let cam = { r: R0, anchor: 0 };
+  let cam = { r: R0, anchor: 0, zoom: 1 };
+  let view = { x0: 0, y0: 0, x1: 0, y1: 0 };
   let toastTimer = 0;
   let clock = 0;
   // Juice: screen shake, landing rings, floating text, afterimages, banners
@@ -409,6 +428,7 @@
       if (TIERS[p.tier].note) toast(TIERS[p.tier].note);
       else if (p.tier === 0) toast('Boing! Steer toward the arrow to reach the clouds.');
     }
+    if (p.ride && p.ride.state === 'near') startRide(p);
   }
 
   // Caught by the last checkpoint: drop back onto its platform from just above.
@@ -428,10 +448,39 @@
     toast(`Caught at the ${TIERS[checkpoint].layer} checkpoint.`, 2.5);
   }
 
+  const riding = (p) => player.lastPlat === p && !player.onGround && state === 'play';
+  function updateRide(p, dt) {
+    const r = p.ride;
+    if (r.state === 'moving' || r.state === 'returning') {
+      r.t += dt;
+      const u = clamp(r.t / RIDE_TIME, 0, 1);
+      const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      const na = r.from + (r.to - r.from) * e;
+      const d = na - p.a;
+      p.a = p.a0 = na;
+      if (riding(p)) theta -= d; // carry the tramp along with it
+      if (u >= 1) { r.state = r.to === r.far ? 'far' : 'near'; r.idle = 0; }
+    } else if (r.state === 'far') {
+      // If you fell off on the way, it heads back to pick you up.
+      const away = Math.abs(wrap(p.a + theta)) > Math.PI / 2;
+      r.idle = !riding(p) && away ? r.idle + dt : 0;
+      if (r.idle > 2) { r.state = 'returning'; r.from = r.far; r.to = r.near; r.t = 0; }
+    }
+  }
+  function startRide(p) {
+    const r = p.ride;
+    r.state = 'moving'; r.from = r.near; r.to = r.far; r.t = 0;
+    banner('AROUND THE WORLD', r.title);
+    toast(r.fact, 5);
+    sfx.tier();
+    fx.flash = 0.2;
+  }
+
   function update(dt) {
     clock += dt;
     for (const p of world.plats) {
       if (p.sway) p.a = p.a0 + p.sway * Math.sin(clock * p.freq + p.phase);
+      if (p.ride) updateRide(p, dt);
       p.squash = Math.max(0, p.squash - dt * 4);
       p.jig += dt;
     }
@@ -499,7 +548,8 @@
         if (s.taken) continue;
         const ph = s.a + theta;
         const dx = s.R * Math.sin(ph), dy = s.R * Math.cos(ph) - bodyR;
-        if (dx * dx + dy * dy < 30 * 30) {
+        const reach = s.big ? 90 : 30;
+        if (dx * dx + dy * dy < reach * reach) {
           s.taken = true;
           const got = world.stars.filter((q) => q.taken).length;
           sfx.star(got);
@@ -547,6 +597,10 @@
     cam.r += (player.r - cam.r) * Math.min(1, dt * 7);
     const want = player.vr < -250 ? 0.34 : 0.46;
     cam.anchor = lerp(cam.anchor || want, want, Math.min(1, dt * 2));
+    // Pull the camera out during a ride so you can watch the Earth turn below.
+    const onRide = player.lastPlat && player.lastPlat.ride && (player.lastPlat.ride.state === 'moving') && riding(player.lastPlat);
+    const zWant = onRide ? clamp((H * 0.42) / (player.r - R0 + 80), 0.1, 1) : 1;
+    cam.zoom = lerp(cam.zoom, zWant, Math.min(1, dt * (onRide ? 1.6 : 1.2)));
 
     if (toastTimer > 0) {
       toastTimer -= dt;
@@ -580,7 +634,7 @@
     ctx.imageSmoothingEnabled = false;
   }
 
-  const onScreen = (x, y, m = 220) => x > -m && x < W + m && y > -m && y < H + m;
+  const onScreen = (x, y, m = 220) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
   function at(phi, R, fn, margin) {
     const x = cx + R * Math.sin(phi), y = cy - R * Math.cos(phi);
     if (!onScreen(x, y, margin)) return;
@@ -787,7 +841,7 @@
     // reveals more and more of the mountains behind. They fade out into the haze
     // (and then the dark) on the way to space.
     const tf = tierFloat(player.r);
-    const fade = clamp(1 - (tf - 3) / 4, 0, 1);
+    const fade = clamp(1 - (tf - 3) / 4, 0, 1) * clamp((cam.zoom - 0.55) / 0.35, 0, 1);
     if (fade <= 0) return;
     const skyS = clamp((player.r - R0) / (tierR(9) - R0), 0, 1);
     const haze = mix('#58b4f0', '#03040c', skyS).match(/\d+/g).map(Number);
@@ -799,7 +853,7 @@
     ctx.globalAlpha = fade;
     world.ranges.forEach((m, depth) => {
       const my = cy - climb * (1 - m.sink); // this range's own centre, lifted by parallax
-      if (my - R0 - m.hMax > H + 20) return;
+      if (my - R0 - m.hMax > view.y1 + 20) return;
       const n = m.h.length;
       const rot = theta * m.f;
       const hazeK = (1 - m.sink) * 0.7 + skyS * 0.5;
@@ -808,7 +862,7 @@
         const r = R0 - 6 + m.h[i % n];
         return [cx + r * Math.sin(a), my - r * Math.cos(a)];
       };
-      const span = Math.min(n / 2, Math.ceil((n * (W / 2 + 260)) / (TAU * R0)));
+      const span = Math.min(n / 2, Math.ceil((n * ((view.x1 - view.x0) / 2 + 260)) / (TAU * R0)));
       const mid = Math.round((((-rot / TAU) % 1) + 1) % 1 * n);
       ctx.fillStyle = tint(m.col, hazeK);
       ctx.beginPath();
@@ -817,8 +871,8 @@
         i === mid - span ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
       // Close the shape well below the screen so nothing shows through underneath.
-      ctx.lineTo(W + 400, Math.max(my, H + 400));
-      ctx.lineTo(-400, Math.max(my, H + 400));
+      ctx.lineTo(view.x1 + 400, Math.max(my, view.y1 + 400));
+      ctx.lineTo(view.x0 - 400, Math.max(my, view.y1 + 400));
       ctx.closePath();
       ctx.fill();
       if (m.snow) {
@@ -840,14 +894,14 @@
         g.addColorStop(0, `rgba(${haze.join(',')},0)`);
         g.addColorStop(1, `rgba(${haze.join(',')},${0.35 * (1 - skyS)})`);
         ctx.fillStyle = g;
-        ctx.fillRect(0, my - R0 - 10, W, 70);
+        ctx.fillRect(view.x0, my - R0 - 10, view.x1 - view.x0, 70);
       }
     });
     ctx.globalAlpha = 1;
   }
 
   function drawEarth() {
-    if (cy - R0 > H + 60) return;
+    if (cy - R0 > view.y1 + 60) return;
     // Atmosphere glow
     const glow = ctx.createRadialGradient(cx, cy, R0, cx, cy, R0 + 90);
     glow.addColorStop(0, 'rgba(140,210,255,0.45)');
@@ -990,6 +1044,39 @@
     }, 220);
   }
 
+  function drawRide(p) {
+    const r = p.ride;
+    const moving = r.state === 'moving' || r.state === 'returning';
+    // Dotted orbit line showing where the ride goes, until it's used
+    if (r.state === 'near') {
+      ctx.fillStyle = 'rgba(143,208,255,0.55)';
+      const steps = 60;
+      for (let i = 1; i <= steps; i++) {
+        const a = r.near + (r.far - r.near) * (i / steps);
+        at(a + theta, p.R + 18, () => { px(-2, -2, 4, 4, 'rgba(143,208,255,0.55)'); }, 10);
+      }
+    }
+    at(p.a + theta, p.R, () => {
+      if (moving) {
+        // Streaks trailing behind as it races round
+        const dir = Math.sign(r.to - r.from);
+        ctx.fillStyle = r.kind === 'jet' ? 'rgba(255,255,255,0.7)' : 'rgba(255,210,63,0.6)';
+        for (let i = 0; i < 7; i++) {
+          const y = 4 + i * 6, len = 40 + ((i * 37 + Math.floor(clock * 20)) % 50);
+          ctx.fillRect(-dir * (p.w / 2 + 6) - (dir > 0 ? len : 0), y, len, 2);
+        }
+      }
+      // Label so you know this one goes somewhere
+      if (r.state === 'near') {
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#1b1530'; ctx.fillText('RIDE', 1, 58);
+        ctx.fillStyle = '#8fd0ff'; ctx.fillText('RIDE', 0, 57);
+        ctx.textAlign = 'start';
+      }
+    }, 260);
+  }
+
   function drawStar(s) {
     if (s.taken) return;
     at(s.a + theta, s.R, () => {
@@ -1094,10 +1181,17 @@
     drawSky();
     ctx.save();
     if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    // Zoom about the tramp (only differs from 1 during a ride).
+    const z = cam.zoom, pivotY = cy - player.r;
+    if (z < 0.999) { ctx.translate(cx, pivotY); ctx.scale(z, z); ctx.translate(-cx, -pivotY); }
+    view = { x0: cx - cx / z, x1: cx + (W - cx) / z, y0: pivotY - pivotY / z, y1: pivotY + (H - pivotY) / z };
     drawMountains();
     drawEarth();
     drawDecor();
-    for (const p of world.plats) drawPlatform(p);
+    for (const p of world.plats) {
+      if (p.ride) drawRide(p);
+      drawPlatform(p);
+    }
     for (const p of world.plats) {
       if (mode !== 'checkpoint' || !p.main || !CHECKPOINTS.has(p.tier)) continue;
       at(p.a + theta, p.R, () => {
@@ -1172,6 +1266,8 @@
     saveBests();
     const nextTime = TIME_MEDALS.slice().reverse().find(([limit]) => playTime > limit);
     $('won-mode').textContent = MODES[mode].name;
+    lastRun = { mode, timeMs: playTime * 1000, stars: got, total, falls };
+    offerPost();
     $('medals').innerHTML = [
       medalHtml(tMedal, 'Time', fmtTime(playTime), newTime, nextTime ? `${nextTime[1]} under ${fmtTime(nextTime[0])}` : 'top medal'),
       medalHtml(sMedal, 'Stars', `${got} / ${total}`, newStars, sMedal === 'gold' ? 'every star' : 'gold for every star'),
@@ -1180,6 +1276,97 @@
     $('won-stats').textContent = R.wins === 1 ? 'Your first trip to the Moon.' : newTime ? 'New best time!' : `Your best time is ${fmtTime(R.bestTime)}.`;
     renderBests();
     setTimeout(() => { $('won').hidden = false; }, 900);
+  }
+
+  // ---- Shared scoreboard (see scoreboard.js) ----------------------------------
+  const board = window.SuperTrampBoard;
+  const NAME_KEY = 'supertramp.name';
+  let lastRun = null;
+  let boardMode = 'checkpoint';
+  let boardBack = 'title';
+  const setStatus = (text) => { const el = $('post-status'); el.textContent = text; el.hidden = !text; };
+  function placeText(res, m) {
+    if (!res || !res.rank) return 'Posted.';
+    const where = board.kind === 'artifact' ? "this page's" : 'the';
+    return `${res.kept ? 'Your earlier run is still your best: ' : ''}#${res.rank} of ${res.of} on ${where} ${MODES[m].short} board.`;
+  }
+  async function postRun(name) {
+    if (!lastRun) return;
+    const run = { ...lastRun, name };
+    setStatus('Posting your score…');
+    $('post-btn').disabled = true;
+    try {
+      const res = await board.submit(run);
+      setStatus(placeText(res, run.mode));
+      $('post').hidden = true;
+    } catch (e) {
+      setStatus(e && e.message === 'name' ? 'Type a name first (letters and numbers).' : "Couldn't reach the scoreboard. Check your connection and try again.");
+      $('post-btn').disabled = false;
+    }
+  }
+  function offerPost() {
+    setStatus('');
+    $('post').hidden = true;
+    if (!board || board.kind === 'none') return;
+    if (board.needsName) {
+      let saved = '';
+      try { saved = localStorage.getItem(NAME_KEY) || ''; } catch (e) { /* no storage */ }
+      $('post-name').value = saved;
+      $('post-btn').disabled = false;
+      $('post').hidden = false;
+    } else {
+      postRun(''); // claude.ai page: posted under your own profile name
+    }
+  }
+  function renderBoardRows(rows) {
+    const list = $('board-list');
+    list.textContent = '';
+    if (!rows.length) {
+      const li = document.createElement('li');
+      li.className = 'note';
+      li.textContent = 'No Moon landings yet. Be the first.';
+      list.append(li);
+      return;
+    }
+    rows.forEach((r, i) => {
+      const li = document.createElement('li');
+      if (r.isMe) li.className = 'me';
+      const cells = [['rank', `#${i + 1}`], ['who', r.name], ['time', fmtTime(r.timeMs / 1000)], ['stars-col', `★${r.stars}/${r.total}`]];
+      for (const [cls, text] of cells) { const span = document.createElement('span'); span.className = cls; span.textContent = text; li.append(span); }
+      list.append(li);
+    });
+  }
+  async function loadBoard() {
+    document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.board === boardMode)));
+    const list = $('board-list');
+    list.innerHTML = '<li class="note">Loading…</li>';
+    try { renderBoardRows(await board.top(boardMode, 10)); } catch (e) { list.innerHTML = '<li class="note">Couldn\'t load the scoreboard. Check your connection.</li>'; }
+  }
+  function openBoard(from) {
+    boardBack = from;
+    boardMode = mode;
+    $('board-where').textContent = `${board.where()}. Fastest Moon landings; ties go to more stars.`;
+    $(from).hidden = true;
+    $('board').hidden = false;
+    loadBoard();
+  }
+  if (board) {
+    board.ready.then((kind) => {
+      if (kind === 'none') return;
+      $('open-board').hidden = false;
+      $('won-board').hidden = false;
+    });
+    $('open-board').addEventListener('click', () => openBoard('title'));
+    $('won-board').addEventListener('click', () => openBoard('won'));
+    $('close-board').addEventListener('click', () => { $('board').hidden = true; $(boardBack).hidden = false; });
+    document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => { boardMode = t.dataset.board; loadBoard(); }));
+    $('post-btn').addEventListener('click', () => {
+      const name = board.cleanName($('post-name').value);
+      $('post-name').value = name;
+      try { if (name) localStorage.setItem(NAME_KEY, name); } catch (e) { /* no storage */ }
+      postRun(name);
+    });
+    $('post-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('post-btn').click(); });
   }
 
   function medalHtml(medal, label, value, isNew, hint) {
@@ -1261,6 +1448,8 @@
   const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
   const JUMP = new Set(['Space', 'ArrowUp', 'KeyW']);
   window.addEventListener('keydown', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (!$('board').hidden) return;
     if (KEYMAP[e.code] && state === 'title') {
       // On the title screen, left/right picks the mode that Space will start.
       mode = KEYMAP[e.code] === 'left' ? 'checkpoint' : 'uber';

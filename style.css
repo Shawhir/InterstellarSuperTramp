@@ -195,6 +195,33 @@ body {
 .won-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .card .won-actions .secondary { color: var(--ink); background: transparent; border: 3px solid var(--ink); box-shadow: none; }
 
+/* Scoreboard */
+.card #open-board { justify-self: start; }
+.card .secondary { color: var(--ink); background: transparent; border: 3px solid var(--ink); box-shadow: none; }
+.board-where { color: var(--muted); }
+.tabs { display: flex; gap: 8px; }
+.card .tabs .tab { font-size: 10px; padding: 8px 10px; color: var(--muted); background: transparent; border: 2px dashed var(--muted); box-shadow: none; }
+.card .tabs .tab[aria-selected="true"] { color: var(--night); background: var(--star); border: 2px solid var(--star); }
+.board-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 50vh; overflow-y: auto; }
+.board-list li { display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto auto; gap: 10px; align-items: baseline; font-size: 21px; padding: 2px 6px; font-variant-numeric: tabular-nums; }
+.board-list li.me { background: rgba(255, 210, 63, 0.15); outline: 2px solid var(--star); }
+.board-list .rank { font-family: var(--display); font-size: 10px; color: var(--star); }
+.board-list .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-list .stars-col { color: var(--star); }
+.board-list li.note { display: block; color: var(--muted); }
+.post { display: grid; gap: 6px; }
+.post label { font-size: 19px; color: var(--muted); }
+.post-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.post-row input {
+  flex: 1 1 10em; min-width: 0;
+  font-family: var(--body); font-size: 22px;
+  color: var(--ink); background: var(--night);
+  border: 2px solid var(--muted); padding: 6px 8px;
+}
+.post-row input:focus-visible { outline: 3px solid var(--star); outline-offset: 1px; }
+.card .post-row button { padding: 8px 12px; font-size: 11px; }
+.card .post-status { color: var(--go); }
+
 /* Records and medals */
 .card .bests { font-size: 19px; color: var(--muted); }
 .card .bests b { color: var(--star); font-weight: normal; }
