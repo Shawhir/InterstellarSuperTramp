@@ -56,6 +56,10 @@ says so if that happens.
   from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow
   minor drift with echo in space, and speeds up with the bounce multiplier.
   Music and sound effects have separate on/off buttons.
+- Intro: a comet streaks through a rushing starfield and the title peels off its
+  tail; tap to fall from space down to Earth, then the menu fades in with the top
+  scores. On the menu the tramp hops along the logo (with the odd backflip off the
+  end letter), and each mode plays its own jingle when picked.
 - Juice: screen shake on landings, squash and stretch, afterimage trail, landing
   rings, PERFECT! for centre landings, streak counter, layer banners, speed lines,
   a sun, drifting clouds, aurora, shooting stars.

@@ -136,6 +136,22 @@
       const t = now();
       [76, 72, 67, 60].forEach((m, i) => voice({ type: 'square', f: hz(m), t: t + i * 0.07, dur: 0.1, vol: 0.05 }));
     },
+    // Falling from space to Earth after the title
+    whoosh() {
+      if (!ok()) return;
+      const t = now();
+      noise({ t, dur: 2.4, vol: 0.22, type: 'bandpass', freq: 3200, freq1: 260, q: 1.4 });
+      voice({ type: 'sine', f: 900, f1: 120, t, dur: 2.2, vol: 0.06, vib: 8 });
+      voice({ type: 'sine', f: 70, f1: 40, t: t + 2.1, dur: 0.6, vol: 0.4 });
+    },
+    // Picking a mode: bright for Checkpoint, darker and tougher for Uber Tramp
+    jingle(mode) {
+      if (!ok()) return;
+      const t = now();
+      const notes = mode === 'uber' ? [57, 60, 63, 69, 68] : [67, 71, 74, 79, 83];
+      notes.forEach((m, i) => voice({ type: 'square', f: hz(m), t: t + i * 0.08, dur: i === notes.length - 1 ? 0.35 : 0.1, vol: 0.06 }));
+      voice({ type: 'triangle', f: hz(notes[0] - 12), t, dur: 0.5, vol: 0.12 });
+    },
     sizzle() {
       if (!ok()) return;
       noise({ t: now(), dur: 0.6, vol: 0.25, type: 'highpass', freq: 3000, freq1: 7000 });
