@@ -7,7 +7,13 @@
   'use strict';
 
   const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
+  const mainCtx = canvas.getContext('2d');
+  // The world is drawn onto a small canvas (1/PIX size) and scaled up with hard
+  // edges, so everything is made of real chunky pixels. Text stays crisp.
+  const PIX = 3;
+  const lo = document.createElement('canvas');
+  const loCtx = lo.getContext('2d');
+  let ctx = mainCtx;
   const $ = (id) => document.getElementById(id);
   const hud = { score: $('score'), mult: $('mult'), alt: $('alt'), layer: $('layer'), stars: $('stars'), toast: $('toast'), music: $('music'), sfx: $('sfx'), tilt: $('tilt') };
 
@@ -89,7 +95,8 @@
     const rows = FRAMES[frame];
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.translate(Math.round(x), Math.round(y));
+    const snap = ctx === loCtx ? (v) => Math.round(v / PIX) * PIX : Math.round;
+    ctx.translate(snap(x), snap(y));
     ctx.scale(flip ? -sx : sx, sy);
     for (let j = 0; j < rows.length; j++) {
       const row = rows[j];
@@ -195,16 +202,17 @@
     // Mountain ranges behind the ground, farthest first:
     // [sideways parallax, vertical parallax, colour, snow, tallest peak]
     const ranges = [
-      [0.3, 0.55, '#cdd8ee', '#ffffff', 250],
-      [0.42, 0.64, '#b3c3e2', '#f5f8ff', 205],
-      [0.55, 0.74, '#9fb4d8', '#eef3ff', 160],
-      [0.72, 0.84, '#7f9bc2', '#e3ebf8', 115],
-      [0.88, 0.93, '#4d7a6e', null, 60],
-    ].map(([f, sink, col, snow, hMax]) => {
+      [0.3, 0.55, '#e8835a', '#ffb27a', 250],
+      [0.42, 0.64, '#cf6660', '#f59a74', 205],
+      [0.55, 0.74, '#a8527a', '#d27a8e', 160],
+      [0.72, 0.84, '#784682', null, 115],
+      [0.88, 0.93, '#3a2c55', null, 46, true],
+    ].map(([f, sink, col, snow, hMax, trees]) => {
       const n = 480, h = new Array(n).fill(0);
-      const peaks = 26 + Math.floor(rnd() * 10);
+      // The nearest range is a dark treeline: lots of small bumps instead of peaks
+      const peaks = trees ? 170 : 26 + Math.floor(rnd() * 10);
       for (let i = 0; i < peaks; i++) {
-        const c = rnd() * n, width = 8 + rnd() * 22, height = hMax * (0.35 + rnd() * 0.65);
+        const c = rnd() * n, width = trees ? 1.5 + rnd() * 2.5 : 8 + rnd() * 22, height = hMax * (0.35 + rnd() * 0.65);
         for (let j = -Math.ceil(width); j <= Math.ceil(width); j++) {
           const idx = (Math.round(c) + j + n) % n;
           h[idx] = Math.max(h[idx], height * (1 - Math.abs(j) / width));
@@ -793,8 +801,17 @@
     const zoom = clamp(Math.min(cw / 560, ch / 640), 0.55, 1);
     W = cw / zoom; H = ch / zoom;
     canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
-    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
-    ctx.imageSmoothingEnabled = false;
+    mainCtx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
+    mainCtx.imageSmoothingEnabled = false;
+    lo.width = Math.ceil(W / PIX); lo.height = Math.ceil(H / PIX);
+    loCtx.imageSmoothingEnabled = false;
+  }
+  // Where a world point lands on screen after the ride zoom (for crisp text drawn on top)
+  let lastZ = 1, lastPivotY = 0;
+  function toScreen(a, R) {
+    const ph = a + theta;
+    const x0 = cx + R * Math.sin(ph), y0 = cy - R * Math.cos(ph);
+    return lastZ < 0.999 ? [cx + (x0 - cx) * lastZ, lastPivotY + (y0 - lastPivotY) * lastZ] : [x0, y0];
   }
 
   const onScreen = (x, y, m = 220) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
@@ -805,13 +822,26 @@
   }
   function px(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); }
 
+  // Sunset palette, top of the sky to the horizon (pixel-art bands)
+  const SUNSET = ['#5a3a78', '#7a3f7a', '#a24a72', '#c95a62', '#e0704f', '#ef8a40', '#f6a54a', '#f9c060'];
+  const SPACE_TOP = '#03040c', SPACE_BOTTOM = '#141a3e';
+  function sunsetAt(t) {
+    const f = clamp(t, 0, 1) * (SUNSET.length - 1), i = Math.min(SUNSET.length - 2, Math.floor(f));
+    return [SUNSET[i], SUNSET[i + 1], f - i];
+  }
+  const hexOf = (rgb) => '#' + rgb.match(/\d+/g).slice(0, 3).map((v) => (+v).toString(16).padStart(2, '0')).join('');
   function drawSky() {
     const s = clamp((cam.r - R0) / (tierR(9) - R0), 0, 1);
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, mix('#58b4f0', '#03040c', s));
-    g.addColorStop(1, mix('#d4f0ff', '#101634', Math.min(1, s * 1.1)));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+    // Stepped bands, like a pixel-art sky; they darken into space as you climb
+    const bands = 18, bh = Math.ceil(H / bands);
+    for (let i = 0; i < bands; i++) {
+      const t = i / (bands - 1);
+      const [a, b, k] = sunsetAt(t);
+      const day = hexOf(mix(a, b, k));
+      const night = hexOf(mix(SPACE_TOP, SPACE_BOTTOM, t));
+      ctx.fillStyle = mix(day, night, Math.min(1, s * 1.15));
+      ctx.fillRect(0, i * bh, W, bh + 1);
+    }
     drawSun(s);
     drawSkyMoon();
     drawAurora();
@@ -834,16 +864,20 @@
   }
 
   function drawSun(s) {
-    const x = W * 0.16, y = H * 0.16 + s * 20;
-    const glow = ctx.createRadialGradient(x, y, 4, x, y, 90);
-    glow.addColorStop(0, `rgba(255,240,170,${0.9 - s * 0.3})`);
-    glow.addColorStop(1, 'rgba(255,240,170,0)');
+    // A big low sun glowing through the sunset, sinking out of view as you climb
+    const x = W * 0.3, y = H * 0.3 + (cam.r - R0) * 0.25;
+    if (y - 140 > H) return;
+    const fade = 1 - s;
+    const glow = ctx.createRadialGradient(x, y, 10, x, y, 200);
+    glow.addColorStop(0, `rgba(255,214,120,${0.75 * fade})`);
+    glow.addColorStop(0.4, `rgba(255,150,80,${0.35 * fade})`);
+    glow.addColorStop(1, 'rgba(255,120,80,0)');
     ctx.fillStyle = glow;
-    ctx.fillRect(x - 90, y - 90, 180, 180);
-    ctx.save(); ctx.translate(x, y); ctx.rotate(clock * 0.2);
-    for (let i = 0; i < 8; i++) { ctx.rotate(TAU / 8); px(-2, 26 + (i % 2) * 4, 4, 10, 'rgba(255,230,140,0.8)'); }
-    ctx.restore();
-    ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(x, y, 20, 0, TAU); ctx.fill();
+    ctx.fillRect(x - 200, y - 200, 400, 400);
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = '#ffe08a'; ctx.beginPath(); ctx.arc(x, y, 46, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#fff3c4'; ctx.beginPath(); ctx.arc(x - 8, y - 8, 30, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
   }
 
   // The Moon is one object for the whole climb: a small disc in the sky near
@@ -913,18 +947,23 @@
   }
 
   function drawFarClouds(s) {
-    const a = clamp(1 - s * 2.2, 0, 1);
+    // Long streaky sunset clouds, lit from below
+    const a = clamp(1 - s * 2, 0, 1);
     if (a <= 0) return;
-    ctx.globalAlpha = 0.5 * a;
-    ctx.fillStyle = '#ffffff';
-    for (let i = 0; i < 7; i++) {
-      const span = W + 240;
-      let x = ((i * 0.37 * span - theta * 90 + clock * 6) % span + span) % span - 120;
-      let y = ((i * 0.53 % 1) * H * 0.6 + (cam.r - R0) * 0.12) % (H * 1.2);
-      const r = 14 + (i % 3) * 6;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, TAU); ctx.arc(x + r, y - r * 0.4, r * 1.1, 0, TAU); ctx.arc(x + r * 2.2, y, r * 0.9, 0, TAU);
-      ctx.fill();
+    for (let i = 0; i < 9; i++) {
+      const span = W + 400;
+      const x = ((i * 0.37 * span - theta * (60 + i * 8) + clock * (4 + i)) % span + span) % span - 200;
+      const y = ((i * 0.53) % 1) * H * 0.5 + 20 + (cam.r - R0) * (0.08 + i * 0.01);
+      if (y > H + 40) continue;
+      const len = 90 + (i % 4) * 50, th = 8 + (i % 3) * 4;
+      ctx.globalAlpha = 0.85 * a;
+      ctx.fillStyle = i % 2 ? '#f39a5a' : '#e8745a';
+      ctx.fillRect(x, y, len, th);
+      ctx.fillRect(x + len * 0.15, y - th * 0.6, len * 0.55, th * 0.7);
+      ctx.fillStyle = '#ffc47a';
+      ctx.fillRect(x + len * 0.1, y + th - 3, len * 0.7, 3);
+      ctx.fillStyle = '#b8506a';
+      ctx.fillRect(x + len * 0.2, y - th * 0.6, len * 0.4, 2);
     }
     ctx.globalAlpha = 1;
   }
@@ -1012,19 +1051,23 @@
         ctx.globalAlpha = 1;
       }, 120);
     }
+  }
+
+  function drawPops() {
     ctx.font = '10px "Press Start 2P", monospace';
     ctx.textAlign = 'center';
     for (const q of fx.pops) {
-      at(q.a + theta, q.R + q.t * 50, () => {
-        const k = q.t / 1.1;
-        let sc = q.t < 0.15 ? 0.6 + (q.t / 0.15) * 0.6 : 1.2 - Math.min(0.2, (q.t - 0.15));
-        if (q.small) sc *= 0.75;
-        ctx.scale(sc, sc);
-        ctx.globalAlpha = 1 - k * k;
-        ctx.fillStyle = '#1b1530'; ctx.fillText(q.text, 2, 2);
-        ctx.fillStyle = q.color; ctx.fillText(q.text, 0, 0);
-        ctx.globalAlpha = 1;
-      }, 80);
+      const [x, y] = toScreen(q.a, q.R + q.t * 50);
+      if (x < -80 || x > W + 80 || y < -40 || y > H + 40) continue;
+      const k = q.t / 1.1;
+      let sc = q.t < 0.15 ? 0.6 + (q.t / 0.15) * 0.6 : 1.2 - Math.min(0.2, (q.t - 0.15));
+      if (q.small) sc *= 0.75;
+      ctx.save();
+      ctx.translate(x, y); ctx.scale(sc, sc);
+      ctx.globalAlpha = 1 - k * k;
+      ctx.fillStyle = '#1b1530'; ctx.fillText(q.text, 2, 2);
+      ctx.fillStyle = q.color; ctx.fillText(q.text, 0, 0);
+      ctx.restore();
     }
     ctx.textAlign = 'start';
   }
@@ -1057,7 +1100,7 @@
     const fade = clamp(1 - (tf - 3) / 4, 0, 1) * clamp((cam.zoom - 0.55) / 0.35, 0, 1);
     if (fade <= 0) return;
     const skyS = clamp((cam.r - R0) / (tierR(9) - R0), 0, 1);
-    const haze = mix('#58b4f0', '#03040c', skyS).match(/\d+/g).map(Number);
+    const haze = mix('#f0985a', '#03040c', skyS).match(/\d+/g).map(Number);
     const tint = (hex, k) => {
       const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
       return `rgb(${c.map((v, i) => Math.round(lerp(v, haze[i], k))).join(',')})`;
@@ -1123,9 +1166,9 @@
     ctx.beginPath(); ctx.arc(cx, cy, R0 + 90, 0, TAU); ctx.fill();
 
     const disc = (r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill(); };
-    disc(R0, '#7a4e33');
+    disc(R0, '#8a3f2c');
     const crustG = ctx.createRadialGradient(cx, cy, R0 * 0.9, cx, cy, R0);
-    crustG.addColorStop(0, '#5e3a27'); crustG.addColorStop(1, '#94603f');
+    crustG.addColorStop(0, '#5e2a22'); crustG.addColorStop(1, '#a24a33');
     disc(R0, crustG);
     const mantle = ctx.createRadialGradient(cx, cy, R0 * 0.55, cx, cy, R0 * 0.9);
     mantle.addColorStop(0, '#f2842e'); mantle.addColorStop(1, '#a5322a');
@@ -1154,9 +1197,9 @@
       }, 30);
     }
     // Grass
-    ctx.strokeStyle = '#4fb34a'; ctx.lineWidth = 10;
+    ctx.strokeStyle = '#6fa32c'; ctx.lineWidth = 12;
     ctx.beginPath(); ctx.arc(cx, cy, R0 - 5, 0, TAU); ctx.stroke();
-    ctx.strokeStyle = '#7ad65a'; ctx.lineWidth = 3;
+    ctx.strokeStyle = '#a8d44a'; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.arc(cx, cy, R0 - 1, 0, TAU); ctx.stroke();
 
     // Layer labels stay upright while the rock turns past them
@@ -1212,14 +1255,19 @@
         const spring = Math.exp(-4.5 * p.jig) * Math.cos(17 * p.jig) * p.hit;
         const breath = Math.sin(clock * 1.6 + p.spin) * 0.03;
         ctx.scale(1 + spring * 0.22 + breath, 1 - spring * 0.32 - breath * 0.6);
-        const base = p.type === 'nlc' ? 'rgba(130,200,255,0.85)' : '#ffffff';
-        const shade = p.type === 'nlc' ? 'rgba(80,120,255,0.7)' : '#d7e6f5';
+        const base = p.type === 'nlc' ? 'rgba(130,200,255,0.85)' : '#ffd9c2';
+        const shade = p.type === 'nlc' ? 'rgba(80,120,255,0.7)' : '#d98a8e';
         const bulge = (i) => 1 + spring * 0.18 * (i % 2 ? 1 : -1) + Math.sin(clock * 2.3 + p.spin + i * 1.7) * 0.04;
         const puffs = [[-w * 0.32, 18, 17], [-w * 0.1, 12, 22], [w * 0.14, 14, 20], [w * 0.34, 20, 15]].map(([x, y, r], i) => [x, y, r * bulge(i)]);
         ctx.fillStyle = shade;
         for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x, y + 5, r, 0, TAU); ctx.fill(); }
         ctx.fillStyle = base;
         for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+        if (p.type === 'cloud') {
+          // Sunlit tops, like the clouds in a pixel-art sunset
+          ctx.fillStyle = '#fff1de';
+          for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x - r * 0.2, y - r * 0.3, r * 0.55, 0, TAU); ctx.fill(); }
+        }
         if (p.type === 'nlc') { ctx.strokeStyle = 'rgba(200,240,255,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-w / 2, 10); ctx.bezierCurveTo(-w / 4, 0, w / 4, 22, w / 2, 8); ctx.stroke(); }
       } else if (p.type === 'balloon') {
         ctx.scale(1 + sq * 0.15, 1 - sq * 0.15);
@@ -1412,10 +1460,13 @@
   }
 
   function render() {
-    if (state === 'splash') { drawIntro(); return; }
+    if (state === 'splash') { ctx = mainCtx; drawIntro(); return; }
     const anchorY = H * (cam.anchor || 0.46);
     cx = Math.round(W / 2);
     cy = anchorY + cam.r;
+    // Pixel pass: the whole world goes onto the small canvas
+    ctx = loCtx;
+    ctx.setTransform(1 / PIX, 0, 0, 1 / PIX, 0, 0);
     drawSky();
     ctx.save();
     if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
@@ -1423,6 +1474,7 @@
     const z = cam.zoom, pivotY = cy - player.r;
     if (z < 0.999) { ctx.translate(cx, pivotY); ctx.scale(z, z); ctx.translate(-cx, -pivotY); }
     view = { x0: cx - cx / z, x1: cx + (W - cx) / z, y0: pivotY - pivotY / z, y1: pivotY + (H - pivotY) / z };
+    lastZ = z; lastPivotY = pivotY;
     drawMountains();
     drawEarth();
     drawDecor();
@@ -1466,6 +1518,10 @@
     drawFx();
     ctx.restore();
     drawSpeedLines();
+    // Scale the pixel canvas up onto the screen, then crisp text on top
+    ctx = mainCtx;
+    ctx.drawImage(lo, 0, 0, lo.width, lo.height, 0, 0, lo.width * PIX, lo.height * PIX);
+    drawPops();
     drawBanner();
     if (fx.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${fx.flash * 0.5})`; ctx.fillRect(0, 0, W, H); }
     if (state === 'descend') drawIntroOverlay();
