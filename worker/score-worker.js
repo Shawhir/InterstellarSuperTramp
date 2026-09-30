@@ -18,12 +18,18 @@ const MIN_GAP_MS = 20000; // one post per 20 s per address (best effort)
 const recent = new Map();
 
 // A light filter for a family game; names that trip it are replaced, not rejected.
-const BLOCKED = ['fuck', 'shit', 'cunt', 'bitch', 'bastard', 'dick', 'cock', 'pussy', 'wank', 'twat', 'slut', 'whore', 'nigg', 'fag', 'rape', 'nazi', 'hitler', 'porn', 'sex'];
+// Blocked anywhere in a name (rarely part of a real one):
+const BLOCKED = ['fuck', 'shit', 'bitch', 'bastard', 'pussy', 'wank', 'twat', 'slut', 'whore', 'nigger', 'nigga', 'porn'];
+// Blocked only as whole words, because they hide inside real names
+// (Dickson, Hancock, Essex, Fagan, Grapes, Scunthorpe...):
+const BLOCKED_WORDS = ['cunt', 'dick', 'cock', 'fag', 'faggot', 'rape', 'nazi', 'hitler', 'sex', 'sexy', 'cum', 'anal'];
 
 function cleanName(raw) {
   const name = String(raw || '').normalize('NFKC').replace(/[^\p{L}\p{N} _.'-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
-  const squashed = name.toLowerCase().replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's').replace(/[^a-z]/g, '');
-  if (BLOCKED.some((w) => squashed.includes(w))) return 'Space Tramp';
+  const plain = name.toLowerCase().replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's');
+  const squashed = plain.replace(/[^a-z]/g, '');
+  const words = plain.match(/[a-z]+/g) || [];
+  if (BLOCKED.some((w) => squashed.includes(w)) || words.some((w) => BLOCKED_WORDS.includes(w))) return 'Space Tramp';
   return name;
 }
 
@@ -73,14 +79,17 @@ export default {
     if (!c.ok) return json({ error: 'Posting is only allowed from the game.' }, 403, c.headers);
     if (!env.GITHUB_TOKEN) return json({ error: 'The scoreboard is not set up yet.' }, 503, c.headers);
 
-    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-    const now = Date.now();
-    if (recent.has(ip) && now - recent.get(ip) < MIN_GAP_MS) return json({ error: 'Slow down: one score every 20 seconds.' }, 429, c.headers);
-
     let body;
     try { body = await request.json(); } catch (e) { return json({ error: 'Bad request.' }, 400, c.headers); }
     const { run, error } = checkRun(body);
     if (error) return json({ error }, 400, c.headers);
+
+    // One post every 20 s per player per connection, so family members on the
+    // same Wi-Fi don't block each other.
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const who = `${ip}|${run.name.toLowerCase()}`;
+    const now = Date.now();
+    if (recent.has(who) && now - recent.get(who) < MIN_GAP_MS) return json({ error: 'Slow down: one score every 20 seconds.' }, 429, c.headers);
 
     const repo = env.GITHUB_REPO || DEFAULT_REPO;
     const gh = await fetch(`https://api.github.com/repos/${repo}/dispatches`, {
@@ -97,7 +106,7 @@ export default {
     if (gh.status !== 204) {
       return json({ error: `GitHub didn't accept the score (${gh.status}). Check the Worker's GITHUB_TOKEN.` }, 502, c.headers);
     }
-    recent.set(ip, now);
+    recent.set(who, now);
     if (recent.size > 5000) recent.clear();
     return json({ ok: true, name: run.name }, 202, c.headers);
   },

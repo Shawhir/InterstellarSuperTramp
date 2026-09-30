@@ -11,16 +11,21 @@ import re
 import time
 import unicodedata
 
-BLOCKED = ["fuck", "shit", "cunt", "bitch", "bastard", "dick", "cock", "pussy", "wank", "twat",
-           "slut", "whore", "nigg", "fag", "rape", "nazi", "hitler", "porn", "sex"]
+# Blocked anywhere in a name (rarely part of a real one)
+BLOCKED = ["fuck", "shit", "bitch", "bastard", "pussy", "wank", "twat", "slut", "whore", "nigger", "nigga", "porn"]
+# Blocked only as whole words, because they hide inside real names
+# (Dickson, Hancock, Essex, Fagan, Grapes, Scunthorpe...)
+BLOCKED_WORDS = ["cunt", "dick", "cock", "fag", "faggot", "rape", "nazi", "hitler", "sex", "sexy", "cum", "anal"]
 
 
 def clean_name(raw):
     name = unicodedata.normalize("NFKC", str(raw or ""))
     name = re.sub(r"[^\w .'-]", "", name, flags=re.UNICODE)
     name = re.sub(r"\s+", " ", name).strip()[:16]
-    squashed = re.sub(r"[^a-z]", "", name.lower().translate(str.maketrans("01345", "oieas")))
-    if any(w in squashed for w in BLOCKED):
+    plain = name.lower().translate(str.maketrans("01345", "oieas"))
+    squashed = re.sub(r"[^a-z]", "", plain)
+    words = re.findall(r"[a-z]+", plain)
+    if any(w in squashed for w in BLOCKED) or any(w in BLOCKED_WORDS for w in words):
         return "Space Tramp"
     return name
 
