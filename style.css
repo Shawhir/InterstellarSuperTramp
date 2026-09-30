@@ -1,0 +1,175 @@
+/* Layout: full-bleed canvas world; HUD pinned to the corners; overlays centred over the game. */
+:root {
+  --night: #0b0f26;
+  --panel: rgba(11, 15, 38, 0.82);
+  --ink: #eef1ff;
+  --muted: #a9b0d6;
+  --star: #ffd23f;
+  --go: #52e07a;
+  --warn: #ffab3d;
+  --display: "Press Start 2P", "Courier New", monospace;
+  --body: "VT323", "Courier New", monospace;
+  color-scheme: dark;
+}
+
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--night);
+  color: var(--ink);
+  font-family: var(--body);
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
+.hud {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: none;
+}
+.hud-block { display: grid; gap: 6px; }
+.alt {
+  font-family: var(--display);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 2px 2px 0 var(--night);
+}
+.layer {
+  font-size: 20px;
+  color: var(--muted);
+  text-shadow: 2px 2px 0 var(--night);
+}
+.stars {
+  font-family: var(--display);
+  font-size: 14px;
+  color: var(--star);
+  text-align: right;
+  text-shadow: 2px 2px 0 var(--night);
+  font-variant-numeric: tabular-nums;
+}
+.hud button {
+  pointer-events: auto;
+  justify-self: end;
+  font-family: var(--display);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+  background: var(--panel);
+  border: 2px solid var(--muted);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.hud button:focus-visible, .overlay button:focus-visible, .pad button:focus-visible {
+  outline: 3px solid var(--star);
+  outline-offset: 2px;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 84px);
+  transform: translateX(-50%);
+  max-width: min(440px, calc(100% - 32px));
+  padding: 8px 14px;
+  background: var(--panel);
+  border: 2px solid var(--star);
+  font-size: 22px;
+  line-height: 1.1;
+  text-align: center;
+  text-wrap: balance;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-inline: 16px;
+  background: rgba(11, 15, 38, 0.45);
+}
+.card {
+  max-width: 460px;
+  width: 100%;
+  background: var(--panel);
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+  padding: 22px 22px 20px;
+  display: grid;
+  gap: 14px;
+}
+.card h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(16px, 5vw, 24px);
+  line-height: 1.35;
+  text-wrap: balance;
+}
+.card h1 span { color: var(--star); }
+.card p { margin: 0; font-size: 22px; line-height: 1.15; color: var(--ink); }
+.card .keys { color: var(--muted); }
+.card kbd {
+  font-family: var(--display);
+  font-size: 10px;
+  padding: 2px 5px;
+  border: 2px solid var(--muted);
+  color: var(--ink);
+}
+.card .go { color: var(--go); }
+.card button {
+  justify-self: start;
+  font-family: var(--display);
+  font-size: 13px;
+  padding: 12px 16px;
+  color: var(--night);
+  background: var(--star);
+  border: 0;
+  box-shadow: 4px 4px 0 var(--ink);
+  cursor: pointer;
+}
+.card button:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+
+.pad {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  display: none;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pad .lr { display: flex; gap: 12px; }
+.pad button {
+  width: 72px;
+  height: 72px;
+  font-family: var(--display);
+  font-size: 18px;
+  color: var(--ink);
+  background: var(--panel);
+  border: 3px solid var(--muted);
+  touch-action: none;
+}
+.pad button.on { border-color: var(--star); color: var(--star); }
+.pad .jump { width: 96px; font-size: 11px; }
+@media (pointer: coarse) { .pad { display: flex; } }
+
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }

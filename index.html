@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Interstellar SuperTramp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game" tabindex="0" aria-label="Interstellar SuperTramp game"></canvas>
+
+<div class="hud">
+  <div class="hud-block">
+    <div class="alt" id="alt">0 m</div>
+    <div class="layer" id="layer">On the ground</div>
+  </div>
+  <div class="hud-block">
+    <div class="stars" id="stars">★ 0 / 0</div>
+    <button id="sound" type="button" aria-pressed="true">SOUND ON</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<div class="overlay" id="title">
+  <div class="card">
+    <h1>Interstellar <span>SuperTramp</span></h1>
+    <p>The world turns under your feet. Walk to a trampoline, hop on, and bounce from cloud to balloon to satellite until you reach the Moon, 384,400 km up.</p>
+    <p>The arrow under your feet points to the next bouncy thing. When it turns <span class="go">green and points down</span>, you are lined up to land.</p>
+    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> walk and steer &nbsp; <kbd>SPACE</kbd> hop. Grab the stars on the way.</p>
+    <button id="start" type="button">Start walking</button>
+  </div>
+</div>
+
+<div class="overlay" id="won" hidden>
+  <div class="card">
+    <h1>You made it to <span>the Moon</span></h1>
+    <p>384,400 km from home, one bounce at a time.</p>
+    <p id="won-stats"></p>
+    <button id="again" type="button">Bounce again</button>
+  </div>
+</div>
+
+<div class="pad" aria-label="Touch controls">
+  <div class="lr">
+    <button type="button" data-key="left" aria-label="Walk left">◀</button>
+    <button type="button" data-key="right" aria-label="Walk right">▶</button>
+  </div>
+  <button type="button" class="jump" data-key="jump" aria-label="Hop">HOP</button>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
