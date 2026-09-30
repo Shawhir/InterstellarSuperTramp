@@ -1790,7 +1790,7 @@
       unlockActions();
     } catch (e) {
       const noName = e && e.message === 'name';
-      setStatus(noName ? 'Type your name to post your score.'
+      setStatus(noName ? 'Type your name using letters or numbers (emoji and symbols are left out).'
         : e && e.userMessage ? e.userMessage
         : "Couldn't reach the scoreboard. Check your connection and try again.");
       $('post-btn').disabled = false;

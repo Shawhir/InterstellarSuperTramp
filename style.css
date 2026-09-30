@@ -296,6 +296,7 @@ body.intro .hud, body.intro .toast { opacity: 0; pointer-events: none; }
 .post label { font-size: 19px; color: var(--muted); }
 .post-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .post-row input {
+  -webkit-user-select: text; user-select: text; touch-action: manipulation;
   flex: 1 1 10em; min-width: 0;
   font-family: var(--body); font-size: 22px;
   color: var(--ink); background: var(--night);
