@@ -82,7 +82,8 @@
   };
   const WALK_CYCLE = ['walk1', 'stand', 'walk2', 'stand'];
 
-  function drawSprite(frame, x, y, flip, sy, sx = 1, alpha = 1) {
+  const HOT = { h: '#fff3b0', k: '#ff7a1a', s: '#ffd36b', y: '#ffffff', c: '#ffb23a', p: '#ff8a2a', b: '#e0433b' };
+  function drawSprite(frame, x, y, flip, sy, sx = 1, alpha = 1, pal = PAL) {
     const rows = FRAMES[frame];
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -93,7 +94,7 @@
       for (let i = 0; i < row.length; i++) {
         const ch = row[i];
         if (ch === '.') continue;
-        ctx.fillStyle = PAL[ch];
+        ctx.fillStyle = pal[ch];
         ctx.fillRect((i - 6) * SCALE, (j - 15) * SCALE, SCALE, SCALE);
       }
     }
@@ -230,7 +231,7 @@
   // Juice: screen shake, landing rings, floating text, afterimages, banners
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let shake = 0;
-  let fx = { puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
+  let fx = { flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
   const tilt = { on: false, axis: 0, zero: null, got: false };
   let checkpoint = 0;   // highest checkpoint layer reached this run
   let falls = 0;        // misses this run (caught at a checkpoint or back on Earth)
@@ -272,9 +273,9 @@
 
   function reset(seed) {
     world = buildWorld(seed);
-    Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1, apexR: R0, lastPlat: null, lastH: 0 });
+    Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1, apexR: R0, lastPlat: null, lastH: 0, heat: 0 });
     theta = 0; lastTier = -1; bestTier = -1; playTime = 0; particles = [];
-    fx = { puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
+    fx = { flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
     checkpoint = 0; falls = 0; heightRecordShown = false;
     cam.r = R0;
     updateStarsHud();
@@ -359,6 +360,13 @@
   // ---- Update ---------------------------------------------------------------
   function land(p) {
     const off = Math.abs(wrap(p.a + theta) * p.R);
+    if (player.heat > 0.3) {
+      // Put out by the landing: a hiss of steam
+      for (let i = 0; i < 12; i++) fx.puffs.push({ a: -theta, R: p.R + 6, vt: (Math.random() - 0.5) * 220, vr: 60 + Math.random() * 140, r: 5 + Math.random() * 8, t: 0, life: 0.7 + Math.random() * 0.5, nlc: false });
+      sfx.sizzle();
+      pop('PHEW!', '#8fd0ff', player.r + 90);
+      player.heat = 0; fx.flames = [];
+    }
     player.r = p.R;
     p.squash = 1;
     player.squash = 1;
@@ -431,10 +439,29 @@
     if (p.ride && p.ride.state === 'near') startRide(p);
   }
 
+  // A fireball hits the ground: boom, big shake, crater.
+  function impact(h) {
+    const a = -theta;
+    sfx.boom(h);
+    addShake(14 + h * 16);
+    fx.flash = 0.45 + h * 0.3;
+    ring(a, R0, '#ffb23a', 2.2);
+    ring(a, R0, '#ffffff', 1.4);
+    burst(a, R0, '#8a5a3b', 26, 320);
+    burst(a, R0, '#5a3a28', 16, 420);
+    burst(a, R0, '#ffb23a', 20, 260);
+    burst(a, R0, '#fff3b0', 10, 200);
+    for (let i = 0; i < 16; i++) fx.puffs.push({ a, R: R0 + 4, vt: (Math.random() - 0.5) * 320, vr: 40 + Math.random() * 160, r: 8 + Math.random() * 12, t: 0, life: 1 + Math.random() * 0.8, nlc: false, smoke: true });
+    fx.craters.push({ a, t: 0, size: 0.8 + h * 0.6 });
+    pop('KABOOM!', '#ffb23a', R0 + 120);
+    toast('Crash landing! Find a trampoline to get back up.', 3.2);
+  }
+
   // Caught by the last checkpoint: drop back onto its platform from just above.
   function rescue() {
     const p = world.plats.find((q) => q.tier === checkpoint && q.main);
     if (!p) return;
+    player.heat = 0; fx.flames = [];
     falls++;
     theta = -p.a;
     player.r = p.R + 170; player.vr = -150; player.vx = 0;
@@ -535,7 +562,9 @@
           const hard = player.vr < -900;
           if (lastTier >= 0) falls++;
           player.r = R0; player.vr = 0; player.onGround = true; player.squash = 1;
-          if (lastTier >= 0) { toast('Back on solid ground. Find a trampoline!'); sfx.thud(); addShake(hard ? 12 : 6); ring(-theta, R0, '#c9a27a', 1.4); }
+          if (player.heat > 0.3) impact(player.heat);
+          else if (lastTier >= 0) { toast('Back on solid ground. Find a trampoline!'); sfx.thud(); addShake(hard ? 12 : 6); ring(-theta, R0, '#c9a27a', 1.4); }
+          player.heat = 0; fx.flames = [];
           lastTier = -1; fx.streak = 0; fx.whistled = false;
           player.lastPlat = null; player.lastH = 0;
           burst(-theta, R0, '#8a5a3b', hard ? 18 : 8, hard ? 180 : 90);
@@ -562,6 +591,21 @@
     }
 
     player.squash = player.squash > 0 ? Math.max(0, player.squash - dt * 5) : Math.min(0, player.squash + dt * 4);
+    // Re-entry: drop a layer or more and you heat up into a fireball.
+    const fallen = !player.onGround && player.vr < 0 ? (player.apexR || player.r) - player.r : 0;
+    const heatWant = state === 'play' ? clamp((fallen - 320) / 380, 0, 1) : 0;
+    player.heat = (player.heat || 0) + (heatWant - (player.heat || 0)) * Math.min(1, dt * (heatWant > (player.heat || 0) ? 7 : 10));
+    if (player.heat > 0.05 && state === 'play') {
+      const n = Math.ceil(player.heat * 4);
+      for (let i = 0; i < n; i++) {
+        fx.flames.push({ a: -theta + ((Math.random() - 0.5) * 22) / player.r, R: player.r + 10 + Math.random() * 30, vt: (Math.random() - 0.5) * 60, vr: Math.random() * 60, t: 0, life: 0.25 + Math.random() * 0.35 * player.heat, size: 4 + Math.random() * 8 * player.heat });
+      }
+    }
+    for (const f of fx.flames) { f.t += dt; f.R += f.vr * dt; f.a += (f.vt * dt) / f.R; }
+    fx.flames = fx.flames.filter((f) => f.t < f.life);
+    for (const c of fx.craters) c.t += dt;
+    fx.craters = fx.craters.filter((c) => c.t < 14);
+    if (snd) snd.sfx.burn(state === 'play' ? player.heat : 0);
     shake = Math.max(0, shake - dt * 30);
     fx.flash = Math.max(0, fx.flash - dt * 1.5);
     for (const q of fx.puffs) { q.t += dt; q.R += q.vr * dt; q.a += (q.vt * dt) / q.R; q.vt *= 1 - dt * 2.5; q.vr *= 1 - dt * 2; }
@@ -780,12 +824,60 @@
     }
   }
 
+  function drawFire(feetX, feetY) {
+    const h = player.heat || 0;
+    for (const f of fx.flames) {
+      at(f.a + theta, f.R, () => {
+        const k = f.t / f.life;
+        ctx.globalAlpha = 1 - k;
+        ctx.fillStyle = k < 0.25 ? '#fff3b0' : k < 0.55 ? '#ffb23a' : k < 0.8 ? '#ff6a1a' : '#8a3a2a';
+        const sz = f.size * (1 - k * 0.5);
+        ctx.fillRect(-sz / 2, -sz / 2, sz, sz);
+        ctx.globalAlpha = 1;
+      }, 40);
+    }
+    if (h < 0.05) return;
+    const y = feetY - 24;
+    const g = ctx.createRadialGradient(feetX, y, 4, feetX, y, 40 + h * 40);
+    g.addColorStop(0, `rgba(255,243,176,${0.8 * h})`);
+    g.addColorStop(0.4, `rgba(255,140,40,${0.55 * h})`);
+    g.addColorStop(1, 'rgba(255,90,20,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(feetX, y, 40 + h * 40, 0, TAU); ctx.fill();
+    // Flame cone streaming up behind the falling tramp
+    const flick = Math.sin(clock * 40) * 4;
+    ctx.fillStyle = `rgba(255,120,30,${0.7 * h})`;
+    ctx.beginPath(); ctx.moveTo(feetX - 22, y + 6); ctx.quadraticCurveTo(feetX + flick, y - 90 * h - 20, feetX + 22, y + 6); ctx.fill();
+    ctx.fillStyle = `rgba(255,230,140,${0.8 * h})`;
+    ctx.beginPath(); ctx.moveTo(feetX - 12, y + 4); ctx.quadraticCurveTo(feetX - flick, y - 55 * h - 10, feetX + 12, y + 4); ctx.fill();
+  }
+
+  function drawCraters() {
+    for (const c of fx.craters) {
+      at(c.a + theta, R0, () => {
+        const fade = clamp(1 - (c.t - 10) / 4, 0, 1);
+        ctx.globalAlpha = fade;
+        ctx.scale(c.size, c.size);
+        ctx.fillStyle = '#2a1a14'; ctx.beginPath(); ctx.ellipse(0, 3, 34, 9, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#4a2e20'; ctx.beginPath(); ctx.ellipse(0, 2, 24, 5, 0, 0, TAU); ctx.fill();
+        if (c.t < 0.6) { ctx.fillStyle = `rgba(255,178,58,${1 - c.t / 0.6})`; ctx.beginPath(); ctx.ellipse(0, 1, 20, 4, 0, 0, TAU); ctx.fill(); }
+        // wisps of smoke
+        ctx.fillStyle = 'rgba(90,90,100,0.35)';
+        for (let i = 0; i < 3; i++) {
+          const k = ((c.t * 0.5 + i / 3) % 1);
+          ctx.beginPath(); ctx.arc((i - 1) * 12 + Math.sin(c.t * 2 + i) * 4, -k * 60, 5 + k * 10, 0, TAU); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }, 120);
+    }
+  }
+
   function drawFx() {
     for (const q of fx.puffs) {
       at(q.a + theta, q.R, () => {
         const k = q.t / q.life;
         ctx.globalAlpha = (1 - k) * 0.9;
-        ctx.fillStyle = q.nlc ? '#b8e4ff' : '#ffffff';
+        ctx.fillStyle = q.smoke ? '#8a7f78' : q.nlc ? '#b8e4ff' : '#ffffff';
         ctx.beginPath(); ctx.arc(0, 0, q.r * (1 + k * 1.2), 0, TAU); ctx.fill();
         ctx.globalAlpha = 1;
       }, 60);
@@ -1188,6 +1280,7 @@
     drawMountains();
     drawEarth();
     drawDecor();
+    drawCraters();
     for (const p of world.plats) {
       if (p.ride) drawRide(p);
       drawPlatform(p);
@@ -1217,7 +1310,8 @@
       drawSprite('jump', cx + g.r * Math.sin(ph), cy - g.r * Math.cos(ph), g.flip, 1, 1, g.life * 2);
     }
     drawGuide(feetX, feetY);
-    drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx);
+    drawFire(feetX, feetY);
+    drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx, 1, player.heat > 0.55 ? HOT : PAL);
     drawParticles();
     drawFx();
     ctx.restore();

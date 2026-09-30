@@ -26,6 +26,7 @@
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
   let echo = null;
+  let burnNode = null;
 
   const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
 
@@ -93,6 +94,36 @@
     fall() {
       if (!ok()) return;
       voice({ type: 'sine', f: 1400, f1: 220, t: now(), dur: 1.1, vol: 0.08, vib: 12 });
+    },
+    // Roar of re-entry; level 0..1, called every frame
+    burn(level) {
+      if (!ac) return;
+      if (!burnNode) {
+        if (level < 0.05) return;
+        const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+        src.buffer = noiseBuf; src.loop = true;
+        f.type = 'lowpass'; f.frequency.value = 400; f.Q.value = 1.5;
+        g.gain.value = 0;
+        src.connect(f).connect(g).connect(sfxBus);
+        src.start();
+        burnNode = { src, f, g };
+      }
+      const t = ac.currentTime, v = sfxOn ? level * 0.35 : 0;
+      burnNode.g.gain.setTargetAtTime(v, t, 0.05);
+      burnNode.f.frequency.setTargetAtTime(300 + level * 1500, t, 0.08);
+      if (level < 0.02) { const n = burnNode; burnNode = null; n.g.gain.setTargetAtTime(0, t, 0.05); n.src.stop(t + 0.4); }
+    },
+    sizzle() {
+      if (!ok()) return;
+      noise({ t: now(), dur: 0.6, vol: 0.25, type: 'highpass', freq: 3000, freq1: 7000 });
+    },
+    boom(h = 1) {
+      if (!ok()) return;
+      const t = now();
+      voice({ type: 'sine', f: 90, f1: 22, t, dur: 1.2, vol: 0.8 });
+      voice({ type: 'triangle', f: 160, f1: 40, t, dur: 0.5, vol: 0.4 });
+      noise({ t, dur: 1.4, vol: 0.5 * (0.6 + h * 0.4), type: 'lowpass', freq: 2500, freq1: 90, q: 0.5 });
+      noise({ t: t + 0.05, dur: 0.25, vol: 0.3, type: 'bandpass', freq: 900, q: 0.6 });
     },
     thud() {
       if (!ok()) return;
