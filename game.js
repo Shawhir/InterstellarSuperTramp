@@ -122,7 +122,7 @@
     const stars = [];
     const mk = (tier, a) => {
       const type = TIERS[tier].type;
-      const p = { tier, a, a0: a, type, R: tierR(tier), w: WIDTH[type], bounce: bounceFor(tier), squash: 0, sway: 0, freq: 0, phase: 0, spin: rnd() * TAU };
+      const p = { tier, a, a0: a, type, R: tierR(tier), w: WIDTH[type], bounce: bounceFor(tier), squash: 0, jig: 9, hit: 0, sway: 0, freq: 0, phase: 0, spin: rnd() * TAU };
       if (type === 'satellite' || type === 'station' || type === 'asteroid') {
         // Orbiting things sway back and forth so they never drift out of reach for good.
         p.sway = (30 + rnd() * 40) / p.R;
@@ -211,7 +211,7 @@
   // Juice: screen shake, landing rings, floating text, afterimages, banners
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let shake = 0;
-  let fx = { rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
+  let fx = { puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
   const tilt = { on: false, axis: 0, zero: null, got: false };
   let checkpoint = 0;   // highest checkpoint layer reached this run
   let falls = 0;        // misses this run (caught at a checkpoint or back on Earth)
@@ -253,9 +253,9 @@
 
   function reset(seed) {
     world = buildWorld(seed);
-    Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1 });
+    Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1, apexR: R0, lastPlat: null, lastH: 0 });
     theta = 0; lastTier = -1; bestTier = -1; playTime = 0; particles = [];
-    fx = { rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
+    fx = { puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
     checkpoint = 0; falls = 0; heightRecordShown = false;
     cam.r = R0;
     updateStarsHud();
@@ -350,12 +350,30 @@
       win();
       return;
     }
-    player.vr = p.bounce;
+    // Rebound: a platform throws you back as high as you fell from. Each repeat
+    // bounce on the same platform halves the extra height until it's back to normal.
     player.speed = speedFor(p.tier);
+    const normalH = tierR(p.tier + 1) - tierR(p.tier) + OVERSHOOT;
+    const fellFrom = player.apexR - p.R;
+    let bounceH = fellFrom > normalH + 20 ? fellFrom : normalH;
+    if (p === player.lastPlat && player.lastH > normalH) bounceH = normalH + (player.lastH - normalH) / 2;
+    if (bounceH - normalH < 20) bounceH = normalH;
+    const rebound = bounceH > normalH && p !== player.lastPlat;
+    player.lastPlat = p; player.lastH = bounceH; player.apexR = p.R;
+    player.vr = bounceH > normalH ? player.speed * Math.sqrt(2 * G * bounceH) : p.bounce;
+    if (rebound && bounceH > normalH + 150) pop('REBOUND!', '#8fd0ff', player.r + 110);
+    p.jig = 0; p.hit = Math.min(1.6, 0.8 + (player.vr / p.bounce - 1) * 0.6);
     const climbed = p.tier > lastTier;
     lastTier = p.tier;
     sfx.boing(p.tier, player.speed);
     const puff = p.type === 'cloud' || p.type === 'balloon' || p.type === 'nlc' ? '#ffffff' : '#ffd23f';
+    if (p.type === 'cloud' || p.type === 'nlc') {
+      const n = 7 + Math.round(p.hit * 4);
+      for (let i = 0; i < n; i++) {
+        const side = i % 2 ? 1 : -1;
+        fx.puffs.push({ a: -theta, R: p.R - 4 - Math.random() * 10, vt: side * (40 + Math.random() * 110) * p.hit, vr: 20 + Math.random() * 60, r: 5 + Math.random() * 7, t: 0, life: 0.6 + Math.random() * 0.4, nlc: p.type === 'nlc' });
+      }
+    }
     burst(-theta, p.R, puff, 12, 200);
     ring(-theta, p.R, puff);
     addShake(2 + player.speed * 1.5);
@@ -400,6 +418,7 @@
     falls++;
     theta = -p.a;
     player.r = p.R + 170; player.vr = -150; player.vx = 0;
+    player.apexR = player.r; player.lastPlat = null; player.lastH = 0;
     player.speed = speedFor(Math.max(0, checkpoint - 1));
     lastTier = checkpoint - 1; fx.streak = 0; fx.whistled = false; fx.trail = [];
     cam.r = player.r - 260;
@@ -414,6 +433,7 @@
     for (const p of world.plats) {
       if (p.sway) p.a = p.a0 + p.sway * Math.sin(clock * p.freq + p.phase);
       p.squash = Math.max(0, p.squash - dt * 4);
+      p.jig += dt;
     }
 
     if (state === 'title') {
@@ -442,12 +462,14 @@
       jumpBuffer -= dt;
       if (player.onGround && jumpBuffer > 0) {
         player.vr = HOP_V; player.speed = 1; player.onGround = false; jumpBuffer = 0;
+        player.apexR = player.r; player.lastPlat = null; player.lastH = 0;
         player.squash = -0.6;
         sfx.hop();
         burst(-theta, R0, '#c9a27a', 5, 80);
       }
       if (!player.onGround) {
         const prev = player.r;
+        player.apexR = Math.max(player.apexR || player.r, player.r);
         player.vr = Math.max(player.vr - G * player.speed * player.speed * dt, -1600 * player.speed);
         player.r += player.vr * dt;
         if (player.vr < 0) {
@@ -466,6 +488,7 @@
           player.r = R0; player.vr = 0; player.onGround = true; player.squash = 1;
           if (lastTier >= 0) { toast('Back on solid ground. Find a trampoline!'); sfx.thud(); addShake(hard ? 12 : 6); ring(-theta, R0, '#c9a27a', 1.4); }
           lastTier = -1; fx.streak = 0; fx.whistled = false;
+          player.lastPlat = null; player.lastH = 0;
           burst(-theta, R0, '#8a5a3b', hard ? 18 : 8, hard ? 180 : 90);
         }
       }
@@ -491,6 +514,8 @@
     player.squash = player.squash > 0 ? Math.max(0, player.squash - dt * 5) : Math.min(0, player.squash + dt * 4);
     shake = Math.max(0, shake - dt * 30);
     fx.flash = Math.max(0, fx.flash - dt * 1.5);
+    for (const q of fx.puffs) { q.t += dt; q.R += q.vr * dt; q.a += (q.vt * dt) / q.R; q.vt *= 1 - dt * 2.5; q.vr *= 1 - dt * 2; }
+    fx.puffs = fx.puffs.filter((q) => q.t < q.life);
     for (const r of fx.rings) r.t += dt;
     fx.rings = fx.rings.filter((r) => r.t < 0.5);
     for (const q of fx.pops) q.t += dt;
@@ -702,6 +727,15 @@
   }
 
   function drawFx() {
+    for (const q of fx.puffs) {
+      at(q.a + theta, q.R, () => {
+        const k = q.t / q.life;
+        ctx.globalAlpha = (1 - k) * 0.9;
+        ctx.fillStyle = q.nlc ? '#b8e4ff' : '#ffffff';
+        ctx.beginPath(); ctx.arc(0, 0, q.r * (1 + k * 1.2), 0, TAU); ctx.fill();
+        ctx.globalAlpha = 1;
+      }, 60);
+    }
     for (const r of fx.rings) {
       at(r.a + theta, r.R, () => {
         const k = r.t / 0.5;
@@ -907,10 +941,14 @@
         ctx.beginPath(); ctx.moveTo(-w / 2 + 6, 1); ctx.quadraticCurveTo(0, 1 + sq * 14, w / 2 - 6, 1); ctx.lineTo(w / 2 - 6, 4); ctx.quadraticCurveTo(0, 4 + sq * 14, -w / 2 + 6, 4); ctx.fill();
         px(-w / 2, 0, 6, 6, '#ffd23f'); px(w / 2 - 6, 0, 6, 6, '#ffd23f');
       } else if (p.type === 'cloud' || p.type === 'nlc') {
-        ctx.scale(1 + sq * 0.12, 1 - sq * 0.2);
+        // Jelly wobble after a landing (squash, overshoot, settle) plus a slow idle breath.
+        const spring = Math.exp(-4.5 * p.jig) * Math.cos(17 * p.jig) * p.hit;
+        const breath = Math.sin(clock * 1.6 + p.spin) * 0.03;
+        ctx.scale(1 + spring * 0.22 + breath, 1 - spring * 0.32 - breath * 0.6);
         const base = p.type === 'nlc' ? 'rgba(130,200,255,0.85)' : '#ffffff';
         const shade = p.type === 'nlc' ? 'rgba(80,120,255,0.7)' : '#d7e6f5';
-        const puffs = [[-w * 0.32, 18, 17], [-w * 0.1, 12, 22], [w * 0.14, 14, 20], [w * 0.34, 20, 15]];
+        const bulge = (i) => 1 + spring * 0.18 * (i % 2 ? 1 : -1) + Math.sin(clock * 2.3 + p.spin + i * 1.7) * 0.04;
+        const puffs = [[-w * 0.32, 18, 17], [-w * 0.1, 12, 22], [w * 0.14, 14, 20], [w * 0.34, 20, 15]].map(([x, y, r], i) => [x, y, r * bulge(i)]);
         ctx.fillStyle = shade;
         for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x, y + 5, r, 0, TAU); ctx.fill(); }
         ctx.fillStyle = base;
@@ -1267,7 +1305,7 @@
 
   // Hot reload support when hosted as an artifact; harmless elsewhere.
   function snapshot() {
-    return { seed: world.seed, state, theta, lastTier, bestTier, playTime, checkpoint, falls, mode, player: { ...player }, taken: world.stars.filter((s) => s.taken).map((s) => s.id) };
+    return { seed: world.seed, state, theta, lastTier, bestTier, playTime, checkpoint, falls, mode, player: { ...player, lastPlat: null }, taken: world.stars.filter((s) => s.taken).map((s) => s.id) };
   }
   function start(data) {
     resize();

@@ -72,4 +72,9 @@ says so if that happens.
   checkpoints: any miss drops you all the way back to Earth). Each Moon landing awards medals for time (gold under 0:30, silver
   under 0:45, bronze under 1:15, first guesses to tune), stars (all, two thirds,
   a third) and falls (gold for none).
+- Rebound: fall from higher up onto a lower platform and the first bounce throws
+  you back to the height you fell from; each repeat bounce on that platform
+  halves the extra height until it is back to the normal bounce.
+- Clouds wobble like jelly when you land (squash, overshoot, settle), breathe
+  gently while idle, and throw off soft puffs.
 - `style.css`: HUD, overlays and the touch pad.
