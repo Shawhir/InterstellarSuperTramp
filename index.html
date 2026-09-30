@@ -55,6 +55,7 @@
         <span class="mode-best" id="bests-uber">No runs yet.</span>
       </button>
     </div>
+    <button id="open-board" class="secondary" type="button" hidden>Scoreboard</button>
   </div>
 </div>
 
@@ -64,10 +65,32 @@
     <p class="won-mode" id="won-mode"></p>
     <p id="won-stats">384,400 km from home, one bounce at a time.</p>
     <div class="medals" id="medals"></div>
+    <div class="post" id="post" hidden>
+      <label for="post-name">Your name on the scoreboard</label>
+      <div class="post-row">
+        <input id="post-name" type="text" maxlength="16" autocomplete="nickname" spellcheck="false">
+        <button id="post-btn" type="button">Post score</button>
+      </div>
+    </div>
+    <p class="post-status" id="post-status" hidden></p>
     <div class="won-actions">
       <button id="again" type="button">Bounce again</button>
       <button id="change-mode" class="secondary" type="button">Change mode</button>
+      <button id="won-board" class="secondary" type="button" hidden>Scoreboard</button>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="board" hidden>
+  <div class="card">
+    <h1>Score<span>board</span></h1>
+    <p class="board-where" id="board-where"></p>
+    <div class="tabs" role="tablist" aria-label="Mode">
+      <button type="button" class="tab" role="tab" data-board="checkpoint" aria-selected="true">Checkpoint</button>
+      <button type="button" class="tab" role="tab" data-board="uber" aria-selected="false">Uber Tramp</button>
+    </div>
+    <ol class="board-list" id="board-list"></ol>
+    <button id="close-board" type="button">Back</button>
   </div>
 </div>
 
@@ -79,6 +102,8 @@
   <button type="button" class="jump" data-key="jump" aria-label="Hop">HOP</button>
 </div>
 
+<script src="scoreboard-config.js"></script>
+<script src="scoreboard.js"></script>
 <script src="audio.js"></script>
 <script src="game.js"></script>
 </body>
