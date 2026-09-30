@@ -1400,6 +1400,57 @@
     drawRail();
   }
 
+  // ---- Title logo: the tramp hops along the letters ---------------------------
+  function startLogo() {
+    const c = $('logo-tramp');
+    if (!c) return;
+    const g = c.getContext('2d');
+    const paint = (frame) => {
+      g.clearRect(0, 0, c.width, c.height);
+      FRAMES[frame].forEach((row, j) => {
+        for (let i = 0; i < row.length; i++) {
+          if (row[i] === '.') continue;
+          g.fillStyle = PAL[row[i]];
+          g.fillRect(i * SCALE, j * SCALE, SCALE, SCALE);
+        }
+      });
+    };
+    const letters = [...document.querySelectorAll('.logo-main span')];
+    const spot = (el) => ({ x: el.offsetLeft + el.offsetWidth / 2, y: el.offsetTop });
+    const land = (el) => {
+      el.classList.remove('squash'); void el.offsetWidth; el.classList.add('squash');
+      el.addEventListener('animationend', () => el.classList.remove('squash'), { once: true });
+    };
+    let at = 0, step = 1, t0 = performance.now() + 1100; // wait for the letters to drop in
+    const HOP = 480;
+    if (reduceMotion) {
+      paint('stand');
+      const p = spot(letters[0]);
+      c.style.transform = `translate(${p.x - c.offsetWidth / 2}px, ${p.y - c.offsetHeight}px)`;
+      return;
+    }
+    function tick(now) {
+      requestAnimationFrame(tick);
+      if ($('title').hidden || !c.offsetWidth) return;
+      let u = (now - t0) / HOP;
+      if (u >= 1) {
+        at += step;
+        if (at === letters.length - 1 || at === 0) step = -step; // bounce back at each end
+        land(letters[at]);
+        t0 = now; u = 0;
+      }
+      u = Math.max(0, u);
+      const a = spot(letters[at]), b = spot(letters[at + step]);
+      const x = lerp(a.x, b.x, u), base = lerp(a.y, b.y, u);
+      const h = c.offsetHeight, w = c.offsetWidth;
+      const y = base - h + 4 - Math.sin(u * Math.PI) * h * 0.9;
+      paint(u > 0.08 && u < 0.92 ? 'jump' : 'stand');
+      c.style.transform = `translate(${x - w / 2}px, ${y}px) scaleX(${step < 0 ? -1 : 1})`;
+    }
+    requestAnimationFrame(tick);
+  }
+  startLogo();
+
   // ---- Flow -----------------------------------------------------------------
   function startGame() {
     if (snd) { snd.init(); snd.music.start(); }
