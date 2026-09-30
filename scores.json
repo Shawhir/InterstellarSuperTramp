@@ -1,6 +1,15 @@
 {
   "checkpoint": [
     {
+      "name": "Tina",
+      "score": 925415,
+      "time_ms": 146053,
+      "stars": 18,
+      "total_stars": 37,
+      "falls": 21,
+      "at": 1790801676
+    },
+    {
       "name": "Rosie Q",
       "score": 572820,
       "time_ms": 295388,
@@ -17,15 +26,6 @@
       "total_stars": 33,
       "falls": 8,
       "at": 1790798614
-    },
-    {
-      "name": "Tina",
-      "score": 442425,
-      "time_ms": 166943,
-      "stars": 25,
-      "total_stars": 38,
-      "falls": 14,
-      "at": 1790801505
     }
   ],
   "uber": [
