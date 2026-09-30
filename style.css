@@ -187,4 +187,22 @@ body {
   .layer { font-size: 18px; }
 }
 
+/* Short screens: phones in landscape */
+@media (max-height: 500px) {
+  .hud { top: calc(env(safe-area-inset-top, 0px) + 8px); left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); }
+  .alt { font-size: 13px; }
+  .layer { font-size: 17px; }
+  .stars { font-size: 12px; }
+  .hud button { font-size: 8px; padding: 5px 6px; }
+  .pad { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+  .pad button { width: 58px; height: 58px; font-size: 15px; }
+  .pad .jump { width: 80px; }
+  .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important; max-width: min(420px, calc(100% - 260px)); font-size: 17px !important; padding: 6px 10px; }
+  .overlay { place-items: start center; padding-block: 12px; }
+  .card { max-width: 620px; padding: 14px 16px; gap: 8px; }
+  .card h1 { font-size: 16px; }
+  .card p { font-size: 17px; }
+  .card button { padding: 10px 14px; font-size: 11px; }
+}
+
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } .stars.pop { animation: none; } }
