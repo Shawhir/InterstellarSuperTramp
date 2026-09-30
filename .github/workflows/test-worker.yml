@@ -1,0 +1,11 @@
+name: Test the score middleman (temporary)
+on: workflow_dispatch
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post a test run with a score, the way the game does
+        run: |
+          curl -sS -i -X POST https://supertrampscores.mkmquinn.workers.dev \
+            -H 'Origin: https://shawhir.github.io' -H 'Content-Type: application/json' \
+            -d '{"name":"Score Test","mode":"checkpoint","score":12345,"time_ms":63000,"stars":7,"total_stars":36,"falls":4}' | tee -a "$GITHUB_STEP_SUMMARY"
