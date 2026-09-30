@@ -1,0 +1,102 @@
+// Interstellar SuperTramp: score middleman (Cloudflare Worker).
+//
+// Lets players post a Moon landing with just a name, no GitHub account. The game
+// POSTs the run here; this checks it and hands it to GitHub as a
+// "repository_dispatch" event using a private token that players never see.
+// The repo's "Record a score" workflow then saves it to scores.json.
+//
+// Settings (Cloudflare dashboard → the Worker → Settings → Variables and secrets):
+//   GITHUB_TOKEN     (secret, required)  fine-grained token for this one repo with
+//                                        "Contents: Read and write"
+//   GITHUB_REPO      (optional)          defaults to Shawhir/InterstellarSuperTramp
+//   ALLOWED_ORIGINS  (optional)          comma-separated sites allowed to post;
+//                                        defaults to https://shawhir.github.io
+
+const DEFAULT_REPO = 'Shawhir/InterstellarSuperTramp';
+const DEFAULT_ORIGINS = 'https://shawhir.github.io';
+const MIN_GAP_MS = 20000; // one post per 20 s per address (best effort)
+const recent = new Map();
+
+// A light filter for a family game; names that trip it are replaced, not rejected.
+const BLOCKED = ['fuck', 'shit', 'cunt', 'bitch', 'bastard', 'dick', 'cock', 'pussy', 'wank', 'twat', 'slut', 'whore', 'nigg', 'fag', 'rape', 'nazi', 'hitler', 'porn', 'sex'];
+
+export function cleanName(raw) {
+  const name = String(raw || '').normalize('NFKC').replace(/[^\p{L}\p{N} _.'-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
+  const squashed = name.toLowerCase().replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's').replace(/[^a-z]/g, '');
+  if (BLOCKED.some((w) => squashed.includes(w))) return 'Space Tramp';
+  return name;
+}
+
+export function checkRun(body) {
+  const run = {
+    name: cleanName(body && body.name),
+    mode: body && body.mode,
+    time_ms: Math.round(Number(body && body.time_ms)),
+    stars: Math.round(Number(body && body.stars)),
+    total_stars: Math.round(Number(body && body.total_stars)),
+    falls: Math.round(Number((body && body.falls) || 0)),
+  };
+  if (!run.name) return { error: 'Please type a name (letters and numbers).' };
+  if (run.mode !== 'checkpoint' && run.mode !== 'uber') return { error: 'Unknown mode.' };
+  if (!(run.time_ms >= 5000 && run.time_ms <= 3600000)) return { error: "That time doesn't look like a real run." };
+  if (!(run.total_stars >= 1 && run.total_stars <= 100 && run.stars >= 0 && run.stars <= run.total_stars)) return { error: "Those stars don't add up." };
+  if (!(run.falls >= 0 && run.falls <= 1000)) return { error: 'Too many falls to be real.' };
+  return { run };
+}
+
+function cors(origin, env) {
+  const allowed = (env.ALLOWED_ORIGINS || DEFAULT_ORIGINS).split(',').map((s) => s.trim());
+  const ok = allowed.includes(origin);
+  return {
+    ok,
+    headers: {
+      'Access-Control-Allow-Origin': ok ? origin : allowed[0],
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
+      Vary: 'Origin',
+    },
+  };
+}
+
+const json = (data, status, headers) => new Response(JSON.stringify(data), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
+
+export default {
+  async fetch(request, env) {
+    const origin = request.headers.get('Origin') || '';
+    const c = cors(origin, env);
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: c.headers });
+    if (request.method === 'GET') return json({ ok: true, service: 'Interstellar SuperTramp scores' }, 200, c.headers);
+    if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405, c.headers);
+    if (!c.ok) return json({ error: 'Posting is only allowed from the game.' }, 403, c.headers);
+    if (!env.GITHUB_TOKEN) return json({ error: 'The scoreboard is not set up yet.' }, 503, c.headers);
+
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const now = Date.now();
+    if (recent.has(ip) && now - recent.get(ip) < MIN_GAP_MS) return json({ error: 'Slow down: one score every 20 seconds.' }, 429, c.headers);
+
+    let body;
+    try { body = await request.json(); } catch (e) { return json({ error: 'Bad request.' }, 400, c.headers); }
+    const { run, error } = checkRun(body);
+    if (error) return json({ error }, 400, c.headers);
+
+    const repo = env.GITHUB_REPO || DEFAULT_REPO;
+    const gh = await fetch(`https://api.github.com/repos/${repo}/dispatches`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'supertramp-score-worker',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ event_type: 'score', client_payload: run }),
+    });
+    if (gh.status !== 204) {
+      return json({ error: `GitHub didn't accept the score (${gh.status}). Check the Worker's GITHUB_TOKEN.` }, 502, c.headers);
+    }
+    recent.set(ip, now);
+    if (recent.size > 5000) recent.clear();
+    return json({ ok: true, name: run.name }, 202, c.headers);
+  },
+};

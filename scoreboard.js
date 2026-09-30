@@ -14,7 +14,7 @@
 
   const cfg = window.SUPERTRAMP_SCOREBOARD || {};
   const TABLE = cfg.table || 'scores';
-  const board = { kind: 'none', ready: null, needsName: false, viaGithub: false };
+  const board = { kind: 'none', ready: null, needsName: false, viaGithub: false, viaWorker: false };
   const REPO = cfg.githubRepo || 'Shawhir/InterstellarSuperTramp';
   let db = null, user = null, myId = null;
 
@@ -38,7 +38,12 @@
       if (await initArtifact()) { board.kind = 'artifact'; return board.kind; }
     } catch (e) { /* fall through */ }
     if (initSupabase()) { board.kind = 'supabase'; board.needsName = true; return board.kind; }
-    if (location.hostname.endsWith('github.io') || cfg.github) { board.kind = 'github'; board.viaGithub = true; }
+    if (location.hostname.endsWith('github.io') || cfg.github) {
+      board.kind = 'github';
+      // With the Cloudflare middleman set up, players just type a name;
+      // otherwise they post through a GitHub issue with their GitHub account.
+      if (cfg.workerUrl) { board.viaWorker = true; board.needsName = true; } else board.viaGithub = true;
+    }
     return board.kind;
   })();
 
@@ -103,6 +108,29 @@
     return { pending: true };
   }
 
+  async function wkSubmit(run) {
+    const name = clean(run.name);
+    if (!name) throw new Error('name');
+    let res;
+    try {
+      res = await fetch(cfg.workerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, mode: run.mode, time_ms: Math.round(run.timeMs), stars: run.stars, total_stars: run.total, falls: run.falls }),
+      });
+    } catch (e) {
+      throw new Error('network');
+    }
+    if (!res.ok) {
+      let msg = '';
+      try { msg = (await res.json()).error || ''; } catch (e) { /* not JSON */ }
+      const err = new Error('refused');
+      err.userMessage = msg;
+      throw err;
+    }
+    return { pending: true, worker: true, name };
+  }
+
   // ---- Artifact db: scores/<viewer id> holds that person's best per mode ------
   async function artTop(mode) {
     const snap = await db.collection('scores').get();
@@ -141,14 +169,15 @@
     await board.ready;
     if (board.kind === 'artifact') return artSubmit(run);
     if (board.kind === 'supabase') return sbSubmit(run);
-    if (board.kind === 'github') return ghSubmit(run);
+    if (board.kind === 'github') return board.viaWorker ? wkSubmit(run) : ghSubmit(run);
     return null;
   };
   board.cleanName = clean;
+  board.postWithGithub = (run) => ghSubmit(run);
   board.where = () => (board.kind === 'artifact'
     ? 'Everyone who opens this page on claude.ai'
     : board.kind === 'supabase' ? 'Everyone playing online'
-      : board.kind === 'github' ? 'Everyone playing online, posted through GitHub' : '');
+      : board.kind === 'github' ? 'Everyone playing online' : '');
 
   window.SuperTrampBoard = board;
 })();

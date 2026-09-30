@@ -1,11 +1,22 @@
 name: Record a score
 
-# Players post a run by opening a pre-filled issue from the game's Moon screen.
-# This checks it, adds it to scores.json (best run per GitHub user per mode),
-# replies with the rank, closes the issue and republishes the site.
+# Runs arrive three ways:
+#  - an issue opened from the game's "Post on GitHub" button (name = GitHub username)
+#  - a repository_dispatch "score" event from the Cloudflare Worker in worker/
+#    (name typed by the player, no GitHub account needed)
+#  - a manual run with a JSON payload, for testing
+# Each run is checked and added to scores.json (best per name per mode), then the
+# site is republished. Issues get a reply with the rank and are closed.
 on:
   issues:
     types: [opened]
+  repository_dispatch:
+    types: [score]
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: 'Run as JSON: {"name","mode","time_ms","stars","total_stars","falls"}'
+        required: true
 
 permissions:
   contents: write
@@ -18,7 +29,7 @@ concurrency:
 
 jobs:
   record:
-    if: contains(github.event.issue.body, 'supertramp-score')
+    if: github.event_name != 'issues' || contains(github.event.issue.body, 'supertramp-score')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,81 +38,29 @@ jobs:
       - name: Add the run to scores.json
         id: add
         env:
+          EVENT: ${{ github.event_name }}
           ISSUE_BODY: ${{ github.event.issue.body }}
-          PLAYER: ${{ github.event.issue.user.login }}
-        run: |
-          python3 - <<'PY'
-          import json, os, re, time
-          body, player = os.environ["ISSUE_BODY"], os.environ["PLAYER"]
-          out = open(os.environ["GITHUB_OUTPUT"], "a")
-          def fail(msg):
-              out.write("ok=false\n")
-              out.write(f"message={msg}\n")
-              raise SystemExit(0)
-          m = re.search(r"```json\s*(\{.*?\})\s*```", body, re.S)
-          if not m:
-              fail("I couldn't find the run details in this issue. Please post from the game's Moon screen.")
-          try:
-              run = json.loads(m.group(1))
-          except ValueError:
-              fail("The run details in this issue aren't valid. Please post from the game's Moon screen.")
-          try:
-              mode = run["mode"]
-              entry = {
-                  "name": player,
-                  "time_ms": int(run["time_ms"]),
-                  "stars": int(run["stars"]),
-                  "total_stars": int(run["total_stars"]),
-                  "falls": int(run.get("falls", 0)),
-                  "at": int(time.time()),
-              }
-          except (KeyError, TypeError, ValueError):
-              fail("The run details in this issue are incomplete. Please post from the game's Moon screen.")
-          if mode not in ("checkpoint", "uber") \
-             or not 5000 <= entry["time_ms"] <= 3600000 \
-             or not 1 <= entry["total_stars"] <= 100 \
-             or not 0 <= entry["stars"] <= entry["total_stars"] \
-             or not 0 <= entry["falls"] <= 1000:
-              fail("Those numbers don't look like a real run, so I haven't recorded it.")
-          scores = json.load(open("scores.json"))
-          rows = scores.setdefault(mode, [])
-          key = lambda r: (r["time_ms"], -r["stars"])
-          prev = next((r for r in rows if r["name"].lower() == player.lower()), None)
-          improved = prev is None or key(entry) < key(prev)
-          if improved:
-              rows = [r for r in rows if r["name"].lower() != player.lower()] + [entry]
-          rows.sort(key=key)
-          scores[mode] = rows[:200]
-          json.dump(scores, open("scores.json", "w"), indent=2)
-          open("scores.json", "a").write("\n")
-          rank = next((i + 1 for i, r in enumerate(scores[mode]) if r["name"].lower() == player.lower()), None)
-          label = "Checkpoint" if mode == "checkpoint" else "Uber Tramp"
-          secs = entry["time_ms"] // 1000
-          t = f"{secs // 60}:{secs % 60:02d}"
-          if improved:
-              msg = f"Recorded: {t} with {entry['stars']}/{entry['total_stars']} stars. You're #{rank} of {len(scores[mode])} on the {label} board. It shows in the game in a minute or two."
-          else:
-              msg = f"Nice run ({t}), but your best on the {label} board is still faster, so the board keeps that one. You're #{rank} of {len(scores[mode])}."
-          out.write("ok=true\n")
-          out.write(f"changed={'true' if improved else 'false'}\n")
-          out.write(f"message={msg}\n")
-          PY
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          DISPATCH_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+          MANUAL_PAYLOAD: ${{ github.event.inputs.payload }}
+        run: python3 .github/scripts/record_score.py
       - name: Save scores.json
         if: steps.add.outputs.ok == 'true' && steps.add.outputs.changed == 'true'
         env:
-          PLAYER: ${{ github.event.issue.user.login }}
+          WHO: ${{ steps.add.outputs.name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add scores.json
-          git commit -m "Record a score for $PLAYER"
+          git commit -m "Record a score for $WHO"
           for i in 1 2 3; do git push origin HEAD:main && break; git pull --rebase origin main; done
       - name: Republish the site
-        if: steps.add.outputs.changed == 'true'
+        if: steps.add.outputs.ok == 'true' && steps.add.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
       - name: Reply and close the issue
+        if: github.event_name == 'issues'
         env:
           GH_TOKEN: ${{ github.token }}
           MESSAGE: ${{ steps.add.outputs.message }}
@@ -111,3 +70,7 @@ jobs:
           gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body "$MESSAGE"
           if [ "$OK" = "true" ]; then reason=completed; else reason="not planned"; fi
           gh issue close "$ISSUE" --repo "$GITHUB_REPOSITORY" --reason "$reason"
+      - name: Report
+        env:
+          MESSAGE: ${{ steps.add.outputs.message }}
+        run: echo "$MESSAGE" >> "$GITHUB_STEP_SUMMARY"
