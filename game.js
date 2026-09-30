@@ -175,6 +175,7 @@
   let clock = 0;
 
   const keys = { left: false, right: false };
+  const touch = window.matchMedia('(pointer: coarse)').matches;
   let jumpBuffer = 0;
 
   function reset(seed) {
@@ -385,9 +386,12 @@
 
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = canvas.clientWidth; H = canvas.clientHeight;
-    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cw = canvas.clientWidth, ch = canvas.clientHeight;
+    // Zoom out on narrow screens so the next platform is usually in view.
+    const zoom = clamp(cw / 560, 0.7, 1);
+    W = cw / zoom; H = ch / zoom;
+    canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
+    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
     ctx.imageSmoothingEnabled = false;
   }
 
@@ -675,11 +679,14 @@
     state = 'play';
     $('title').hidden = true;
     $('won').hidden = true;
-    toast('Walk to a trampoline, then hop on with Space.');
+    document.body.classList.add('playing');
+    toast(touch ? 'Walk to a trampoline, then press HOP to jump on.' : 'Walk to a trampoline, then hop on with Space.');
     canvas.focus();
+    try { navigator.wakeLock?.request('screen').catch(() => {}); } catch (e) { /* not available */ }
   }
   function win() {
     state = 'won';
+    document.body.classList.remove('playing');
     sfx.win();
     const got = world.stars.filter((s) => s.taken).length;
     const m = Math.floor(playTime / 60), s = Math.floor(playTime % 60);
@@ -747,6 +754,7 @@
       updateStarsHud();
       state = 'play';
       $('title').hidden = true;
+      document.body.classList.add('playing');
     }
     window.claude?.hot?.snapshot?.(snapshot);
     requestAnimationFrame((t) => { last = t; frame(t); });

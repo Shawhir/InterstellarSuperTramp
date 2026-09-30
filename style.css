@@ -85,7 +85,7 @@ body {
 .toast {
   position: fixed;
   left: 50%;
-  top: calc(env(safe-area-inset-top, 0px) + 84px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
   transform: translateX(-50%);
   max-width: min(440px, calc(100% - 32px));
   padding: 8px 14px;
@@ -105,6 +105,7 @@ body {
   display: grid;
   place-items: center;
   padding-inline: 16px;
+  overflow-y: auto;
   background: rgba(11, 15, 38, 0.45);
 }
 .card {
@@ -170,6 +171,15 @@ body {
 }
 .pad button.on { border-color: var(--star); color: var(--star); }
 .pad .jump { width: 96px; font-size: 11px; }
-@media (pointer: coarse) { .pad { display: flex; } }
+@media (pointer: coarse) {
+  body.playing .pad { display: flex; }
+  .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 104px); font-size: 19px; }
+}
+@media (max-width: 480px) {
+  .card { padding: 18px 16px 16px; gap: 10px; }
+  .card p { font-size: 19px; }
+  .alt { font-size: 14px; }
+  .layer { font-size: 18px; }
+}
 
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }

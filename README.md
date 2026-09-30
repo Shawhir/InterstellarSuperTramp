@@ -13,6 +13,19 @@ and points down when you are lined up to land on it.
 
 Open `index.html` in a browser. There's no build step and nothing to install.
 
+### On your phone
+
+The repo deploys itself to GitHub Pages on every push to `main`
+(`.github/workflows/pages.yml`). Once Pages is switched on, the game lives at
+`https://shawhir.github.io/InterstellarSuperTramp/`.
+
+One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**,
+then re-run the "Deploy to GitHub Pages" workflow (or push anything). GitHub Pages
+on a private repo needs a paid GitHub plan; on a free plan, make the repo public.
+
+On the phone, open the link and use **Add to Home Screen** (Safari: Share button;
+Chrome: ⋮ menu). It then launches full screen with its own icon, like an app.
+
 | Action | Keys | Touch |
 |---|---|---|
 | Walk / steer | ← → or A D | ◀ ▶ |
