@@ -43,7 +43,8 @@
     { km: 384400, type: 'moon', layer: 'The Moon' },
   ];
   const TOP = TIERS.length - 1;
-  const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 700 };
+  const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220 };
+  const MOON_R = 110; // the landing Moon's radius; its top is the last bouncy surface
   const tierR = (k) => R0 + 30 + k * TIER_GAP;
   // Difficulty: each step up the bouncing gets faster, from 1.01x on the first
   // trampoline to 2x by the last jump before the Moon. Heights stay the same;
@@ -133,7 +134,11 @@
     let prevA = 0.36;
     for (let k = 1; k <= TOP; k++) {
       const R = tierR(k);
-      if (TIERS[k].type === 'moon') { mk(k, prevA); break; }
+      if (TIERS[k].type === 'moon') {
+        // Off to one side of the last asteroid, so you rise past it and drop on top.
+        mk(k, prevA + ((170 * (rnd() < 0.5 ? -1 : 1)) / R));
+        break;
+      }
       // Faster bounces mean less air time, so keep the gap reachable.
       const off = (100 + (rnd() * 210) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.5 ? -1 : 1);
       const a = prevA + off / R;
@@ -260,7 +265,7 @@
     return clamp(f, 0, TOP);
   }
   function layerName() {
-    if (player.onGround) return 'On the ground';
+    if (player.onGround) return lastTier === TOP ? 'On the Moon' : 'On the ground';
     const k = Math.floor(tierFloat(player.r));
     return k === 0 ? 'Troposphere' : TIERS[k].layer;
   }
@@ -522,16 +527,50 @@
     ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(x, y, 20, 0, TAU); ctx.fill();
   }
 
+  // The Moon is one object for the whole climb: a small disc in the sky near
+  // Earth that grows as you go up, and over the last few layers glides into
+  // its real place in the world, where you land on it.
+  function moonView() {
+    const p = world.plats.find((q) => q.type === 'moon');
+    if (!p) return null;
+    const tf = tierFloat(player.r);
+    const phi = wrap(p.a + theta);
+    // Sky position: drifts left or right with the direction the Moon really lies.
+    const f = tf / TOP;
+    const rS = 8 + Math.pow(f, 1.6) * 70;
+    const xS = W / 2 + clamp(phi / (Math.PI / 2), -1, 1) * W * 0.3;
+    const yS = H * 0.14 + rS * 0.3;
+    // World position: centre sits MOON_R below the landing surface.
+    const rc = p.R - MOON_R;
+    const xW = cx + rc * Math.sin(phi), yW = cy - rc * Math.cos(phi);
+    const k = clamp((tf - 11) / (TOP - 0.6 - 11), 0, 1);
+    const t = k * k * (3 - 2 * k); // smoothstep
+    const r = lerp(rS, MOON_R, t);
+    // If its real spot is off screen, keep it peeking in from that edge so it
+    // never disappears; walk that way and it slides into its true position.
+    const peek = r * 0.55;
+    const xT = clamp(xW, peek - r, W - peek + r), yT = clamp(yW, peek - r, H - peek + r);
+    return { p, phi, t, x: lerp(xS, xT, t), y: lerp(yS, yT, t), r, alpha: lerp(0.55 + f * 0.45, 1, t) };
+  }
+
   function drawSkyMoon() {
-    // The Moon waits in the sky and grows as you climb toward it.
-    const f = tierFloat(player.r) / TOP;
-    if (f > 0.9) return;
-    const r = 8 + Math.pow(f, 1.6) * 70, x = W * 0.72, y = H * 0.14 + r * 0.3;
-    ctx.globalAlpha = 0.55 + f * 0.45;
+    const m = moonView();
+    if (!m) return;
+    const { x, y, r } = m;
+    ctx.globalAlpha = m.alpha;
+    const glow = ctx.createRadialGradient(x, y, r * 0.9, x, y, r * 1.6);
+    glow.addColorStop(0, 'rgba(230,228,240,0.35)');
+    glow.addColorStop(1, 'rgba(230,228,240,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(x, y, r * 1.6, 0, TAU); ctx.fill();
     ctx.fillStyle = '#e6e4ec'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
     ctx.fillStyle = '#c3c0cc';
-    ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.2, r * 0.22, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + r * 0.35, y + r * 0.25, r * 0.15, 0, TAU); ctx.fill();
+    for (const [cxo, cyo, cr] of [[-0.3, -0.2, 0.22], [0.35, 0.25, 0.15], [0.05, 0.5, 0.18], [-0.45, 0.35, 0.1], [0.4, -0.4, 0.09]]) {
+      ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill();
+    }
+    // Shadow on the lower edge gives it a round, solid feel up close
+    ctx.fillStyle = 'rgba(80,70,110,0.18)';
+    ctx.beginPath(); ctx.arc(x, y, r, 0.1 * Math.PI, 0.9 * Math.PI); ctx.arc(x, y - r * 0.25, r * 0.9, 0.85 * Math.PI, 0.15 * Math.PI, true); ctx.fill();
     ctx.globalAlpha = 1;
   }
 
@@ -828,14 +867,12 @@
         ctx.lineTo(w / 3, 34); ctx.lineTo(-w / 5, 40); ctx.closePath(); ctx.fill();
         px(-12, 10, 10, 8, '#5d5563'); px(10, 18, 8, 6, '#5d5563'); px(-w / 3, 0, w * 0.55, 3, '#a79fae');
       } else if (p.type === 'moon') {
-        const mr = 380;
-        ctx.fillStyle = '#c9c7cf'; ctx.beginPath(); ctx.arc(0, mr, mr, 0, TAU); ctx.fill();
-        ctx.fillStyle = '#a9a6b2';
-        for (const [x, y, r] of [[-120, 60, 30], [90, 40, 20], [20, 130, 45], [-200, 150, 25], [180, 120, 35]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
-        // A little flag waiting for the tramp
-        px(60, -40, 3, 40, '#e8e8f0'); px(63, -40, 22, 14, '#e0433b'); px(66, -36, 6, 6, '#ffd23f');
+        // The Moon itself is drawn by drawSkyMoon; once it has arrived, plant a flag on top.
+        const m = moonView();
+        if (!m || m.t < 0.98) return;
+        px(30, -40, 3, 41, '#e8e8f0'); px(33, -40, 22, 14, '#e0433b'); px(36, -36, 6, 6, '#ffd23f');
       }
-    }, p.type === 'moon' ? 800 : 220);
+    }, 220);
   }
 
   function drawStar(s) {

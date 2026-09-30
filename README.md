@@ -61,6 +61,9 @@ says so if that happens.
   Music and sound effects have separate on/off buttons.
 - Juice: screen shake on landings, squash and stretch, afterimage trail, landing
   rings, PERFECT! for centre landings, streak counter, layer banners, speed lines,
-  a sun, drifting clouds, aurora, shooting stars and a Moon that grows as you climb.
+  a sun, drifting clouds, aurora, shooting stars.
+- The Moon is one object for the whole climb: a speck in the sky near Earth that
+  grows as you rise, drifts toward the side it really lies on, and over the last
+  few layers glides into place as the surface you land on.
   Screen shake and speed lines switch off for reduced-motion settings.
 - `style.css`: HUD, overlays and the touch pad.
