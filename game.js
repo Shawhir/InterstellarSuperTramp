@@ -1767,6 +1767,7 @@
   const board = window.SuperTrampBoard;
   const NAME_KEY = 'supertramp.name';
   let lastRun = null;
+  let mustPost = false; // on the Moon screen, posting the score is the way on
   let boardMode = 'checkpoint';
   let boardBack = 'title';
   const setStatus = (text) => { const el = $('post-status'); el.textContent = text; el.hidden = !text; };
@@ -1786,17 +1787,36 @@
       const res = await board.submit(run);
       setStatus(placeText(res, run.mode));
       $('post').hidden = true;
+      unlockActions();
     } catch (e) {
-      setStatus(e && e.message === 'name' ? 'Type a name first (letters and numbers).'
+      const noName = e && e.message === 'name';
+      setStatus(noName ? 'Type your name to post your score.'
         : e && e.userMessage ? e.userMessage
         : "Couldn't reach the scoreboard. Check your connection and try again.");
       $('post-btn').disabled = false;
+      // Only a real failure (not a missing name) offers a way past
+      if (!noName && mustPost) $('post-skip').hidden = false;
+      if (noName) { try { $('post-name').focus(); } catch (err) { /* ignore */ } }
     }
+  }
+  function unlockActions() {
+    mustPost = false;
+    $('won-actions').hidden = false;
+    $('post-skip').hidden = true;
   }
   function offerPost() {
     setStatus('');
     $('post').hidden = true;
+    $('post-skip').hidden = true;
+    $('won-actions').hidden = false;
+    mustPost = false;
     if (!board || board.kind === 'none') return;
+    if (board.needsName) {
+      // No way on until the score is posted
+      mustPost = true;
+      $('won-actions').hidden = true;
+      setTimeout(() => { try { $('post-name').focus(); } catch (e) { /* ignore */ } }, 950);
+    }
     if (board.viaGithub) {
       $('post-label').textContent = 'Post this run to the online scoreboard. It opens GitHub, where you tap Submit (free GitHub account needed).';
       $('post-name').hidden = true;
@@ -1881,7 +1901,9 @@
       if (!lastRun) return;
       setStatus(placeText(board.postWithGithub(lastRun), lastRun.mode));
       $('post').hidden = true;
+      unlockActions();
     });
+    $('post-skip').addEventListener('click', () => { setStatus(''); $('post').hidden = true; unlockActions(); });
   }
 
   function medalHtml(medal, label, value, isNew, hint) {
@@ -1978,6 +2000,7 @@
       e.preventDefault();
       if (state === 'splash') { if (!e.repeat) beginDescend(); return; }
       if (state === 'descend') return;
+      if (state === 'won' && mustPost) return; // post your score first
       if (state === 'title' || (state === 'won' && !$('won').hidden)) { if (!e.repeat) { jingle(); startGame(); } return; }
       if (!e.repeat) jumpBuffer = 0.15;
     }
