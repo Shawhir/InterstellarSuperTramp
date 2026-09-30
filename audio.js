@@ -13,9 +13,26 @@
 
   // iOS suspends or "interrupts" audio after a call, app switch or screen lock;
   // wake it up again on the next touch or when the page comes back.
-  const wake = () => { if (ac && ac.state !== 'running') ac.resume().catch(() => {}); };
+  const wake = () => { if (ac && ac.state !== 'running' && !document.hidden) ac.resume().catch(() => {}); };
   ['pointerdown', 'touchend', 'keydown'].forEach((ev) => window.addEventListener(ev, wake, { passive: true }));
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+
+  // Go fully quiet when the page is hidden (app switch, tab change, screen lock).
+  // Otherwise iOS keeps "media" audio alive in the background while the browser
+  // throttles the music timer, which comes out as stuttering notes.
+  let musicWasPlaying = false;
+  function sleep() {
+    musicWasPlaying = musicWasPlaying || music.playing;
+    music.stop();
+    if (burnNode) { try { burnNode.src.stop(); } catch (e) { /* already stopped */ } burnNode = null; }
+    if (ac && ac.state === 'running') ac.suspend().catch(() => {});
+    try { if (navigator.audioSession) navigator.audioSession.type = 'auto'; } catch (e) { /* older iOS */ }
+  }
+  function unsleep() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older iOS */ }
+    if (ac && ac.state !== 'running') ac.resume().catch(() => {});
+    if (musicWasPlaying) { musicWasPlaying = false; music.start(); }
+  }
+  // (listeners are attached at the bottom, once `music` exists)
 
   function init() {
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older iOS */ }
@@ -198,7 +215,7 @@
     playing: false, step: 0, next: 0, timer: null,
     mood: 'earth', speed: 1, space: 0, intensity: 0,
     start() {
-      if (!ac || this.playing) return;
+      if (!ac || this.playing || document.hidden) return;
       this.playing = true; this.step = 0; this.next = ac.currentTime + 0.1;
       this.timer = setInterval(() => this.tick(), 25);
     },
@@ -244,6 +261,10 @@
       if (s % 2 === 1 || (this.intensity > 0.6 && !space)) noise({ t, dur: 0.03, vol: space ? 0.03 : 0.06, bus: b, type: 'highpass', freq: 8000 });
     },
   };
+
+  document.addEventListener('visibilitychange', () => (document.hidden ? sleep() : unsleep()));
+  window.addEventListener('pagehide', sleep);
+  window.addEventListener('pageshow', () => { if (!document.hidden) unsleep(); });
 
   window.SuperTrampAudio = {
     init,
