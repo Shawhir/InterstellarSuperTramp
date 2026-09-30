@@ -7,8 +7,19 @@
   let ac = null, master, musicBus, sfxBus, noiseBuf;
   let musicOn = true, sfxOn = true;
 
+  // iPhones mute web audio when the ring/silent switch is on unless the page
+  // says it plays media ("playback"), as a video player would. iOS 17+.
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older iOS */ }
+
+  // iOS suspends or "interrupts" audio after a call, app switch or screen lock;
+  // wake it up again on the next touch or when the page comes back.
+  const wake = () => { if (ac && ac.state !== 'running') ac.resume().catch(() => {}); };
+  ['pointerdown', 'touchend', 'keydown'].forEach((ev) => window.addEventListener(ev, wake, { passive: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+
   function init() {
-    if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older iOS */ }
+    if (ac) { if (ac.state !== 'running') ac.resume().catch(() => {}); return; }
     try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; return; }
     const comp = ac.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4;
