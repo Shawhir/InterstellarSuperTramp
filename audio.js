@@ -243,6 +243,9 @@
       if (!musicOn) { this.next = ac.currentTime + 0.05; return; }
       const bpm = 112 + (this.speed - 1) * 40 - this.space * 12;
       const sixteenth = 60 / bpm / 4;
+      // If the timer was paused (background, throttling), skip the missed notes
+      // instead of cramming them all in at once, which sounds like stuttering.
+      if (this.next < ac.currentTime - 0.05) this.next = ac.currentTime + 0.05;
       while (this.next < ac.currentTime + 0.12) {
         this.play(this.step, this.next, sixteenth);
         this.next += sixteenth;

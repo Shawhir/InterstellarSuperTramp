@@ -24,6 +24,9 @@ jobs:
           mkdir /tmp/site
           cp index.html scores.json scoreboard-config.js scoreboard.js audio.js game.js style.css manifest.webmanifest icon.svg icon-*.png /tmp/site/
           touch /tmp/site/.nojekyll
+          # Stamp every file link with this commit so phones load new code at once
+          v="${GITHUB_SHA::7}"
+          sed -i -E "s/(src=\"[a-z-]+\.js)\"/\1?v=$v\"/g; s/(href=\"style\.css)\"/\1?v=$v\"/" /tmp/site/index.html
           git fetch origin gh-pages
           git switch gh-pages
           git rm -rq --ignore-unmatch .
