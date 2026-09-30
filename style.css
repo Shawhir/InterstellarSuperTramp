@@ -58,6 +58,7 @@ body {
   text-shadow: 2px 2px 0 var(--night);
 }
 .stars {
+  transform-origin: right center;
   font-family: var(--display);
   font-size: 14px;
   color: var(--star);
@@ -65,6 +66,9 @@ body {
   text-shadow: 2px 2px 0 var(--night);
   font-variant-numeric: tabular-nums;
 }
+.toggles { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.stars.pop { animation: starpop 0.35s ease-out; }
+@keyframes starpop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
 .hud button {
   pointer-events: auto;
   justify-self: end;
@@ -169,6 +173,7 @@ body {
   border: 3px solid var(--muted);
   touch-action: none;
 }
+.hud button[aria-pressed="false"] { color: var(--muted); border-style: dashed; }
 .pad button.on { border-color: var(--star); color: var(--star); }
 .pad .jump { width: 96px; font-size: 11px; }
 @media (pointer: coarse) {
@@ -182,4 +187,4 @@ body {
   .layer { font-size: 18px; }
 }
 
-@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } .stars.pop { animation: none; } }

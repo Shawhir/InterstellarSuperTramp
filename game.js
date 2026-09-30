@@ -9,7 +9,7 @@
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const $ = (id) => document.getElementById(id);
-  const hud = { alt: $('alt'), layer: $('layer'), stars: $('stars'), toast: $('toast'), sound: $('sound') };
+  const hud = { alt: $('alt'), layer: $('layer'), stars: $('stars'), toast: $('toast'), music: $('music'), sfx: $('sfx'), tilt: $('tilt') };
 
   // ---- Tuning ---------------------------------------------------------------
   const R0 = 480;           // Earth radius in pixels
@@ -71,11 +71,12 @@
   };
   const WALK_CYCLE = ['walk1', 'stand', 'walk2', 'stand'];
 
-  function drawSprite(frame, x, y, flip, sy) {
+  function drawSprite(frame, x, y, flip, sy, sx = 1, alpha = 1) {
     const rows = FRAMES[frame];
     ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.translate(Math.round(x), Math.round(y));
-    ctx.scale(flip ? -1 : 1, sy);
+    ctx.scale(flip ? -sx : sx, sy);
     for (let j = 0; j < rows.length; j++) {
       const row = rows[j];
       for (let i = 0; i < row.length; i++) {
@@ -192,6 +193,11 @@
   let cam = { r: R0, anchor: 0 };
   let toastTimer = 0;
   let clock = 0;
+  // Juice: screen shake, landing rings, floating text, afterimages, banners
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let shake = 0;
+  let fx = { rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
+  const tilt = { on: false, axis: 0, zero: null, got: false };
 
   const keys = { left: false, right: false };
   const touch = window.matchMedia('(pointer: coarse)').matches;
@@ -201,37 +207,14 @@
     world = buildWorld(seed);
     Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1 });
     theta = 0; lastTier = -1; bestTier = -1; playTime = 0; particles = [];
+    fx = { rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2 };
     cam.r = R0;
     updateStarsHud();
   }
 
-  // ---- Sound ----------------------------------------------------------------
-  let audio = null;
-  let muted = false;
-  function initAudio() {
-    if (audio) return;
-    try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
-  }
-  function tone(type, f0, f1, dur, vol = 0.08, delay = 0) {
-    if (!audio || muted) return;
-    const t = audio.currentTime + delay;
-    const o = audio.createOscillator();
-    const g = audio.createGain();
-    o.type = type;
-    o.frequency.setValueAtTime(f0, t);
-    o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(audio.destination);
-    o.start(t); o.stop(t + dur + 0.02);
-  }
-  const sfx = {
-    hop: () => tone('square', 300, 520, 0.12, 0.05),
-    boing: (k) => tone('square', 140 + k * 18, 620 + k * 30, 0.28, 0.07),
-    star: () => { tone('triangle', 880, 900, 0.09, 0.09); tone('triangle', 1320, 1340, 0.14, 0.09, 0.08); },
-    thud: () => tone('sawtooth', 120, 50, 0.2, 0.06),
-    win: () => [523, 659, 784, 1047].forEach((f, i) => tone('triangle', f, f, 0.25, 0.09, i * 0.14)),
-  };
+  // ---- Sound (see audio.js) ------------------------------------------------
+  const snd = window.SuperTrampAudio;
+  const sfx = snd ? snd.sfx : new Proxy({}, { get: () => () => {} });
 
   // ---- Toasts & HUD ---------------------------------------------------------
   function toast(text, secs = 3.6) {
@@ -240,9 +223,10 @@
     hud.toast.style.opacity = '1';
     toastTimer = secs;
   }
-  function updateStarsHud() {
+  function updateStarsHud(popIt) {
     const got = world.stars.filter((s) => s.taken).length;
     hud.stars.textContent = `★ ${got} / ${world.stars.length}`;
+    if (popIt) { hud.stars.classList.remove('pop'); void hud.stars.offsetWidth; hud.stars.classList.add('pop'); }
   }
   function kmAt(r) {
     if (r <= R0) return 0;
@@ -296,15 +280,21 @@
   function burst(a, R, color, n, speed = 160) {
     for (let i = 0; i < n; i++) {
       const ang = Math.random() * Math.PI;
-      particles.push({ a, R, vt: Math.cos(ang) * speed * (0.4 + Math.random()), vr: Math.sin(ang) * speed * (0.4 + Math.random()), life: 0.5 + Math.random() * 0.4, color });
+      particles.push({ a, R, vt: Math.cos(ang) * speed * (0.4 + Math.random()), vr: Math.sin(ang) * speed * (0.4 + Math.random()), life: 0.5 + Math.random() * 0.4, color, size: 2 + Math.floor(Math.random() * 3) * 2 });
     }
   }
+  const addShake = (n) => { if (!reduceMotion) shake = Math.max(shake, n); };
+  const ring = (a, R, color, size = 1) => fx.rings.push({ a, R, t: 0, color, size });
+  const pop = (text, color, R = player.r + 70) => fx.pops.push({ a: -theta, R, text, color, t: 0 });
+  const banner = (text, sub) => { fx.banner = { text, sub, t: 0 }; };
 
   // ---- Update ---------------------------------------------------------------
   function land(p) {
+    const off = Math.abs(wrap(p.a + theta) * p.R);
     player.r = p.R;
     p.squash = 1;
     player.squash = 1;
+    fx.whistled = false;
     if (p.type === 'moon') {
       player.vr = 0; player.onGround = true;
       lastTier = TOP; bestTier = TOP;
@@ -313,11 +303,29 @@
     }
     player.vr = p.bounce;
     player.speed = speedFor(p.tier);
+    const climbed = p.tier > lastTier;
     lastTier = p.tier;
-    sfx.boing(p.tier);
-    burst(-theta, p.R, p.type === 'cloud' || p.type === 'balloon' ? '#ffffff' : '#ffd23f', 10);
+    sfx.boing(p.tier, player.speed);
+    const puff = p.type === 'cloud' || p.type === 'balloon' || p.type === 'nlc' ? '#ffffff' : '#ffd23f';
+    burst(-theta, p.R, puff, 12, 200);
+    ring(-theta, p.R, puff);
+    addShake(2 + player.speed * 1.5);
+    if (off < 10 && p.tier > 0) {
+      pop('PERFECT!', '#52e07a');
+      sfx.perfect();
+      burst(-theta, p.R, '#52e07a', 10, 260);
+      ring(-theta, p.R, '#52e07a', 1.6);
+    }
     if (p.tier > bestTier) {
       bestTier = p.tier;
+      fx.streak = climbed ? fx.streak + 1 : 1;
+      if (fx.streak >= 3) pop(`${fx.streak} IN A ROW`, '#ffab3d', player.r + 100);
+      const prevLayer = p.tier > 0 ? TIERS[p.tier - 1].layer : null;
+      if (p.tier > 0 && TIERS[p.tier].layer !== prevLayer) {
+        banner(TIERS[p.tier].layer.toUpperCase(), fmtKm(TIERS[p.tier].km));
+        sfx.tier();
+        fx.flash = 0.35;
+      }
       if (TIERS[p.tier].note) toast(TIERS[p.tier].note);
       else if (p.tier === 0) toast('Boing! Steer toward the arrow to reach the clouds.');
     }
@@ -337,18 +345,28 @@
       player.walkT += dt * 5;
     } else if (state === 'play') {
       playTime += dt;
-      const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-      if (dir) player.facing = dir;
+      const kdir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      const dir = kdir !== 0 ? kdir : tilt.on ? tilt.axis : 0;
+      if (Math.abs(dir) > 0.1) player.facing = Math.sign(dir);
       const sp = player.speed;
       const maxV = player.onGround ? WALK : AIR * Math.sqrt(sp);
       player.vx = approach(player.vx, dir * maxV, (player.onGround ? 1800 : 1200 * sp) * dt);
       theta -= (player.vx * dt) / player.r;
-      if (player.onGround && Math.abs(player.vx) > 5) player.walkT += dt * (Math.abs(player.vx) / 22);
+      if (player.onGround && Math.abs(player.vx) > 5) {
+        const before = Math.floor(player.walkT);
+        player.walkT += dt * (Math.abs(player.vx) / 22);
+        if (Math.floor(player.walkT) !== before && Math.floor(player.walkT) % 2 === 0) {
+          sfx.step();
+          burst(-theta, R0, '#c9a27a', 2, 50);
+        }
+      }
 
       jumpBuffer -= dt;
       if (player.onGround && jumpBuffer > 0) {
         player.vr = HOP_V; player.speed = 1; player.onGround = false; jumpBuffer = 0;
+        player.squash = -0.6;
         sfx.hop();
+        burst(-theta, R0, '#c9a27a', 5, 80);
       }
       if (!player.onGround) {
         const prev = player.r;
@@ -359,11 +377,16 @@
             if (prev >= p.R && player.r <= p.R && Math.abs(wrap(p.a + theta) * p.R) <= p.w / 2 + 8) { land(p); break; }
           }
         }
+        // Missed: whistle on the way down
+        if (!fx.whistled && lastTier >= 0 && player.vr < -500 && player.r < tierR(lastTier) - 40) {
+          fx.whistled = true; fx.streak = 0; sfx.fall();
+        }
         if (state === 'play' && player.r <= R0) {
+          const hard = player.vr < -900;
           player.r = R0; player.vr = 0; player.onGround = true; player.squash = 1;
-          if (lastTier >= 0) { toast('Back on solid ground. Find a trampoline!'); sfx.thud(); }
-          lastTier = -1;
-          burst(-theta, R0, '#8a5a3b', 8, 90);
+          if (lastTier >= 0) { toast('Back on solid ground. Find a trampoline!'); sfx.thud(); addShake(hard ? 12 : 6); ring(-theta, R0, '#c9a27a', 1.4); }
+          lastTier = -1; fx.streak = 0; fx.whistled = false;
+          burst(-theta, R0, '#8a5a3b', hard ? 18 : 8, hard ? 180 : 90);
         }
       }
 
@@ -375,14 +398,41 @@
         const dx = s.R * Math.sin(ph), dy = s.R * Math.cos(ph) - bodyR;
         if (dx * dx + dy * dy < 30 * 30) {
           s.taken = true;
-          sfx.star();
-          burst(s.a, s.R, '#ffd23f', 14, 120);
-          updateStarsHud();
+          const got = world.stars.filter((q) => q.taken).length;
+          sfx.star(got);
+          burst(s.a, s.R, '#ffd23f', 18, 170);
+          ring(s.a, s.R, '#ffd23f', 0.8);
+          fx.pops.push({ a: s.a, R: s.R + 20, text: '+1 ★', color: '#ffd23f', t: 0 });
+          updateStarsHud(true);
         }
       }
     }
 
-    player.squash = Math.max(0, player.squash - dt * 5);
+    player.squash = player.squash > 0 ? Math.max(0, player.squash - dt * 5) : Math.min(0, player.squash + dt * 4);
+    shake = Math.max(0, shake - dt * 30);
+    fx.flash = Math.max(0, fx.flash - dt * 1.5);
+    for (const r of fx.rings) r.t += dt;
+    fx.rings = fx.rings.filter((r) => r.t < 0.5);
+    for (const q of fx.pops) q.t += dt;
+    fx.pops = fx.pops.filter((q) => q.t < 1.1);
+    if (fx.banner) { fx.banner.t += dt; if (fx.banner.t > 2.6) fx.banner = null; }
+    // Afterimages while moving fast through the air
+    fx.trailT -= dt;
+    if (!player.onGround && Math.abs(player.vr) > 350 && fx.trailT <= 0) {
+      fx.trailT = 0.022;
+      fx.trail.push({ a: -theta, r: player.r, flip: player.facing < 0, life: 0.16 });
+    }
+    for (const g of fx.trail) g.life -= dt;
+    fx.trail = fx.trail.filter((g) => g.life > 0);
+    // Shooting stars in space
+    fx.shootT -= dt;
+    if (fx.shootT <= 0) {
+      fx.shootT = 1.2 + Math.random() * 2.5;
+      fx.shooting.push({ x: Math.random(), y: Math.random() * 0.5, t: 0, dir: Math.random() < 0.5 ? -1 : 1 });
+    }
+    for (const q of fx.shooting) q.t += dt;
+    fx.shooting = fx.shooting.filter((q) => q.t < 0.9);
+    if (snd) snd.music.set({ tierF: tierFloat(player.r), speed: player.speed, won: state === 'won' });
     for (const q of particles) {
       q.R += q.vr * dt; q.a += (q.vt * dt) / q.R; q.vr -= 380 * dt; q.life -= dt;
     }
@@ -399,7 +449,7 @@
       if (toastTimer <= 0) hud.toast.hidden = true;
     }
     hud.alt.textContent = fmtKm(kmAt(player.r));
-    hud.layer.textContent = player.onGround || state !== 'play' ? layerName() : `${layerName()} · bounce ×${player.speed.toFixed(2)}`;
+    hud.layer.textContent = player.onGround || state !== 'play' ? layerName() : `${layerName()} ×${player.speed.toFixed(2)}`;
   }
 
   // ---- Drawing --------------------------------------------------------------
@@ -431,14 +481,147 @@
     g.addColorStop(1, mix('#d4f0ff', '#101634', Math.min(1, s * 1.1)));
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
+    drawSun(s);
+    drawSkyMoon();
+    drawAurora();
+    drawFarClouds(s);
     const alpha = clamp((s - 0.25) / 0.5, 0, 1);
     if (alpha <= 0) return;
+    for (const q of fx.shooting) {
+      const k = q.t / 0.9, x = (q.x + q.dir * k * 0.5) * W, y = (q.y + k * 0.25) * H;
+      ctx.strokeStyle = `rgba(255,255,255,${alpha * (1 - k)})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - q.dir * 60, y - 30); ctx.stroke();
+    }
     for (const st of world.sky) {
       let x = (st.x * W - theta * 260) % W; if (x < 0) x += W;
       const tw = 0.6 + 0.4 * Math.sin(clock * 2 + st.tw);
       ctx.globalAlpha = alpha * tw;
       px(x, st.y * H, st.s, st.s, '#ffffff');
     }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawSun(s) {
+    const x = W * 0.16, y = H * 0.16 + s * 20;
+    const glow = ctx.createRadialGradient(x, y, 4, x, y, 90);
+    glow.addColorStop(0, `rgba(255,240,170,${0.9 - s * 0.3})`);
+    glow.addColorStop(1, 'rgba(255,240,170,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - 90, y - 90, 180, 180);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(clock * 0.2);
+    for (let i = 0; i < 8; i++) { ctx.rotate(TAU / 8); px(-2, 26 + (i % 2) * 4, 4, 10, 'rgba(255,230,140,0.8)'); }
+    ctx.restore();
+    ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(x, y, 20, 0, TAU); ctx.fill();
+  }
+
+  function drawSkyMoon() {
+    // The Moon waits in the sky and grows as you climb toward it.
+    const f = tierFloat(player.r) / TOP;
+    if (f > 0.9) return;
+    const r = 8 + Math.pow(f, 1.6) * 70, x = W * 0.72, y = H * 0.14 + r * 0.3;
+    ctx.globalAlpha = 0.55 + f * 0.45;
+    ctx.fillStyle = '#e6e4ec'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c3c0cc';
+    ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.2, r * 0.22, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + r * 0.35, y + r * 0.25, r * 0.15, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawAurora() {
+    // Northern-lights curtains between the mesosphere and low orbit.
+    const tf = tierFloat(player.r);
+    const a = clamp(1 - Math.abs(tf - 10) / 3.5, 0, 1);
+    if (a <= 0) return;
+    const bands = [['rgba(90,255,170,', 0.18, 0], ['rgba(170,110,255,', 0.3, 2]];
+    for (const [col, yf, ph] of bands) {
+      for (let x = 0; x < W; x += 6) {
+        const wave = Math.sin(x * 0.012 + clock * 0.8 + ph + theta * 3) * 22 + Math.sin(x * 0.031 - clock * 1.3) * 10;
+        const h = 60 + Math.sin(x * 0.02 + clock + ph) * 25;
+        const g = ctx.createLinearGradient(0, H * yf + wave, 0, H * yf + wave + h);
+        g.addColorStop(0, col + '0)'); g.addColorStop(0.5, col + (0.35 * a) + ')'); g.addColorStop(1, col + '0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(x, H * yf + wave, 6, h);
+      }
+    }
+  }
+
+  function drawFarClouds(s) {
+    const a = clamp(1 - s * 2.2, 0, 1);
+    if (a <= 0) return;
+    ctx.globalAlpha = 0.5 * a;
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 7; i++) {
+      const span = W + 240;
+      let x = ((i * 0.37 * span - theta * 90 + clock * 6) % span + span) % span - 120;
+      let y = ((i * 0.53 % 1) * H * 0.6 + (cam.r - R0) * 0.12) % (H * 1.2);
+      const r = 14 + (i % 3) * 6;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, TAU); ctx.arc(x + r, y - r * 0.4, r * 1.1, 0, TAU); ctx.arc(x + r * 2.2, y, r * 0.9, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawSpeedLines() {
+    const v = Math.abs(player.vr);
+    if (v < 700 || reduceMotion) return;
+    const a = clamp((v - 700) / 900, 0, 0.6);
+    const dir = Math.sign(player.vr);
+    ctx.fillStyle = `rgba(255,255,255,${a})`;
+    for (let i = 0; i < 16; i++) {
+      const x = ((i * 0.618 + 0.13) % 1) * W;
+      if (Math.abs(x - W / 2) < 60) continue;
+      const len = 20 + (v / 60) * ((i % 3) + 1) * 0.5;
+      const y = (((i * 0.37 + clock * dir * (v / 700)) % 1) + 1) % 1 * (H + len) - len;
+      ctx.fillRect(Math.round(x), Math.round(y), 2, len);
+    }
+  }
+
+  function drawFx() {
+    for (const r of fx.rings) {
+      at(r.a + theta, r.R, () => {
+        const k = r.t / 0.5;
+        ctx.strokeStyle = r.color;
+        ctx.globalAlpha = 1 - k;
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(0, 0, (14 + k * 90) * r.size, (4 + k * 18) * r.size, 0, 0, TAU); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }, 120);
+    }
+    ctx.font = '10px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    for (const q of fx.pops) {
+      at(q.a + theta, q.R + q.t * 50, () => {
+        const k = q.t / 1.1;
+        const sc = q.t < 0.15 ? 0.6 + (q.t / 0.15) * 0.6 : 1.2 - Math.min(0.2, (q.t - 0.15));
+        ctx.scale(sc, sc);
+        ctx.globalAlpha = 1 - k * k;
+        ctx.fillStyle = '#1b1530'; ctx.fillText(q.text, 2, 2);
+        ctx.fillStyle = q.color; ctx.fillText(q.text, 0, 0);
+        ctx.globalAlpha = 1;
+      }, 80);
+    }
+    ctx.textAlign = 'start';
+  }
+
+  function drawBanner() {
+    const b = fx.banner;
+    if (!b) return;
+    const inT = clamp(b.t / 0.35, 0, 1), outT = clamp((b.t - 2.1) / 0.5, 0, 1);
+    const ease = 1 - Math.pow(1 - inT, 3);
+    const x = W / 2 + (1 - ease) * -W + outT * W * 0.6, y = H * 0.27;
+    ctx.globalAlpha = 1 - outT;
+    ctx.fillStyle = 'rgba(11,15,38,0.7)';
+    ctx.fillRect(0, y - 34, W, 58);
+    ctx.fillStyle = '#ffd23f'; ctx.fillRect(0, y - 34, W, 3); ctx.fillRect(0, y + 21, W, 3);
+    ctx.textAlign = 'center';
+    ctx.font = `${W < 480 ? 14 : 20}px "Press Start 2P", monospace`;
+    ctx.fillStyle = '#1b1530'; ctx.fillText(b.text, x + 3, y + 3);
+    ctx.fillStyle = '#eef1ff'; ctx.fillText(b.text, x, y);
+    ctx.font = '9px "Press Start 2P", monospace';
+    ctx.fillStyle = '#ffd23f'; ctx.fillText(b.sub, x, y + 15);
+    ctx.textAlign = 'start';
     ctx.globalAlpha = 1;
   }
 
@@ -682,7 +865,7 @@
     for (const q of particles) {
       at(q.a + theta, q.R, () => {
         ctx.globalAlpha = clamp(q.life * 2, 0, 1);
-        px(-2, -2, 4, 4, q.color);
+        px(-q.size / 2, -q.size / 2, q.size, q.size, q.color);
         ctx.globalAlpha = 1;
       }, 10);
     }
@@ -715,6 +898,8 @@
     cx = Math.round(W / 2);
     cy = anchorY + cam.r;
     drawSky();
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
     drawMountains();
     drawEarth();
     drawDecor();
@@ -725,29 +910,45 @@
     let frame = 'stand';
     if (!player.onGround) frame = 'jump';
     else if ((state === 'title') || Math.abs(player.vx) > 5) frame = WALK_CYCLE[Math.floor(player.walkT) % 4];
-    const sy = 1 - player.squash * 0.18;
+    // Squash on landing, stretch while rising or falling fast
+    const stretch = player.onGround ? 0 : clamp(Math.abs(player.vr) / 5000, 0, 0.18);
+    const sy = 1 - player.squash * 0.2 + stretch;
+    const sx = 1 + player.squash * 0.15 - stretch * 0.6;
+    for (const g of fx.trail) {
+      const ph = g.a + theta;
+      drawSprite('jump', cx + g.r * Math.sin(ph), cy - g.r * Math.cos(ph), g.flip, 1, 1, g.life * 2);
+    }
     drawGuide(feetX, feetY);
-    drawSprite(frame, feetX, feetY, player.facing < 0, sy);
+    drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx);
     drawParticles();
+    drawFx();
+    ctx.restore();
+    drawSpeedLines();
+    drawBanner();
+    if (fx.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${fx.flash * 0.5})`; ctx.fillRect(0, 0, W, H); }
     drawRail();
   }
 
   // ---- Flow -----------------------------------------------------------------
   function startGame() {
-    initAudio();
-    if (audio && audio.state === 'suspended') audio.resume();
+    if (snd) { snd.init(); snd.music.start(); }
+    tilt.zero = null;
     reset(Math.floor(Math.random() * 1e9));
     state = 'play';
     $('title').hidden = true;
     $('won').hidden = true;
     document.body.classList.add('playing');
-    toast(touch ? 'Walk to a trampoline, then press HOP to jump on.' : 'Walk to a trampoline, then hop on with Space.');
+    toast(touch ? (tilt.on ? 'Tilt to walk, press HOP to jump on a trampoline.' : 'Walk to a trampoline, press HOP to jump on. Tap TILT to steer by tilting.') : 'Walk to a trampoline, then hop on with Space.', 4.5);
     canvas.focus();
     try { navigator.wakeLock?.request('screen').catch(() => {}); } catch (e) { /* not available */ }
   }
   function win() {
     state = 'won';
     document.body.classList.remove('playing');
+    banner('THE MOON', '384,400 km');
+    fx.flash = 0.6;
+    addShake(10);
+    for (let i = 0; i < 5; i++) burst(-theta + (i - 2) * 0.004, player.r, ['#ffd23f', '#52e07a', '#e0433b', '#3f6fd8', '#ffffff'][i], 14, 300);
     sfx.win();
     const got = world.stars.filter((s) => s.taken).length;
     const m = Math.floor(playTime / 60), s = Math.floor(playTime % 60);
@@ -757,11 +958,55 @@
 
   $('start').addEventListener('click', startGame);
   $('again').addEventListener('click', startGame);
-  hud.sound.addEventListener('click', () => {
-    muted = !muted;
-    hud.sound.textContent = muted ? 'SOUND OFF' : 'SOUND ON';
-    hud.sound.setAttribute('aria-pressed', String(!muted));
-  });
+  const setToggle = (btn, label, on) => { btn.textContent = `${label} ${on ? 'ON' : 'OFF'}`; btn.setAttribute('aria-pressed', String(on)); };
+  hud.music.addEventListener('click', () => { if (snd) { snd.init(); setToggle(hud.music, 'MUSIC', snd.toggleMusic()); } });
+  hud.sfx.addEventListener('click', () => { if (snd) { snd.init(); setToggle(hud.sfx, 'SFX', snd.toggleSfx()); } });
+
+  // ---- Tilt steering (phone gyroscope) ---------------------------------------
+  // Lean the phone left or right to walk and steer. The angle you hold it at
+  // when tilt starts counts as "level".
+  function tiltReading(e) {
+    const angle = (screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0;
+    if (angle === 90) return e.beta;
+    if (angle === -90 || angle === 270) return -e.beta;
+    return e.gamma;
+  }
+  function onTilt(e) {
+    if (e.gamma == null) return;
+    tilt.got = true;
+    const v = tiltReading(e);
+    if (tilt.zero === null) tilt.zero = v;
+    const d = v - tilt.zero, dead = 3, full = 18;
+    tilt.axis = Math.abs(d) < dead ? 0 : Math.sign(d) * clamp((Math.abs(d) - dead) / (full - dead), 0, 1);
+  }
+  function stopTilt(msg) {
+    window.removeEventListener('deviceorientation', onTilt);
+    tilt.on = false; tilt.axis = 0;
+    setToggle(hud.tilt, 'TILT', false);
+    if (msg) toast(msg, 5);
+  }
+  async function startTilt() {
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const answer = await DeviceOrientationEvent.requestPermission();
+        if (answer !== 'granted') { stopTilt('Tilt needs motion access. Tap TILT again and choose Allow.'); return; }
+      }
+    } catch (e) {
+      stopTilt('Tilt steering is blocked here. Open the game from its own web address to use it.');
+      return;
+    }
+    tilt.on = true; tilt.zero = null; tilt.got = false;
+    window.addEventListener('deviceorientation', onTilt);
+    setToggle(hud.tilt, 'TILT', true);
+    toast('Tilt on. Hold the phone comfortably, then lean it left or right to steer.', 4);
+    setTimeout(() => {
+      if (tilt.on && !tilt.got) stopTilt("Tilt isn't available in this view. Open the game from its own web address to use it.");
+    }, 1500);
+  }
+  if (touch && 'DeviceOrientationEvent' in window) {
+    hud.tilt.hidden = false;
+    hud.tilt.addEventListener('click', () => (tilt.on ? stopTilt() : startTilt()));
+  }
 
   const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right' };
   const JUMP = new Set(['Space', 'ArrowUp', 'KeyW']);

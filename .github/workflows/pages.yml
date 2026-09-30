@@ -25,7 +25,7 @@ jobs:
       - name: Collect the game files
         run: |
           mkdir _site
-          cp index.html game.js style.css manifest.webmanifest icon.svg icon-*.png _site/
+          cp index.html audio.js game.js style.css manifest.webmanifest icon.svg icon-*.png _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

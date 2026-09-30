@@ -28,8 +28,13 @@ Chrome: ⋮ menu). It then launches full screen with its own icon, like an app.
 
 | Action | Keys | Touch |
 |---|---|---|
-| Walk / steer | ← → or A D | ◀ ▶ |
+| Walk / steer | ← → or A D | ◀ ▶, or tap TILT and lean the phone |
 | Hop | Space, ↑ or W | HOP |
+
+Tilt steering uses the phone's motion sensor. The angle you hold the phone at when
+you switch it on counts as level. It works when the game is opened from its own web
+address (GitHub Pages); embedded previews usually block motion sensors, and the game
+says so if that happens.
 
 ## How it works
 
@@ -47,4 +52,13 @@ Chrome: ⋮ menu). It then launches full screen with its own icon, like an app.
   stays possible.
 - Three mountain ranges sit behind the ground and turn more slowly than it
   (parallax), so they feel further away.
+- `audio.js`: every sound is synthesised with the Web Audio API, no audio files.
+  Bounces climb a pentatonic scale as you go higher; the chiptune soundtrack shifts
+  from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow
+  minor drift with echo in space, and speeds up with the bounce multiplier.
+  Music and sound effects have separate on/off buttons.
+- Juice: screen shake on landings, squash and stretch, afterimage trail, landing
+  rings, PERFECT! for centre landings, streak counter, layer banners, speed lines,
+  a sun, drifting clouds, aurora, shooting stars and a Moon that grows as you climb.
+  Screen shake and speed lines switch off for reduced-motion settings.
 - `style.css`: HUD, overlays and the touch pad.
