@@ -20,14 +20,14 @@ const recent = new Map();
 // A light filter for a family game; names that trip it are replaced, not rejected.
 const BLOCKED = ['fuck', 'shit', 'cunt', 'bitch', 'bastard', 'dick', 'cock', 'pussy', 'wank', 'twat', 'slut', 'whore', 'nigg', 'fag', 'rape', 'nazi', 'hitler', 'porn', 'sex'];
 
-export function cleanName(raw) {
+function cleanName(raw) {
   const name = String(raw || '').normalize('NFKC').replace(/[^\p{L}\p{N} _.'-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 16);
   const squashed = name.toLowerCase().replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's').replace(/[^a-z]/g, '');
   if (BLOCKED.some((w) => squashed.includes(w))) return 'Space Tramp';
   return name;
 }
 
-export function checkRun(body) {
+function checkRun(body) {
   const run = {
     name: cleanName(body && body.name),
     mode: body && body.mode,

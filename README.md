@@ -91,26 +91,51 @@ says so if that happens.
 
 ## Online scoreboard
 
-The scoreboard lists the fastest Moon landings for each mode, best run per player.
+The scoreboard lists the fastest Moon landings for each mode, best run per name.
+It lives in `scores.json` in this repo; the **Record a score** workflow
+(`.github/workflows/score.yml`, checks in `.github/scripts/record_score.py`) adds
+runs to it and republishes the site. Runs reach it in one of two ways:
 
-- **On the public site (GitHub Pages)** the board is `scores.json` in this repo.
-  After landing on the Moon, **Post on GitHub** opens a pre-filled issue; the
-  player taps **Submit new issue** (a free GitHub account is needed to post, not to
-  view). The **Record a score** workflow (`.github/workflows/score.yml`) checks the
-  run, keeps each GitHub user's best per mode in `scores.json`, replies with the
-  rank, closes the issue and republishes the site. Names are GitHub usernames, so
-  nobody can post as someone else.
-- **On the claude.ai artifact** it uses the artifact's own shared storage. Names
-  come from people's claude.ai profiles, and only people the page is shared with
-  (at Contributor level or above) can post.
+- **With just a name (no GitHub account)**, through a small free Cloudflare
+  Worker (`worker/score-worker.js`). The Worker holds a private GitHub token,
+  checks the run, filters rude names, limits posting to once every 20 seconds per
+  player, and hands the run to GitHub. Set up once as below.
+- **With a GitHub account**, through a pre-filled GitHub issue (the name is the
+  player's GitHub username). This is what the game uses until the Worker is set
+  up, and stays available as "Or post with your GitHub account".
 
-Scores are sent from the player's browser, so a determined cheater could post a
-fake time; the workflow rejects impossible numbers, and an owner can delete a line
-from `scores.json` by hand.
+The claude.ai artifact version keeps its own board in the artifact's shared storage.
 
-### Optional: Supabase instead of GitHub issues
+### Setting up the Cloudflare Worker (once, about 10 minutes)
 
-To let people post without a GitHub account, use a free Supabase database:
+1. **Make a GitHub token for the Worker.** Go to
+   https://github.com/settings/personal-access-tokens/new and choose:
+   - Token name: `SuperTramp scores`; Expiration: up to a year
+   - Repository access: **Only select repositories** → `InterstellarSuperTramp`
+   - Repository permissions → **Contents: Read and write** (nothing else)
+
+   Click **Generate token** and copy it (it starts with `github_pat_`).
+2. **Create the Worker.** Sign up free at https://dash.cloudflare.com, then
+   **Workers & Pages → Create → Create Worker**. Name it `supertramp-scores` and
+   click **Deploy**.
+3. Click **Edit code**, replace everything with the contents of
+   `worker/score-worker.js` from this repo, and click **Deploy**.
+4. **Add the token.** In the Worker, go to **Settings → Variables and Secrets →
+   Add**: type **Secret**, name `GITHUB_TOKEN`, value = the token from step 1.
+   Save / deploy.
+5. Copy the Worker's address (like `https://supertramp-scores.<you>.workers.dev`)
+   into `workerUrl` in `scoreboard-config.js` and push. The Moon screen then asks
+   for a name.
+
+Opening the Worker's address in a browser should show
+`{"ok":true,"service":"Interstellar SuperTramp scores"}`.
+
+With no login, anyone can type any name or try to fake a time. Impossible numbers
+are rejected, and an owner can delete a line from `scores.json` by hand.
+
+### Optional: Supabase instead of GitHub
+
+Scores can live in a free Supabase database instead of this repo:
 
 1. Create a project at https://supabase.com.
 2. In its **SQL Editor**, run:
