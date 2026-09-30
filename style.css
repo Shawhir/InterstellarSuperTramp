@@ -176,6 +176,27 @@ body {
 .hud button[aria-pressed="false"] { color: var(--muted); border-style: dashed; }
 .pad button.on { border-color: var(--star); color: var(--star); }
 .pad .jump { width: 96px; font-size: 11px; }
+/* Records and medals */
+.card .bests { font-size: 19px; color: var(--muted); }
+.card .bests b { color: var(--star); font-weight: normal; }
+.medals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.medal { display: grid; justify-items: center; align-content: start; gap: 4px; text-align: center; min-width: 0; }
+.medal .disc {
+  width: 34px; height: 34px;
+  background: var(--medal, transparent);
+  border: 3px solid var(--medal-edge, var(--muted));
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+}
+.medal.none .disc { border-style: dashed; box-shadow: none; clip-path: none; border-radius: 50%; }
+.medal.gold { --medal: #ffd23f; --medal-edge: #fff1a8; }
+.medal.silver { --medal: #cfd6e6; --medal-edge: #ffffff; }
+.medal.bronze { --medal: #d08a4a; --medal-edge: #f1b27a; }
+.medal .m-label { font-family: var(--display); font-size: 9px; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+.medal .m-value { font-size: 22px; font-variant-numeric: tabular-nums; }
+.medal .m-value b { display: block; font-family: var(--display); font-size: 8px; font-weight: normal; color: var(--go); }
+.medal .m-hint { font-size: 16px; color: var(--muted); line-height: 1; }
+
 @media (pointer: coarse) {
   body.playing .pad { display: flex; }
   .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 104px); font-size: 19px; }
