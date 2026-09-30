@@ -1,5 +1,15 @@
 {
-  "checkpoint": [],
+  "checkpoint": [
+    {
+      "name": "Katherine",
+      "score": 516650,
+      "time_ms": 82111,
+      "stars": 17,
+      "total_stars": 33,
+      "falls": 8,
+      "at": 1790798614
+    }
+  ],
   "uber": [
     {
       "name": "Marcus Aurelius",
