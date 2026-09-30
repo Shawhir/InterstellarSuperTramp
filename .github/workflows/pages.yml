@@ -15,20 +15,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - name: Collect the game files
         run: |
           mkdir _site
           cp index.html audio.js game.js style.css manifest.webmanifest icon.svg icon-*.png _site/
+      - name: Record Pages status (for troubleshooting)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "repo visibility: ${{ github.event.repository.visibility }}"
+            echo "--- GET /pages"
+            curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/pages"
+            echo
+            echo "--- GET /environments/github-pages"
+            curl -sS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/environments/github-pages"
+          } > pages-status.txt 2>&1
+          cat pages-status.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pages-status
+          path: pages-status.txt
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
