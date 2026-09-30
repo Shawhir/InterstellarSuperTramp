@@ -42,18 +42,32 @@
     <h1>Interstellar <span>SuperTramp</span></h1>
     <p>The world turns under your feet. Walk to a trampoline, hop on, and bounce from cloud to balloon to satellite until you reach the Moon, 384,400 km up.</p>
     <p>The arrow under your feet points to the next bouncy thing. When it turns <span class="go">green and points down</span>, you are lined up to land.</p>
-    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> walk and steer &nbsp; <kbd>SPACE</kbd> hop. On a phone, use the buttons or tap TILT to steer by tilting. Grab the stars on the way. Green flags are checkpoints: once you've landed on one, a miss above it catches you there.</p>
-    <p class="bests" id="bests" hidden></p>
-    <button id="start" type="button">Start walking</button>
+    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> walk and steer &nbsp; <kbd>SPACE</kbd> hop. On a phone, use the buttons or tap TILT to steer by tilting. Grab the stars on the way.</p>
+    <div class="modes">
+      <button class="mode" type="button" data-mode="checkpoint">
+        <span class="mode-name">Checkpoint</span>
+        <span class="mode-desc">Green flags catch you when you miss.</span>
+        <span class="mode-best" id="bests-checkpoint">No runs yet.</span>
+      </button>
+      <button class="mode uber" type="button" data-mode="uber">
+        <span class="mode-name">Uber Tramp</span>
+        <span class="mode-desc">No checkpoints. One miss and it's back to Earth.</span>
+        <span class="mode-best" id="bests-uber">No runs yet.</span>
+      </button>
+    </div>
   </div>
 </div>
 
 <div class="overlay" id="won" hidden>
   <div class="card">
     <h1>You made it to <span>the Moon</span></h1>
+    <p class="won-mode" id="won-mode"></p>
     <p id="won-stats">384,400 km from home, one bounce at a time.</p>
     <div class="medals" id="medals"></div>
-    <button id="again" type="button">Bounce again</button>
+    <div class="won-actions">
+      <button id="again" type="button">Bounce again</button>
+      <button id="change-mode" class="secondary" type="button">Change mode</button>
+    </div>
   </div>
 </div>
 
