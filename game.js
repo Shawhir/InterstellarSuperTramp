@@ -383,9 +383,9 @@
       return out;
     };
     const plains = [
-      { f: 0.3, sink: 0.6, top: 66, col: '#b1ac9a', rx: [9, 14], craters: 5 },
-      { f: 0.5, sink: 0.74, top: 42, col: '#c3beac', rx: [13, 20], craters: 4 },
-      { f: 0.72, sink: 0.87, top: 20, col: '#d2cdbb', rx: [17, 24], craters: 4 },
+      { f: 0.3, sink: 0.6, top: 66, col: '#26343e', rx: [9, 14], craters: 5 },
+      { f: 0.5, sink: 0.74, top: 42, col: '#2e3e49', rx: [13, 20], craters: 4 },
+      { f: 0.72, sink: 0.87, top: 20, col: '#374955', rx: [17, 24], craters: 4 },
     ].map((L, i, all) => {
       const below = i < all.length - 1 ? all[i + 1].top : 0;
       const room = L.top - below;
@@ -1228,7 +1228,7 @@
   // Round worlds seen from space: the Moon, Earth, Mars and Venus
   const PLANET = {
     moon: { glow: '230,228,240', body: '#e6e4ec', spots: '#c3c0cc' },
-    earth: { glow: '120,190,255', body: '#2f6fd0', spots: '#4fb34a' },
+    earth: { glow: '170,210,235', body: '#5f97c2', spots: '#a7c3d4' },
     mars: { glow: '255,140,100', body: '#c8553a', spots: '#9a3b2a' },
     venus: { glow: '255,230,160', body: '#efd9a0', spots: '#dcc07a' },
   };
@@ -1251,11 +1251,15 @@
         ctx.fillRect(x - r, y + i * r * 0.28 + Math.sin(clock * 0.3 + i) * r * 0.05, r * 2, r * 0.14);
       }
     } else if (type === 'earth') {
-      for (const [cxo, cyo, cr] of [[-0.35, -0.2, 0.32], [0.3, 0.25, 0.26], [0.1, -0.5, 0.18], [-0.1, 0.55, 0.16]]) {
+      // Pale land and swirling cloud, like Earth seen from the Moon
+      for (const [cxo, cyo, cr] of [[-0.35, -0.2, 0.3], [0.3, 0.25, 0.24], [0.1, -0.5, 0.18], [-0.1, 0.55, 0.15]]) {
         ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill();
       }
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      for (const [cxo, cyo, w] of [[-0.6, -0.45, 0.7], [0.0, 0.05, 0.8], [-0.2, 0.4, 0.6]]) ctx.fillRect(x + cxo * r, y + cyo * r, w * r, Math.max(1, r * 0.08));
+      ctx.strokeStyle = 'rgba(236,244,248,0.85)'; ctx.lineWidth = Math.max(1, r * 0.07); ctx.lineCap = 'round';
+      for (const [cxo, cyo, rr, a0, a1] of [[-0.3, -0.45, 0.35, 0.2, 2.4], [0.25, -0.1, 0.3, 3.4, 5.6], [-0.2, 0.25, 0.28, 4.6, 6.6], [0.35, 0.5, 0.22, 2.8, 4.9], [0.0, 0.05, 0.16, 0, 4.2]]) {
+        ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, rr * r, a0, a1); ctx.stroke();
+      }
+      ctx.lineCap = 'butt';
     } else {
       const spots = type === 'mars' ? [[-0.3, 0.1, 0.3], [0.35, -0.15, 0.2], [0.1, 0.45, 0.22]] : [[-0.3, -0.2, 0.22], [0.35, 0.25, 0.15], [0.05, 0.5, 0.18], [-0.45, 0.35, 0.1], [0.4, -0.4, 0.09]];
       for (const [cxo, cyo, cr] of spots) { ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill(); }
@@ -1273,7 +1277,7 @@
   function drawSpaceSky() {
     const tf = tierFloat(player.r), f = tf / TOP;
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#02030a'); g.addColorStop(1, '#0b1030');
+    g.addColorStop(0, '#070c12'); g.addColorStop(1, '#16232d');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
     // No air, so the stars shine steady: twinkling is caused by an atmosphere
@@ -1289,7 +1293,7 @@
     ctx.fillStyle = sg; ctx.fillRect(sx - sr * 5, sy - sr * 5, sr * 10, sr * 10);
     ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
     // Earth hangs in the black sky, shrinking behind you as you go
-    drawPlanet('earth', W * 0.84, H * 0.17 + tf * 22, 46 / (1 + tf * 0.45));
+    drawPlanet('earth', W * 0.8, H * 0.2 + tf * 22, 60 / (1 + tf * 0.45));
     if (fx.visitor) drawVisitor(fx.visitor);
     if (route) drawSkyMoon();
     else {
@@ -1710,10 +1714,10 @@
     ctx.save();
     ctx.clip(outline);
     const crustG = ctx.createRadialGradient(cx, cy, R0 * 0.9, cx, cy, R0);
-    crustG.addColorStop(0, '#8f8a7c'); crustG.addColorStop(1, '#bdb8a6');
+    crustG.addColorStop(0, '#2c3a45'); crustG.addColorStop(1, '#455865');
     disc(R0 + 24, crustG);
     const mantle = ctx.createRadialGradient(cx, cy, R0 * 0.32, cx, cy, R0 * 0.9);
-    mantle.addColorStop(0, '#5a4f63'); mantle.addColorStop(1, '#7a7585');
+    mantle.addColorStop(0, '#26323c'); mantle.addColorStop(1, '#3a4955');
     disc(R0 * 0.9, mantle);
     disc(R0 * 0.32, '#a8553a');
     const outer = ctx.createRadialGradient(cx, cy, R0 * 0.19, cx, cy, R0 * 0.26);
@@ -1739,8 +1743,8 @@
       }, 34);
     }
     // Pale regolith on top: dust and broken rock, smooth like Earth's grass band
-    ctx.strokeStyle = '#ddd8c6'; ctx.lineWidth = 22; ctx.stroke(outline);
-    ctx.strokeStyle = '#eeeadb'; ctx.lineWidth = 5; ctx.stroke(outline);
+    ctx.strokeStyle = '#4c606d'; ctx.lineWidth = 22; ctx.stroke(outline);
+    ctx.strokeStyle = '#6d828f'; ctx.lineWidth = 5; ctx.stroke(outline);
     ctx.restore();
     ctx.font = '8px "Press Start 2P", monospace';
     ctx.textAlign = 'center';
@@ -1758,26 +1762,26 @@
   const MOON_DECOR = {
     boulder(d) {
       ctx.scale(d.size, d.size);
-      ctx.fillStyle = ['#b5b09f', '#c4bfae', '#a39e8d'][d.hue];
+      ctx.fillStyle = ['#566975', '#617480', '#4b5d69'][d.hue];
       ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-9, -10); ctx.lineTo(2, -14); ctx.lineTo(11, -7); ctx.lineTo(12, 0); ctx.closePath(); ctx.fill();
-      px(-7, -11, 7, 3, '#e6e2d2'); px(6, -6, 5, 6, '#8a8679');
+      px(-7, -11, 7, 3, '#8ea1ac'); px(6, -6, 5, 6, '#33434e');
     },
     // The base, in a clean flat vector style: pale buildings, soft shading
     // (lit from the left), dark doors and windows
     dome(d) {
-      const { w, h } = d, B = '#dfe6ea', S = '#aab6be', D = '#3d4a57';
+      const { w, h } = d, B = '#cfdbe1', S = '#8fa1ac', D = '#1f2c36';
       px(-w / 2 - 3, -3, w + 6, 4, S);
       ctx.save();
       ctx.beginPath(); ctx.ellipse(0, -2, w / 2, h, 0, Math.PI, TAU); ctx.closePath();
       ctx.fillStyle = S; ctx.fill(); ctx.clip();
       ctx.fillStyle = B; ctx.beginPath(); ctx.ellipse(-w * 0.09, 0, w * 0.44, h * 0.96, 0, Math.PI, TAU); ctx.fill();
-      ctx.fillStyle = '#f4f7f9'; ctx.beginPath(); ctx.ellipse(-w * 0.18, -h * 0.72, w * 0.12, h * 0.12, -0.3, 0, TAU); ctx.fill();
-      ctx.strokeStyle = '#c3ccd2'; ctx.lineWidth = 1.5;
+      ctx.fillStyle = '#eef4f7'; ctx.beginPath(); ctx.ellipse(-w * 0.18, -h * 0.72, w * 0.12, h * 0.12, -0.3, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#b2c1c9'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.ellipse(0, -2, w / 2, h * 0.5, 0, Math.PI, TAU); ctx.stroke();
       ctx.restore();
       if (d.door) {
-        px(-7, -14, 14, 12, '#5d6b78');
-        ctx.fillStyle = '#5d6b78'; ctx.beginPath(); ctx.arc(0, -14, 7, Math.PI, TAU); ctx.fill();
+        px(-7, -14, 14, 12, '#4a5a66');
+        ctx.fillStyle = '#4a5a66'; ctx.beginPath(); ctx.arc(0, -14, 7, Math.PI, TAU); ctx.fill();
         px(-5, -13, 10, 11, D); ctx.fillStyle = D; ctx.beginPath(); ctx.arc(0, -13, 5, Math.PI, TAU); ctx.fill();
         px(-1, -10, 2, 2, Math.sin(clock * 2) > 0 ? '#52e07a' : '#2a5a3a');
       }
@@ -1785,57 +1789,63 @@
         const x = (i - (d.wins - 1) / 2) * 16;
         px(x - 4, -h * 0.42, 8, 4, D); px(x - 4, -h * 0.42, 8, 1, '#7fa8c8');
       }
-      if (d.ant) { px(-1, -h - 10, 2, 9, '#7d8a95'); ctx.fillStyle = '#dfe6ea'; ctx.beginPath(); ctx.arc(0, -h - 11, 2.5, 0, TAU); ctx.fill(); }
+      px(-0.5, -h - 1, 1, h - 2, '#b2c1c9');
+      px(-3, -h - 4, 6, 4, '#8fa1ac'); px(-3, -h - 4, 3, 4, '#cfdbe1');
+      if (d.ant) { px(-1, -h - 10, 2, 9, '#6d7f8a'); ctx.fillStyle = '#cfdbe1'; ctx.beginPath(); ctx.arc(0, -h - 11, 2.5, 0, TAU); ctx.fill(); }
     },
     tower() {
-      // A tall rounded tower with side tubes and a capsule on top
-      const B = '#dfe6ea', S = '#aab6be', D = '#3d4a57';
-      for (const x of [-21, 13]) { px(x, -72, 8, 70, S); px(x, -72, 4, 70, B); ctx.fillStyle = B; ctx.beginPath(); ctx.arc(x + 4, -72, 4, Math.PI, TAU); ctx.fill(); }
-      px(-13, -100, 26, 98, S); px(-13, -100, 17, 98, B);
-      ctx.fillStyle = S; ctx.beginPath(); ctx.ellipse(0, -100, 13, 9, 0, Math.PI, TAU); ctx.fill();
-      ctx.fillStyle = B; ctx.beginPath(); ctx.ellipse(-4, -100, 9, 8, 0, Math.PI, TAU); ctx.fill();
-      px(-8, -124, 16, 18, S); px(-8, -124, 11, 18, B);
-      ctx.fillStyle = B; ctx.beginPath(); ctx.arc(0, -124, 8, Math.PI, TAU); ctx.fill();
-      px(-13, -46, 26, 4, '#c3ccd2');
-      for (const y of [-88, -70, -58]) px(-3, y, 6, 5, D);
-      px(-5, -16, 10, 14, D);
-      px(-1, -132, 2, 6, '#7d8a95'); if (Math.sin(clock * 3) > 0) px(-2, -135, 4, 3, '#ff5a4a');
+      // Two tall cylinders joined under a rounded cap, a slim column on top
+      const B = '#cfdbe1', S = '#8fa1ac', D = '#1f2c36';
+      for (const [x, lit] of [[-15, true], [0, false]]) {
+        px(x, -86, 15, 84, S); px(x, -86, lit ? 11 : 5, 84, B);
+        px(x + 7, -86, 1, 84, '#b2c1c9');
+      }
+      ctx.fillStyle = S; ctx.beginPath(); ctx.ellipse(0, -86, 17, 8, 0, Math.PI, TAU); ctx.fill();
+      ctx.fillStyle = B; ctx.beginPath(); ctx.ellipse(-4, -86, 12, 7, 0, Math.PI, TAU); ctx.fill();
+      px(-7, -114, 14, 26, S); px(-7, -114, 9, 26, B);
+      ctx.fillStyle = S; ctx.beginPath(); ctx.ellipse(0, -114, 9, 9, 0, Math.PI, TAU); ctx.fill();
+      ctx.fillStyle = B; ctx.beginPath(); ctx.ellipse(-2, -114, 6, 8, 0, Math.PI, TAU); ctx.fill();
+      px(-9, -102, 18, 3, S); // the band where the column meets the cap
+      px(-2, -108, 4, 5, D);
+      px(-10, -30, 7, 10, D); px(3, -60, 6, 8, D);
+      if (Math.sin(clock * 3) > 0) px(-1, -126, 2, 3, '#ff5a4a');
     },
     rocketpad() {
-      // A rocket waiting on its pad, between two service towers
-      const B = '#dfe6ea', S = '#aab6be', D = '#3d4a57';
-      px(-36, -5, 72, 5, S); px(-36, -5, 72, 2, B);
-      for (const x of [-30, 22]) {
-        px(x, -50, 8, 45, S); px(x, -50, 5, 45, B);
-        ctx.fillStyle = B; ctx.beginPath(); ctx.moveTo(x, -50); ctx.lineTo(x + 4, -60); ctx.lineTo(x + 8, -50); ctx.fill();
+      // A rocket on its pad: a little winged craft on the nose, a booster each side
+      const B = '#cfdbe1', S = '#8fa1ac', D = '#1f2c36';
+      px(-30, -4, 60, 4, S); px(-30, -4, 60, 2, B);
+      for (const x of [-22, 14]) {
+        px(x, -46, 8, 42, S); px(x, -46, 5, 42, B);
+        ctx.fillStyle = B; ctx.beginPath(); ctx.ellipse(x + 4, -46, 4, 6, 0, Math.PI, TAU); ctx.fill();
       }
-      px(-9, -82, 18, 77, S); px(-9, -82, 12, 77, B);
-      ctx.fillStyle = B; ctx.beginPath(); ctx.moveTo(-9, -82); ctx.lineTo(0, -102); ctx.lineTo(9, -82); ctx.fill();
-      ctx.fillStyle = S; ctx.beginPath(); ctx.moveTo(3, -82); ctx.lineTo(0, -102); ctx.lineTo(9, -82); ctx.fill();
-      ctx.fillStyle = B;
-      ctx.beginPath(); ctx.moveTo(-9, -24); ctx.lineTo(-18, -6); ctx.lineTo(-9, -12); ctx.fill();
-      ctx.fillStyle = S; ctx.beginPath(); ctx.moveTo(9, -24); ctx.lineTo(18, -6); ctx.lineTo(9, -12); ctx.fill();
-      ctx.fillStyle = D; ctx.beginPath(); ctx.arc(0, -62, 3, 0, TAU); ctx.fill();
-      px(-9, -40, 18, 2, '#c3ccd2');
+      px(-8, -78, 16, 74, S); px(-8, -78, 11, 74, B);
+      ctx.fillStyle = B; ctx.beginPath(); ctx.moveTo(-8, -78); ctx.lineTo(0, -92); ctx.lineTo(8, -78); ctx.fill();
+      // the winged craft riding on top
+      ctx.fillStyle = B; ctx.beginPath(); ctx.moveTo(-4, -92); ctx.lineTo(0, -112); ctx.lineTo(4, -92); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-3, -98); ctx.lineTo(-12, -92); ctx.lineTo(-3, -94); ctx.fill();
+      ctx.fillStyle = S; ctx.beginPath(); ctx.moveTo(3, -98); ctx.lineTo(12, -92); ctx.lineTo(3, -94); ctx.fill();
+      ctx.fillStyle = B; ctx.beginPath(); ctx.moveTo(-8, -22); ctx.lineTo(-15, -4); ctx.lineTo(-8, -10); ctx.fill();
+      ctx.fillStyle = S; ctx.beginPath(); ctx.moveTo(8, -22); ctx.lineTo(15, -4); ctx.lineTo(8, -10); ctx.fill();
+      ctx.fillStyle = D; ctx.beginPath(); ctx.arc(-1, -58, 2.5, 0, TAU); ctx.fill();
     },
     dish2() {
-      px(-1, -22, 2, 22, '#7d8a95');
-      ctx.fillStyle = '#dfe6ea'; ctx.beginPath(); ctx.ellipse(0, -26, 10, 6, -0.6, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#aab6be'; ctx.beginPath(); ctx.ellipse(2, -25, 6, 3.5, -0.6, 0, TAU); ctx.fill();
+      px(-1, -22, 2, 22, '#6d7f8a');
+      ctx.fillStyle = '#cfdbe1'; ctx.beginPath(); ctx.ellipse(0, -26, 10, 6, -0.6, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#8fa1ac'; ctx.beginPath(); ctx.ellipse(2, -25, 6, 3.5, -0.6, 0, TAU); ctx.fill();
     },
     fence() {
-      px(-14, -12, 28, 2, '#c3ccd2'); px(-14, -6, 28, 2, '#c3ccd2');
-      for (let x = -14; x <= 12; x += 4) px(x, -12, 2, 12, '#dfe6ea');
+      px(-14, -12, 28, 2, '#b2c1c9'); px(-14, -6, 28, 2, '#b2c1c9');
+      for (let x = -14; x <= 12; x += 4) px(x, -12, 2, 12, '#cfdbe1');
     },
     hover() {
       // A lander hovering above the base
       ctx.translate(0, -170 + Math.sin(clock * 1.3) * 5);
-      px(-6, -10, 12, 10, '#dfe6ea'); px(1, -10, 5, 10, '#aab6be');
-      ctx.fillStyle = '#dfe6ea'; ctx.beginPath(); ctx.arc(0, -10, 5, Math.PI, TAU); ctx.fill();
-      px(-2, -8, 4, 3, '#3d4a57');
-      ctx.strokeStyle = '#aab6be'; ctx.lineWidth = 1.5;
+      px(-6, -10, 12, 10, '#cfdbe1'); px(1, -10, 5, 10, '#8fa1ac');
+      ctx.fillStyle = '#cfdbe1'; ctx.beginPath(); ctx.arc(0, -10, 5, Math.PI, TAU); ctx.fill();
+      px(-2, -8, 4, 3, '#1f2c36');
+      ctx.strokeStyle = '#8fa1ac'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(-10, 8); ctx.moveTo(5, 0); ctx.lineTo(10, 8); ctx.stroke();
-      px(-12, 8, 4, 1, '#aab6be'); px(8, 8, 4, 1, '#aab6be');
+      px(-12, 8, 4, 1, '#8fa1ac'); px(8, 8, 4, 1, '#8fa1ac');
       ctx.globalAlpha = 0.5 + 0.3 * Math.sin(clock * 20); px(-2, 2, 4, 6, '#ffd36b'); ctx.globalAlpha = 1;
     },
     sheep() {
