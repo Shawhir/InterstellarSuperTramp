@@ -344,7 +344,7 @@
       if (Math.abs(a) > 0.36) decor.push({ a, kind: 'boulder', size: 0.5 + rnd() * 0.9, hue: Math.floor(rnd() * 3) });
     }
     decor.push(
-      { a: 0, kind: 'base' },
+      { a: -74 / R0, kind: 'base' }, { a: -170 / R0, kind: 'kipple' }, { a: 48 / R0, kind: 'hoarding' }, { a: 120 / R0, kind: 'sheep' },
       { a: -0.45, kind: 'sign', text: '< VENUS', col: '#ffd23f' },
       { a: 0.45, kind: 'sign', text: 'MARS >', col: '#ff6a4a' },
       { a: 0.95, kind: 'solar' }, { a: -0.95, kind: 'solar' },
@@ -860,8 +860,19 @@
   }
   let radioAt = 0;
   let monolithSeen = false;
+  // Little discoveries round the conapt (angles from the base's centre)
+  const MOON_NOTES = [
+    { a: -50 / R0, text: "The door won't open. It wants five cents." },
+    { a: 125 / R0, text: "An electric sheep. Its owner can't afford a real one." },
+    { a: -172 / R0, text: "Kipple: useless junk that piles up whenever nobody's looking." },
+  ];
   function updateSpace(dt) {
     if (fx.dedication > 0) fx.dedication -= dt;
+    if (player.onGround && player.r <= R0 + 1) {
+      for (const q of MOON_NOTES) {
+        if (!q.seen && Math.abs(wrap(q.a + theta)) * R0 < 20) { q.seen = true; toast(q.text, 4.5); }
+      }
+    }
     if (!monolithSeen && player.onGround && player.r <= R0 + 1) {
       const mono = world.decor.find((d) => d.kind === 'monolith');
       if (mono && Math.abs(wrap(mono.a + theta)) * R0 < 30) { monolithSeen = true; toast('A black slab, perfectly smooth. Nobody knows who left it here…', 4.5); sfx.jingle && sfx.jingle('uber'); }
@@ -1745,70 +1756,85 @@
       px(-7, -11, 7, 3, '#e6e2d2'); px(6, -6, 5, 6, '#8a8679');
     },
     base() {
-      // Moon Base 2050, from the drawing: a long block of windows, a big round
-      // dome, and little hook flags on the aerials
-      const win = (x, y, w, h, i) => {
-        px(x - 2, y - 2, w + 4, h + 4, '#5d5563');
-        const on = Math.sin(clock * 0.6 + i * 2.3) > -0.7;
-        px(x, y, w, h, on ? '#ffe9a0' : '#5a6a8a');
-        if (on) { px(x, y, w, 2, '#fff8d8'); px(x, y, 2, h, '#fff8d8'); }
-      };
-      // Moon dust banked up under it all, cut exactly along the Moon's curve
+      // Lunar Conapt 7: a drab corporate housing block, Philip K. Dick style,
+      // with a flickering neon sign, a coin-operated door, an ad hoarding,
+      // an electric sheep in a pen, and a heap of kipple
+      const flick = (seed) => Math.sin(clock * 13 + seed * 7.1) + Math.sin(clock * 3.7 + seed) > -1.6;
+      ctx.translate(74, 0);
+      // Moon dust banked up under the block, cut exactly along the Moon's curve
       ctx.save();
-      ctx.beginPath(); ctx.rect(-220, -240, 440, 300); ctx.arc(0, R0 - 2, R0 - 1, 0, TAU); ctx.clip('evenodd');
+      ctx.beginPath(); ctx.rect(-240, -240, 480, 300); ctx.translate(-74, 0); ctx.arc(0, R0 - 2, R0 - 1, 0, TAU); ctx.translate(74, 0); ctx.clip('evenodd');
       ctx.fillStyle = '#ddd8c6';
-      ctx.beginPath(); ctx.moveTo(-166, -4); ctx.lineTo(-180, 50); ctx.lineTo(160, 50); ctx.lineTo(150, -4); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-160, -4); ctx.lineTo(-170, 40); ctx.lineTo(16, 40); ctx.lineTo(10, -4); ctx.closePath(); ctx.fill();
       ctx.restore();
-      px(-160, -6, 306, 2, '#eeeadb');
-      for (let x = -150; x < 40; x += 32) px(x, -9, 10, 5, '#5d5563');
-      // Main module: light panels, shaded underside, roof cap, orange stripe
-      px(-152, -74, 186, 68, '#5d5563');
-      px(-150, -72, 182, 64, '#e6e9f0');
-      px(-150, -20, 182, 12, '#c9cfdb');
-      px(-146, -78, 174, 6, '#b9bfcc'); px(-140, -80, 162, 2, '#d6dce8');
-      px(-150, -42, 182, 3, '#ff7a1a');
-      for (let x = -114; x < 30; x += 36) px(x, -72, 1, 64, '#c9cfdb');
-      // Two rows of windows, a little uneven like the drawing
-      [[-140, -64, 20, 14], [-108, -66, 16, 16], [-80, -64, 22, 14], [-46, -65, 16, 15], [-16, -64, 20, 14]].forEach(([x, y, w, h], i) => win(x, y, w, h, i));
-      [[-136, -34, 16, 11], [-104, -33, 22, 10], [-68, -34, 16, 11], [-38, -33, 18, 10]].forEach(([x, y, w, h], i) => win(x, y, w, h, i + 5));
-      // Airlock door with a porthole and a status light
-      px(8, -36, 20, 28, '#5d5563'); px(10, -34, 16, 26, '#9aa3b5'); px(17, -34, 2, 26, '#7d869a');
-      ctx.fillStyle = '#5d5563'; ctx.beginPath(); ctx.arc(18, -26, 4, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#8fd0ff'; ctx.beginPath(); ctx.arc(18, -26, 2.5, 0, TAU); ctx.fill();
-      px(14, -40, 8, 3, Math.sin(clock * 2) > 0 ? '#52e07a' : '#2a6a3a');
-      // Name plate on the roof
-      px(-112, -92, 104, 14, '#2a2230'); px(-112, -92, 104, 2, '#5d5563');
-      ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center';
-      ctx.fillStyle = '#ffd23f'; ctx.fillText('MOON BASE 2050', -60, -82);
-      ctx.textAlign = 'start';
-      // Tube joining the block to the dome
-      px(32, -38, 12, 20, '#c9cfdb'); for (let x = 33; x < 44; x += 4) px(x, -38, 1, 20, '#9aa3b5');
-      // The dome: a glass greenhouse on a ring base
-      px(36, -14, 96, 14, '#9aa3b5'); px(36, -14, 96, 3, '#c9cfdb'); px(40, -4, 88, 4, '#7d869a');
-      ctx.save();
-      ctx.beginPath(); ctx.arc(84, -48, 44, 0, TAU); ctx.clip();
-      ctx.fillStyle = '#8fb8d8'; ctx.fillRect(40, -92, 88, 88);
-      ctx.fillStyle = '#6f98bd'; ctx.fillRect(40, -40, 88, 40);
-      px(52, -22, 64, 8, '#7a5a3b');
-      for (const [x, h] of [[58, 16], [70, 24], [82, 14], [94, 22], [106, 16]]) { px(x, -22 - h, 3, h, '#3a8f3a'); px(x - 5, -26 - h, 13, 8, '#4fb34a'); }
-      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(70, -70, 16, 9, -0.6, 0, TAU); ctx.fill();
-      ctx.restore();
-      ctx.strokeStyle = '#5d5563'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(84, -48, 44, 0, TAU); ctx.stroke();
-      ctx.strokeStyle = 'rgba(93,85,99,0.55)'; ctx.lineWidth = 1.5;
-      for (const k of [0.45, 0.85]) { ctx.beginPath(); ctx.ellipse(84, -48, 44 * k, 44, 0, 0, TAU); ctx.stroke(); }
-      ctx.beginPath(); ctx.moveTo(40, -48); ctx.lineTo(128, -48); ctx.stroke();
-      // Aerials with hook flags (the hooks from the drawing), a dish and a beacon
-      for (const [x, top, col] of [[-128, -110, '#e0433b'], [-20, -104, '#ffd23f']]) {
-        px(x, top, 2, -78 - top, '#9aa3b5');
-        ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x + 2, top); ctx.lineTo(x + 13, top + 4); ctx.lineTo(x + 2, top + 8); ctx.fill();
-        ctx.strokeStyle = '#9aa3b5'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x - 3, top + 2, 3, -Math.PI / 2, Math.PI / 2, true); ctx.stroke();
+      px(-160, -6, 168, 2, '#eeeadb');
+      // The conapt block: grey concrete, three identical floors
+      px(-152, -102, 140, 96, '#5d5a55');
+      px(-150, -100, 136, 94, '#a39f97');
+      px(-150, -100, 10, 94, '#8f8b84'); px(-24, -100, 10, 94, '#8f8b84');
+      for (let f = 0; f < 3; f++) {
+        const y = -94 + f * 30;
+        px(-150, y + 24, 136, 4, '#7d7a74'); // floor slab
+        for (let i = 0; i < 6; i++) {
+          const x = -136 + i * 19, id = f * 6 + i;
+          px(x - 1, y + 3, 12, 13, '#4a4743');
+          // Some lit, some cold blue with a TV on, some dark
+          const kind = (id * 7) % 5;
+          px(x, y + 4, 10, 11, kind < 2 ? '#ffe08a' : kind === 2 ? (flick(id) ? '#7fb4ff' : '#4a6a9a') : '#3a3a48');
+        }
       }
-      if (Math.sin(clock * 3) > 0) px(-129, -114, 4, 4, '#ff5a4a');
-      ctx.fillStyle = '#e6e4ec'; ctx.beginPath(); ctx.ellipse(10, -88, 10, 4, -0.4, 0, TAU); ctx.fill();
-      px(9, -86, 2, 8, '#9aa3b5');
-      // Little flag on the dome, like the drawing
-      px(130, -26, 2, 14, '#9aa3b5');
-      ctx.fillStyle = '#e0433b'; ctx.beginPath(); ctx.moveTo(132, -26); ctx.lineTo(142, -22); ctx.lineTo(132, -18); ctx.fill();
+      // Roof clutter: aerials, a water tank, sagging cables
+      px(-140, -112, 18, 10, '#7d7a74'); px(-138, -116, 14, 4, '#8f8b84');
+      for (const [x, h] of [[-100, 26], [-84, 18], [-40, 30]]) { px(x, -102 - h, 2, h, '#9aa3b5'); px(x - 5, -102 - h + 4, 12, 2, '#9aa3b5'); }
+      ctx.strokeStyle = '#3b3b4f'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-99, -120); ctx.quadraticCurveTo(-70, -104, -39, -126); ctx.stroke();
+      // Coin-operated front door
+      px(-62, -30, 24, 24, '#3b3b4f'); px(-60, -28, 20, 22, '#5d5563');
+      px(-34, -24, 10, 8, '#1b1530');
+      ctx.font = '5px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = flick(3) ? '#ffab3d' : '#7a4a1a'; ctx.fillText('5¢', -29, -18);
+      // Vertical neon sign
+      px(-12, -98, 16, 66, '#1b1530');
+      ctx.font = '7px "Press Start 2P", monospace';
+      'REKAL'.split('').forEach((ch, i) => {
+        ctx.fillStyle = flick(10 + i) ? '#ff4fa3' : '#5a1f3a';
+        ctx.fillText(ch, -4, -86 + i * 12);
+      });
+    },
+    kipple() {
+      // Kipple: the junk that piles up when nobody's looking
+      ctx.translate(170, 0);
+      px(-182, -14, 16, 9, '#8a5a3b'); px(-178, -22, 12, 8, '#7d869a'); px(-166, -12, 10, 7, '#5d5563');
+      ctx.strokeStyle = '#3b3b4f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-158, -10, 5, 0, TAU); ctx.stroke();
+      px(-172, -26, 14, 3, '#c9a27a'); px(-186, -8, 6, 3, '#9aa3b5');
+    },
+    hoarding() {
+      ctx.translate(-48, 0);
+      const flick = () => true;
+      // Ad hoarding on stilts
+      px(14, -48, 3, 42, '#5d5563'); px(78, -48, 3, 42, '#5d5563');
+      px(6, -92, 84, 46, '#3b3b4f'); px(8, -90, 80, 42, '#1b1530');
+      ctx.font = '12px "Press Start 2P", monospace';
+      ctx.fillStyle = '#ffd23f'; ctx.fillText('UBIK', 40, -66);
+      ctx.font = '4px "Press Start 2P", monospace';
+      ctx.fillStyle = '#eef1ff'; ctx.fillText('SAFE WHEN USED', 40, -58); ctx.fillText('AS DIRECTED', 40, -53);
+      px(74, -84, 8, 14, '#e0433b'); px(76, -87, 4, 3, '#c9ced9'); // the spray can
+      ctx.textAlign = 'start';
+    },
+    sheep() {
+      ctx.translate(-120, 0);
+      const flick = (seed) => Math.sin(clock * 13 + seed * 7.1) + Math.sin(clock * 3.7 + seed) > -1.6;
+      // The electric sheep, plugged in and grazing in its pen
+      for (const x of [100, 124, 148]) px(x, -18, 2, 18, '#8a5a3b');
+      px(100, -16, 50, 2, '#8a5a3b'); px(100, -8, 50, 2, '#8a5a3b');
+      const bob = Math.sin(clock * 2) > 0.3 ? 2 : 0;
+      ctx.fillStyle = '#f4f6fb';
+      for (const [x, y, r] of [[118, -16, 6], [126, -18, 7], [134, -16, 6], [124, -12, 6], [131, -12, 5]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+      px(138, -18 + bob, 7, 6, '#2a2230'); px(143, -16 + bob, 2, 2, '#ff5a4a'); // head, with a glowing eye
+      px(119, -8, 2, 6, '#2a2230'); px(131, -8, 2, 6, '#2a2230');
+      ctx.strokeStyle = '#2a2230'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(114, -14); ctx.quadraticCurveTo(108, -2, 96, -10); ctx.stroke(); // power cable
+      px(92, -16, 5, 10, '#7d869a'); px(93, -14, 3, 2, flick(20) ? '#52e07a' : '#2a6a3a');
     },
     sign(d) {
       px(-1, -34, 2, 34, '#c9ced9');

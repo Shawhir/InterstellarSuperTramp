@@ -105,13 +105,16 @@ says so if that happens.
 Reach the Moon and you can carry straight on (your score comes with you), or
 start level 2 from the title screen once you've landed there once.
 
-- **Moon base 2050.** You start at a future Moon base, designed from a drawing:
-  a long block with windows, a big glass dome and little flags on the aerials.
-  The Moon is shown in cross-section like Earth: crust with pale highland rock,
-  polar ice, meteorite iron, orange volcanic glass and lava tubes; a cold mantle
-  with moonquake cracks; a partly molten layer; and a small iron core. On the
-  surface: craters, boulders, Apollo 11's landing site, a rover and its tracks,
-  a radio telescope, solar arrays, a greenhouse, a lander and a mining rig.
+- **Lunar Conapt 7.** You start at a drab corporate housing block on the Moon,
+  a nod to Philip K. Dick: flickering REKAL neon, a coin-operated door, a UBIK
+  hoarding, an electric sheep plugged in and grazing in its pen, and a heap of
+  kipple. Walk up to them for a line or two. The Moon is shown in cross-section
+  like Earth: crust with pale highland rock, polar ice, meteorite iron, orange
+  volcanic glass and lava tubes; a cold mantle with moonquake cracks; a partly
+  molten layer; and a small iron core. On the surface: Apollo 11's landing
+  site, a rover and its tracks, a radio telescope, solar arrays, a greenhouse,
+  a lander and a mining rig. Behind, three rings of plain step back in
+  distance with a few craters on them.
 - **Two routes.** The launch pad on the right heads for Mars, the one on the
   left for Venus. Once you pick, the other route turns into see-through ghosts.
 - **Gravity.** Lower than Earth's, so you float (softened from the real values
