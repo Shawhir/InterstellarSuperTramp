@@ -344,15 +344,6 @@
       if (Math.abs(a) > 0.36) decor.push({ a, kind: 'boulder', size: 0.5 + rnd() * 0.9, hue: Math.floor(rnd() * 3) });
     }
     decor.push(
-      // The base: a row of pale buildings, each standing on the curve
-      { a: -170 / R0, kind: 'rocketpad' }, { a: -128 / R0, kind: 'dish2' },
-      { a: -108 / R0, kind: 'dome', w: 26, h: 16, ant: true },
-      { a: -70 / R0, kind: 'dome', w: 54, h: 30, door: true },
-      { a: -34 / R0, kind: 'fence' },
-      { a: 12 / R0, kind: 'dome', w: 74, h: 30, wins: 3, ant: true },
-      { a: 64 / R0, kind: 'tower' },
-      { a: 108 / R0, kind: 'dome', w: 46, h: 24 },
-      { a: 150 / R0, kind: 'sheep' }, { a: 120 / R0, kind: 'hover' },
       { a: -0.45, kind: 'sign', text: '< VENUS', col: '#ffd23f' },
       { a: 0.45, kind: 'sign', text: 'MARS >', col: '#ff6a4a' },
       { a: 0.95, kind: 'solar' }, { a: -0.95, kind: 'solar' },
@@ -870,8 +861,6 @@
   let monolithSeen = false;
   // Little discoveries round the conapt (angles from the base's centre)
   const MOON_NOTES = [
-    { a: -70 / R0, text: "The door won't open. It wants five cents." },
-    { a: 150 / R0, text: "An electric sheep. Its owner can't afford a real one." },
   ];
   function updateSpace(dt) {
     if (fx.dedication > 0) fx.dedication -= dt;
@@ -1251,15 +1240,13 @@
         ctx.fillRect(x - r, y + i * r * 0.28 + Math.sin(clock * 0.3 + i) * r * 0.05, r * 2, r * 0.14);
       }
     } else if (type === 'earth') {
-      // Pale land and swirling cloud, like Earth seen from the Moon
-      for (const [cxo, cyo, cr] of [[-0.35, -0.2, 0.3], [0.3, 0.25, 0.24], [0.1, -0.5, 0.18], [-0.1, 0.55, 0.15]]) {
-        ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill();
+      // Mottled cloud and land, like Earth seen from the Moon
+      for (let i = 0; i < 34; i++) {
+        const h1 = Math.sin(i * 12.9898) * 43758.5453, h2 = Math.sin(i * 78.233) * 12345.678, h3 = Math.sin(i * 39.425) * 9876.54;
+        const fx = (h1 - Math.floor(h1)) * 2 - 1, fy = (h2 - Math.floor(h2)) * 2 - 1, fr = h3 - Math.floor(h3);
+        ctx.fillStyle = i % 3 === 0 ? '#86aac2' : i % 3 === 1 ? '#dce9f0' : '#b4cddb';
+        ctx.beginPath(); ctx.ellipse(x + fx * r * 0.85, y + fy * r * 0.85, r * (0.08 + fr * 0.2), r * (0.05 + fr * 0.11), fx * 2, 0, TAU); ctx.fill();
       }
-      ctx.strokeStyle = 'rgba(236,244,248,0.85)'; ctx.lineWidth = Math.max(1, r * 0.07); ctx.lineCap = 'round';
-      for (const [cxo, cyo, rr, a0, a1] of [[-0.3, -0.45, 0.35, 0.2, 2.4], [0.25, -0.1, 0.3, 3.4, 5.6], [-0.2, 0.25, 0.28, 4.6, 6.6], [0.35, 0.5, 0.22, 2.8, 4.9], [0.0, 0.05, 0.16, 0, 4.2]]) {
-        ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, rr * r, a0, a1); ctx.stroke();
-      }
-      ctx.lineCap = 'butt';
     } else {
       const spots = type === 'mars' ? [[-0.3, 0.1, 0.3], [0.35, -0.15, 0.2], [0.1, 0.45, 0.22]] : [[-0.3, -0.2, 0.22], [0.35, 0.25, 0.15], [0.05, 0.5, 0.18], [-0.45, 0.35, 0.1], [0.4, -0.4, 0.09]];
       for (const [cxo, cyo, cr] of spots) { ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill(); }
@@ -1293,15 +1280,15 @@
     ctx.fillStyle = sg; ctx.fillRect(sx - sr * 5, sy - sr * 5, sr * 10, sr * 10);
     ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
     // Earth hangs in the black sky, shrinking behind you as you go
-    drawPlanet('earth', W * 0.8, H * 0.2 + tf * 22, 60 / (1 + tf * 0.45));
+    drawPlanet('earth', W * 0.5, H * 0.17 + tf * 26, 84 / (1 + tf * 0.45));
     if (fx.visitor) drawVisitor(fx.visitor);
     if (route) drawSkyMoon();
     else {
       // From the base you can see both: Venus off to the left, Mars to the right
-      drawPlanet('venus', W * 0.36, H * 0.2, 7);
-      drawPlanet('mars', W * 0.62, H * 0.22, 6);
+      drawPlanet('venus', W * 0.16, H * 0.3, 7);
+      drawPlanet('mars', W * 0.84, H * 0.3, 6);
       ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(238,241,255,0.75)';
-      ctx.fillText('VENUS', W * 0.36, H * 0.2 + 20); ctx.fillText('MARS', W * 0.62, H * 0.22 + 19);
+      ctx.fillText('VENUS', W * 0.16, H * 0.3 + 20); ctx.fillText('MARS', W * 0.84, H * 0.3 + 19);
       ctx.textAlign = 'start';
     }
   }
@@ -1626,6 +1613,7 @@
       const seen = (a, m = 0) => Math.abs(wrap(a + rot)) < reach + m / R0;
       ctx.fillStyle = L.col;
       ctx.beginPath(); ctx.arc(cx, my, R0 - 6 + L.top, 0, TAU); ctx.fill();
+      if (L === world.plains[1]) drawBaseGroup(P(rot, L.top), rot, L.col);
       // Oval craters on the plain: lit far wall, shadow in the bowl
       for (const c of L.craters) {
         if (!seen(c.a, c.rx)) continue;
@@ -1638,6 +1626,20 @@
       }
     }
     ctx.globalAlpha = 1;
+  }
+  // The base, as one group standing on a flat stretch of the distant horizon
+  const BASE_LAYOUT = [
+    [-150, 'rocketpad'], [-108, 'dish2'], [-90, 'dome', { w: 26, h: 16, ant: true }], [-52, 'dome', { w: 54, h: 30, door: true }],
+    [-18, 'fence'], [26, 'dome', { w: 74, h: 30, wins: 3, ant: true }], [78, 'tower'], [122, 'dome', { w: 46, h: 24 }], [150, 'hover'],
+  ];
+  function drawBaseGroup([x, y], ph, ground) {
+    if (Math.abs(wrap(ph)) * R0 > (view.x1 - view.x0) / 2 + 260) return;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ph); ctx.scale(0.8, 0.8);
+    // A flat shelf of ground for the base to stand on
+    ctx.fillStyle = ground; ctx.fillRect(-190, -1, 380, 40);
+    ctx.fillStyle = hexOf(mix(ground, '#ffffff', 0.12)); ctx.fillRect(-190, -1, 380, 2);
+    for (const [bx, kind, opts] of BASE_LAYOUT) { ctx.save(); ctx.translate(bx, 0); MOON_DECOR[kind](opts || {}); ctx.restore(); }
+    ctx.restore();
   }
   const hexOf = (rgb) => '#' + rgb.match(/\d+/g).slice(0, 3).map((v) => (+v).toString(16).padStart(2, '0')).join('');
 
@@ -1735,10 +1737,10 @@
     }
     for (const c of world.crust) {
       at(c.a + theta, c.rf * R0, () => {
-        if (c.kind === 'rock') { px(-5, -3, 10, 6, ['#d9d7e0', '#c3c0cc', '#e6e4ec'][c.hue]); px(-3, -5, 6, 2, '#f4f6fb'); }
-        else if (c.kind === 'ice') { px(-2, -5, 4, 10, '#9fd8ff'); px(-5, -2, 10, 4, '#9fd8ff'); px(-1, -4, 2, 2, '#ffffff'); }
-        else if (c.kind === 'meteorite') { px(-5, -4, 10, 8, '#3b3844'); px(-3, -3, 3, 3, '#9aa3b5'); px(1, 0, 2, 2, '#c9ced9'); }
-        else if (c.kind === 'glass') { for (const [x, y] of [[-4, -2], [0, -4], [3, 0], [-1, 2]]) px(x, y, 3, 3, c.hue ? '#ff9a3a' : '#ffb23a'); }
+        if (c.kind === 'rock') { px(-5, -3, 10, 6, ['#6f828e', '#64767f', '#7a8c97'][c.hue]); px(-3, -5, 6, 2, '#8ea1ac'); }
+        else if (c.kind === 'ice') { px(-2, -5, 4, 10, '#7f9cb0'); px(-5, -2, 10, 4, '#7f9cb0'); px(-1, -4, 2, 2, '#b8cfdc'); }
+        else if (c.kind === 'meteorite') { px(-5, -4, 10, 8, '#1f2c36'); px(-3, -3, 3, 3, '#6d7f8a'); px(1, 0, 2, 2, '#8ea1ac'); }
+        else if (c.kind === 'glass') { for (const [x, y] of [[-4, -2], [0, -4], [3, 0], [-1, 2]]) px(x, y, 3, 3, c.hue ? '#8c8072' : '#9a8d7c'); }
         else { px(-18, -2, 36, 5, '#4a4757'); px(-18, -3, 36, 1, '#8a8796'); px(-20, -1, 2, 3, '#4a4757'); px(18, -1, 2, 3, '#4a4757'); } // lava tube
       }, 34);
     }
