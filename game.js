@@ -375,9 +375,9 @@
       return out;
     };
     const plains = [
-      { f: 0.3, sink: 0.6, top: 62, col: '#bdb8a7', patch: '#b4af9e', rx: [8, 13], craters: 8, mesas: 6 },
-      { f: 0.5, sink: 0.74, top: 40, col: '#ccc7b5', patch: '#c2bdab', rx: [13, 20], craters: 6, mesas: 2 },
-      { f: 0.72, sink: 0.87, top: 20, col: '#d9d4c2', patch: '#cfcab8', rx: [18, 26], craters: 5, mesas: 0 },
+      { f: 0.3, sink: 0.6, top: 66, col: '#b1ac9a', rx: [9, 14], craters: 5 },
+      { f: 0.5, sink: 0.74, top: 42, col: '#c3beac', rx: [13, 20], craters: 4 },
+      { f: 0.72, sink: 0.87, top: 20, col: '#d2cdbb', rx: [17, 24], craters: 4 },
     ].map((L, i, all) => {
       const below = i < all.length - 1 ? all[i + 1].top : 0;
       const room = L.top - below;
@@ -386,9 +386,7 @@
         // Sits within its own band, visible above the nearer band
         return { a, rx, h: below + ry + 2 + rnd() * Math.max(0, room - ry * 2 - 4) };
       });
-      const mesas = L.mesas ? spaced(L.mesas, TAU / (L.mesas * 2)).map((a) => ({ a, w: 26 + rnd() * 34, h: 5 + rnd() * 5 })) : [];
-      const patches = spaced(2, 1.4).map((a) => ({ a, w: 0.3 + rnd() * 0.35, ph: rnd() * TAU }));
-      return { ...L, below, craters, mesas, patches };
+      return { ...L, below, craters };
     });
     const sky = [];
     for (let i = 0; i < 240; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.12 ? 2 : 1, tw: rnd() * TAU });
@@ -1599,30 +1597,13 @@
       const my = cy - climb * (1 - L.sink);
       if (my - R0 - L.top > view.y1 + 20) continue;
       const rot = theta * L.f;
-      // The plain curves much more gently than the Moon in front of it, so the
-      // horizon reads as wide, flat ground stretching away
-      const RL = R0 * 1.8, yTop = my - (R0 - 6 + L.top);
-      const P = (ph, h) => {
-        const phi = (wrap(ph) * R0) / RL, r = RL - (L.top - h);
-        return [cx + r * Math.sin(phi), yTop + RL - r * Math.cos(phi)];
-      };
-      const tilt = (ph) => (wrap(ph) * R0) / RL;
+      // Each layer is a bigger circle around the same centre as the Moon,
+      // further back, sliding past more slowly
+      const P = (ph, h) => { const r = R0 - 6 + h; return [cx + r * Math.sin(ph), my - r * Math.cos(ph)]; };
+      const tilt = (ph) => ph;
       const seen = (a, m = 0) => Math.abs(wrap(a + rot)) < reach + m / R0;
-      // The band of ground, its far edge a smooth curve
       ctx.fillStyle = L.col;
-      ctx.beginPath();
-      for (let ph = -reach; ph <= reach + 1e-6; ph += reach / 40) { const [x, y] = P(ph, L.top); ph === -reach ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
-      ctx.lineTo(view.x1 + 400, Math.max(my, view.y1 + 400)); ctx.lineTo(view.x0 - 400, Math.max(my, view.y1 + 400)); ctx.closePath(); ctx.fill();
-      // Soft darker patches of older ground
-      ctx.fillStyle = L.patch;
-      for (const q of L.patches) {
-        if (!seen(q.a, q.w * R0)) continue;
-        const a0 = wrap(q.a + rot) - q.w / 2;
-        ctx.beginPath();
-        for (let k = 0; k <= 24; k++) { const t = k / 24; const [x, y] = P(a0 + q.w * t, L.below + (L.top - L.below) * (0.35 + 0.3 * Math.sin(t * Math.PI) + 0.08 * Math.sin(t * 9 + q.ph))); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-        for (let k = 24; k >= 0; k--) { const [x, y] = P(a0 + q.w * (k / 24), L.below - 4); ctx.lineTo(x, y); }
-        ctx.closePath(); ctx.fill();
-      }
+      ctx.beginPath(); ctx.arc(cx, my, R0 - 6 + L.top, 0, TAU); ctx.fill();
       // Oval craters on the plain: lit far wall, shadow in the bowl
       for (const c of L.craters) {
         if (!seen(c.a, c.rx)) continue;
@@ -1631,17 +1612,6 @@
         ctx.fillStyle = dark(L.col, 0.14); ctx.beginPath(); ctx.ellipse(0, 0, c.rx, ry, 0, 0, TAU); ctx.fill();
         ctx.clip();
         ctx.fillStyle = dark(L.col, 0.45); ctx.beginPath(); ctx.ellipse(c.rx * 0.04, ry * 0.42, c.rx * 0.96, ry * 0.8, 0, 0, TAU); ctx.fill();
-        ctx.restore();
-      }
-      // Low, flat-topped crater rims standing on the far edge
-      for (const m of L.mesas) {
-        if (!seen(m.a, m.w)) continue;
-        const ph = m.a + rot, [x, y] = P(ph, L.top), w = m.w / 2, s2 = 6;
-        ctx.save(); ctx.translate(x, y); ctx.rotate(tilt(ph));
-        ctx.fillStyle = L.col; ctx.beginPath(); ctx.moveTo(-w - s2, 1); ctx.lineTo(-w, -m.h); ctx.lineTo(w, -m.h); ctx.lineTo(w + s2, 1); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = dark(L.col, 0.16); ctx.beginPath(); ctx.moveTo(w - 4, -m.h); ctx.lineTo(w, -m.h); ctx.lineTo(w + s2, 1); ctx.lineTo(w + s2 - 6, 1); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = light(L.col, 0.3); ctx.beginPath(); ctx.moveTo(-w, -m.h); ctx.lineTo(w, -m.h); ctx.lineTo(w - 3, -m.h + 3); ctx.lineTo(-w + 3, -m.h + 3); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = dark(L.col, 0.08); ctx.fillRect(-w - s2 + 2, -1, (w + s2) * 2 - 4, 2);
         ctx.restore();
       }
     }
@@ -1775,35 +1745,70 @@
       px(-7, -11, 7, 3, '#e6e2d2'); px(6, -6, 5, 6, '#8a8679');
     },
     base() {
-      // The Moon base from the drawing, as it might look one day: a long block
-      // with windows, a big glass dome, and little flags on the aerials
-      px(-152, -66, 186, 66, '#5d5563');
-      px(-150, -64, 182, 64, '#d6dce8');
-      px(-150, -64, 182, 6, '#c9ced9');
-      px(-150, -30, 182, 4, '#9aa3b5');
-      const wins = [[-138, -54, 18, 14], [-106, -56, 14, 16], [-74, -54, 20, 14], [-40, -55, 16, 15], [-6, -54, 18, 14], [-130, -22, 14, 12], [-96, -20, 20, 12], [-56, -22, 14, 12], [-20, -21, 18, 12]];
-      wins.forEach(([x, y, w, h], i) => {
+      // Moon Base 2050, from the drawing: a long block of windows, a big round
+      // dome, and little hook flags on the aerials
+      const win = (x, y, w, h, i) => {
         px(x - 2, y - 2, w + 4, h + 4, '#5d5563');
-        px(x, y, w, h, Math.sin(clock * 0.7 + i * 1.9) > -0.6 ? '#fff3b0' : '#5a6a8a');
-      });
-      px(10, -26, 18, 26, '#5d5563'); px(12, -24, 14, 24, '#8a8f98'); // airlock door
+        const on = Math.sin(clock * 0.6 + i * 2.3) > -0.7;
+        px(x, y, w, h, on ? '#ffe9a0' : '#5a6a8a');
+        if (on) { px(x, y, w, 2, '#fff8d8'); px(x, y, 2, h, '#fff8d8'); }
+      };
+      // Moon dust banked up under it all, cut exactly along the Moon's curve
+      ctx.save();
+      ctx.beginPath(); ctx.rect(-220, -240, 440, 300); ctx.arc(0, R0 - 2, R0 - 1, 0, TAU); ctx.clip('evenodd');
+      ctx.fillStyle = '#ddd8c6';
+      ctx.beginPath(); ctx.moveTo(-166, -4); ctx.lineTo(-180, 50); ctx.lineTo(160, 50); ctx.lineTo(150, -4); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      px(-160, -6, 306, 2, '#eeeadb');
+      for (let x = -150; x < 40; x += 32) px(x, -9, 10, 5, '#5d5563');
+      // Main module: light panels, shaded underside, roof cap, orange stripe
+      px(-152, -74, 186, 68, '#5d5563');
+      px(-150, -72, 182, 64, '#e6e9f0');
+      px(-150, -20, 182, 12, '#c9cfdb');
+      px(-146, -78, 174, 6, '#b9bfcc'); px(-140, -80, 162, 2, '#d6dce8');
+      px(-150, -42, 182, 3, '#ff7a1a');
+      for (let x = -114; x < 30; x += 36) px(x, -72, 1, 64, '#c9cfdb');
+      // Two rows of windows, a little uneven like the drawing
+      [[-140, -64, 20, 14], [-108, -66, 16, 16], [-80, -64, 22, 14], [-46, -65, 16, 15], [-16, -64, 20, 14]].forEach(([x, y, w, h], i) => win(x, y, w, h, i));
+      [[-136, -34, 16, 11], [-104, -33, 22, 10], [-68, -34, 16, 11], [-38, -33, 18, 10]].forEach(([x, y, w, h], i) => win(x, y, w, h, i + 5));
+      // Airlock door with a porthole and a status light
+      px(8, -36, 20, 28, '#5d5563'); px(10, -34, 16, 26, '#9aa3b5'); px(17, -34, 2, 26, '#7d869a');
+      ctx.fillStyle = '#5d5563'; ctx.beginPath(); ctx.arc(18, -26, 4, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#8fd0ff'; ctx.beginPath(); ctx.arc(18, -26, 2.5, 0, TAU); ctx.fill();
+      px(14, -40, 8, 3, Math.sin(clock * 2) > 0 ? '#52e07a' : '#2a6a3a');
+      // Name plate on the roof
+      px(-112, -92, 104, 14, '#2a2230'); px(-112, -92, 104, 2, '#5d5563');
       ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center';
-      ctx.fillStyle = '#2a2230'; ctx.fillText('MOON BASE 2050', -60, -34);
+      ctx.fillStyle = '#ffd23f'; ctx.fillText('MOON BASE 2050', -60, -82);
       ctx.textAlign = 'start';
-      // Big dome, the round part of the drawing
-      ctx.fillStyle = '#5d5563'; ctx.beginPath(); ctx.arc(78, -42, 46, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#8fb8d8'; ctx.beginPath(); ctx.arc(78, -42, 43, 0, TAU); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(64, -58, 14, 0, TAU); ctx.fill();
-      ctx.strokeStyle = 'rgba(93,85,99,0.7)'; ctx.lineWidth = 2;
-      for (const k of [-0.5, 0, 0.5]) { ctx.beginPath(); ctx.ellipse(78, -42, 43 * Math.cos(k * 1.2), 43, 0, 0, TAU); ctx.stroke(); }
-      px(64, -12, 28, 4, '#4fb34a'); px(70, -20, 4, 8, '#3a8f3a'); px(82, -18, 4, 6, '#3a8f3a'); // plants inside
-      // Aerials with hook flags, just like the drawing
-      for (const [x, h] of [[-118, 24], [-30, 18], [118, 12]]) {
-        const top = x === 118 ? -8 - h : -66 - h;
-        px(x, top, 2, h, '#9aa3b5');
-        ctx.fillStyle = '#e0433b'; ctx.beginPath(); ctx.moveTo(x + 2, top); ctx.lineTo(x + 12, top + 4); ctx.lineTo(x + 2, top + 8); ctx.fill();
+      // Tube joining the block to the dome
+      px(32, -38, 12, 20, '#c9cfdb'); for (let x = 33; x < 44; x += 4) px(x, -38, 1, 20, '#9aa3b5');
+      // The dome: a glass greenhouse on a ring base
+      px(36, -14, 96, 14, '#9aa3b5'); px(36, -14, 96, 3, '#c9cfdb'); px(40, -4, 88, 4, '#7d869a');
+      ctx.save();
+      ctx.beginPath(); ctx.arc(84, -48, 44, 0, TAU); ctx.clip();
+      ctx.fillStyle = '#8fb8d8'; ctx.fillRect(40, -92, 88, 88);
+      ctx.fillStyle = '#6f98bd'; ctx.fillRect(40, -40, 88, 40);
+      px(52, -22, 64, 8, '#7a5a3b');
+      for (const [x, h] of [[58, 16], [70, 24], [82, 14], [94, 22], [106, 16]]) { px(x, -22 - h, 3, h, '#3a8f3a'); px(x - 5, -26 - h, 13, 8, '#4fb34a'); }
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(70, -70, 16, 9, -0.6, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = '#5d5563'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(84, -48, 44, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = 'rgba(93,85,99,0.55)'; ctx.lineWidth = 1.5;
+      for (const k of [0.45, 0.85]) { ctx.beginPath(); ctx.ellipse(84, -48, 44 * k, 44, 0, 0, TAU); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(40, -48); ctx.lineTo(128, -48); ctx.stroke();
+      // Aerials with hook flags (the hooks from the drawing), a dish and a beacon
+      for (const [x, top, col] of [[-128, -110, '#e0433b'], [-20, -104, '#ffd23f']]) {
+        px(x, top, 2, -78 - top, '#9aa3b5');
+        ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x + 2, top); ctx.lineTo(x + 13, top + 4); ctx.lineTo(x + 2, top + 8); ctx.fill();
+        ctx.strokeStyle = '#9aa3b5'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x - 3, top + 2, 3, -Math.PI / 2, Math.PI / 2, true); ctx.stroke();
       }
-      if (Math.sin(clock * 3) > 0) px(-119, -94, 4, 4, '#ff5a4a');
+      if (Math.sin(clock * 3) > 0) px(-129, -114, 4, 4, '#ff5a4a');
+      ctx.fillStyle = '#e6e4ec'; ctx.beginPath(); ctx.ellipse(10, -88, 10, 4, -0.4, 0, TAU); ctx.fill();
+      px(9, -86, 2, 8, '#9aa3b5');
+      // Little flag on the dome, like the drawing
+      px(130, -26, 2, 14, '#9aa3b5');
+      ctx.fillStyle = '#e0433b'; ctx.beginPath(); ctx.moveTo(132, -26); ctx.lineTo(142, -22); ctx.lineTo(132, -18); ctx.fill();
     },
     sign(d) {
       px(-1, -34, 2, 34, '#c9ced9');
