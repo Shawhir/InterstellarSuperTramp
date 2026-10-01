@@ -105,10 +105,11 @@ says so if that happens.
 Reach the Moon and you can carry straight on (your score comes with you), or
 start level 2 from the title screen once you've landed there once.
 
-- **Lunar Conapt 7.** You start at a drab corporate housing block on the Moon,
-  a nod to Philip K. Dick: flickering REKAL neon, a coin-operated door, a UBIK
-  hoarding, an electric sheep plugged in and grazing in its pen, and a heap of
-  kipple. Walk up to them for a line or two. The Moon is shown in cross-section
+- **The Moon base.** You start at a base drawn in a clean flat vector style:
+  pale domes with arched doors, a rocket on its pad between two service
+  towers, a tall tower, a dish and a lander hovering overhead. Two small
+  Philip K. Dick nods: a door that wants five cents and an electric sheep
+  grazing in its pen (walk up to them). The Moon is shown in cross-section
   like Earth: crust with pale highland rock, polar ice, meteorite iron, orange
   volcanic glass and lava tubes; a cold mantle with moonquake cracks; a partly
   molten layer; and a small iron core. On the surface: Apollo 11's landing
