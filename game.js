@@ -375,17 +375,18 @@
       return out;
     };
     const plains = [
-      { f: 0.3, sink: 0.6, top: 150, col: '#bdb8a7', patch: '#b4af9e', rx: [7, 12], craters: 9, mesas: 7 },
-      { f: 0.5, sink: 0.74, top: 96, col: '#ccc7b5', patch: '#c2bdab', rx: [15, 25], craters: 6, mesas: 3 },
-      { f: 0.72, sink: 0.87, top: 44, col: '#d9d4c2', patch: '#cfcab8', rx: [26, 42], craters: 5, mesas: 0 },
+      { f: 0.3, sink: 0.6, top: 62, col: '#bdb8a7', patch: '#b4af9e', rx: [8, 13], craters: 8, mesas: 6 },
+      { f: 0.5, sink: 0.74, top: 40, col: '#ccc7b5', patch: '#c2bdab', rx: [13, 20], craters: 6, mesas: 2 },
+      { f: 0.72, sink: 0.87, top: 20, col: '#d9d4c2', patch: '#cfcab8', rx: [18, 26], craters: 5, mesas: 0 },
     ].map((L, i, all) => {
       const below = i < all.length - 1 ? all[i + 1].top : 0;
       const room = L.top - below;
       const craters = spaced(L.craters, TAU / (L.craters * 1.8)).map((a) => {
         const rx = L.rx[0] + rnd() * (L.rx[1] - L.rx[0]), ry = rx * 0.32;
-        return { a, rx, h: below + ry + 5 + rnd() * Math.max(0, room - ry * 2 - 12) };
+        // Sits within its own band, visible above the nearer band
+        return { a, rx, h: below + ry + 2 + rnd() * Math.max(0, room - ry * 2 - 4) };
       });
-      const mesas = L.mesas ? spaced(L.mesas, TAU / (L.mesas * 2)).map((a) => ({ a, w: 34 + rnd() * 46, h: 9 + rnd() * 11 })) : [];
+      const mesas = L.mesas ? spaced(L.mesas, TAU / (L.mesas * 2)).map((a) => ({ a, w: 26 + rnd() * 34, h: 5 + rnd() * 5 })) : [];
       const patches = spaced(2, 1.4).map((a) => ({ a, w: 0.3 + rnd() * 0.35, ph: rnd() * TAU }));
       return { ...L, below, craters, mesas, patches };
     });
@@ -1600,7 +1601,7 @@
       const rot = theta * L.f;
       // The plain curves much more gently than the Moon in front of it, so the
       // horizon reads as wide, flat ground stretching away
-      const RL = R0 * 3.6, yTop = my - (R0 - 6 + L.top);
+      const RL = R0 * 1.8, yTop = my - (R0 - 6 + L.top);
       const P = (ph, h) => {
         const phi = (wrap(ph) * R0) / RL, r = RL - (L.top - h);
         return [cx + r * Math.sin(phi), yTop + RL - r * Math.cos(phi)];
@@ -1635,7 +1636,7 @@
       // Low, flat-topped crater rims standing on the far edge
       for (const m of L.mesas) {
         if (!seen(m.a, m.w)) continue;
-        const ph = m.a + rot, [x, y] = P(ph, L.top), w = m.w / 2, s2 = 9;
+        const ph = m.a + rot, [x, y] = P(ph, L.top), w = m.w / 2, s2 = 6;
         ctx.save(); ctx.translate(x, y); ctx.rotate(tilt(ph));
         ctx.fillStyle = L.col; ctx.beginPath(); ctx.moveTo(-w - s2, 1); ctx.lineTo(-w, -m.h); ctx.lineTo(w, -m.h); ctx.lineTo(w + s2, 1); ctx.closePath(); ctx.fill();
         ctx.fillStyle = dark(L.col, 0.16); ctx.beginPath(); ctx.moveTo(w - 4, -m.h); ctx.lineTo(w, -m.h); ctx.lineTo(w + s2, 1); ctx.lineTo(w + s2 - 6, 1); ctx.closePath(); ctx.fill();
