@@ -368,3 +368,14 @@ body.intro .hud, body.intro .toast { opacity: 0; pointer-events: none; }
 @media (max-width: 380px) { .modes { grid-template-columns: 1fr; } }
 
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } .stars.pop, .mult.bump { animation: none; } }
+
+/* Level 2: Moon to Mars or Venus */
+.card button.level2 {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  color: var(--ink);
+  background: linear-gradient(90deg, #c8553a, #b5523a 50%, #c9a04a);
+}
+.card button.level2 span { font-family: var(--body); font-size: 18px; opacity: 0.9; }
+.won-actions .level2 { flex-basis: 100%; }
