@@ -371,7 +371,7 @@
       }
     };
     // A wide old basin or two, then craters big and small
-    for (const [n, w0, w1, d0, d1] of [[2, 34, 46, 22, 28], [22, 9, 22, 12, 22], [30, 3, 7, 5, 9]]) {
+    for (const [n, w0, w1, d0, d1] of [[1, 34, 44, 16, 20], [6, 10, 20, 9, 14], [7, 4, 7, 4, 7]]) {
       for (let t = 0, made = 0; t < 200 && made < n; t++) {
         const c = Math.floor(rnd() * SN), w = w0 + rnd() * (w1 - w0), a = (c / SN) * TAU;
         if (isFlat(a, (w * 1.4 * TAU) / SN)) continue;
@@ -390,38 +390,46 @@
     }
     const swirls = [];
     for (let i = 0; i < 18; i++) swirls.push({ a: rnd() * TAU, rf: 0.4 + rnd() * 0.46, len: 0.1 + rnd() * 0.25 });
-    // Grey crater rims and highlands behind the base, farthest (darkest) first
+    // Hills behind the base in the flat vector style of emoji Moons: three
+    // layers of smooth rolling hills in two tones (sunlit and shade), and only
+    // a couple of crater mounds in each
     const ranges = [
-      [0.3, 0.55, '#33313f', '#4a4856', 240],
-      [0.42, 0.64, '#3d3b4a', '#565463', 200],
-      [0.55, 0.74, '#474555', '#636171', 150],
-      [0.72, 0.84, '#514f60', '#706e7e', 105],
-      [0.88, 0.93, '#5b596b', '#7d7b8b', 50],
-    ].map(([f, sink, col, snow, hMax]) => {
-      // Instead of mountains, the skyline is craters seen from the side: a steep
-      // outer wall up to the rim, a bowl dipping between the two rims, and a
-      // little central peak in the big ones
+      [0.35, 0.6, '#3a3848', '#4c4a5c', 150],
+      [0.55, 0.76, '#4a4859', '#605e71', 105],
+      [0.8, 0.9, '#5c5a6c', '#76748a', 60],
+    ].map(([f, sink, col, lit, hMax], layer) => {
       const n = 480, h = new Array(n).fill(0), cr = [];
       const colPx = (TAU * R0) / n;
-      const count = 14 + Math.floor(rnd() * 6);
-      for (let i = 0; i < count; i++) {
-        // A wide, low mound with a flat top (the rim), sloping walls outside
-        const c = Math.round(rnd() * n), w = 7 + rnd() * 13;
-        const height = Math.round(Math.min(hMax * (0.45 + rnd() * 0.55), w * colPx * 0.62));
-        cr.push({ c, w, height });
-        for (let j = -Math.ceil(w * 1.8); j <= Math.ceil(w * 1.8); j++) {
-          const idx = (c + j + n) % n, k = Math.abs(j) / w;
-          const v = k <= 1 ? height : height * Math.pow(Math.max(0, 1 - (k - 1) / 0.8), 1.3);
-          h[idx] = Math.max(h[idx], v);
+      const humps = 9 + Math.floor(rnd() * 4);
+      for (let i = 0; i < humps; i++) {
+        const c = Math.round(rnd() * n), w = 26 + rnd() * 40, height = hMax * (0.35 + rnd() * 0.65);
+        for (let j = -Math.ceil(w); j <= Math.ceil(w); j++) {
+          const idx = (((c + j) % n) + n) % n, k = j / w;
+          h[idx] = Math.max(h[idx], height * Math.pow(Math.max(0, 1 - k * k), 1.5));
         }
       }
-      // Only craters whose rim is the skyline (not hidden behind a bigger one) show their mouth
-      const top = cr.filter((q) => h[q.c] <= q.height + 0.5);
-      return { f, sink, col, snow, hMax, rims: true, craters: top, h };
+      for (let i = 0; i < 3; i++) {
+        // A crater: a flat-topped mound with its mouth on top (the first one in
+        // view of the base)
+        const c = i === 0 ? [8, n - 20, 30][layer] : Math.round(rnd() * n), w = 9 + rnd() * 8;
+        const height = Math.round(Math.min(hMax * (0.5 + rnd() * 0.4), w * colPx * 0.45));
+        for (let j = -Math.ceil(w * 1.8); j <= Math.ceil(w * 1.8); j++) {
+          const idx = (c + j + n) % n, k = Math.abs(j) / w;
+          h[idx] = Math.max(h[idx], k <= 1 ? height : height * Math.pow(Math.max(0, 1 - (k - 1) / 0.8), 1.3));
+        }
+        cr.push({ c, w, height });
+      }
+      return { f, sink, col, lit, hMax, flat: true, craters: cr.filter((q) => h[q.c] <= q.height + 0.5), h };
     });
     const sky = [];
     for (let i = 0; i < 240; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.12 ? 2 : 1, tw: rnd() * TAU });
-    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat: null, beams, dust, surf, craters };
+    // A few flat crater shapes on the ground's face, a shade darker: one or two
+    // big, several medium, a handful small
+    const spots = [];
+    for (const [k, r0, r1] of [[2, 20, 28], [7, 11, 17], [9, 5, 9]]) {
+      for (let i = 0; i < k; i++) spots.push({ a: rnd() * TAU, off: 10 + rnd() * 22, rx: r0 + rnd() * (r1 - r0) });
+    }
+    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat: null, beams, dust, surf, craters, spots };
   }
 
   // ---- State ----------------------------------------------------------------
@@ -1521,9 +1529,9 @@
       const n = m.h.length;
       const rot = theta * m.f;
       const hazeK = (1 - m.sink) * 0.7 + skyS * 0.5;
-      const pt = (i) => {
+      const pt = (i, hh) => {
         const a = (i / n) * TAU + rot;
-        const r = R0 - 6 + m.h[i % n];
+        const r = R0 - 6 + (hh === undefined ? m.h[((i % n) + n) % n] : hh);
         return [cx + r * Math.sin(a), my - r * Math.cos(a)];
       };
       const span = Math.min(n / 2, Math.ceil((n * ((view.x1 - view.x0) / 2 + 260)) / (TAU * R0)));
@@ -1539,7 +1547,35 @@
       ctx.lineTo(view.x0 - 400, Math.max(my, view.y1 + 400));
       ctx.closePath();
       ctx.fill();
-      if (m.rims) {
+      if (m.flat) {
+        // Two tones, like a vector illustration: slopes facing the Sun (to the
+        // left) are lit, the rest stays in shade
+        ctx.fillStyle = tint(m.lit, hazeK);
+        let run = null;
+        const face = (i0, i1) => {
+          ctx.beginPath();
+          for (let i = i0; i <= i1; i++) { const [x, y] = pt(i); i === i0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+          // ...tapering down the slope, like a flat-shaded plane
+          for (let i = i1; i >= i0; i--) { const [x, y] = pt(i, m.h[((i % n) + n) % n] * 0.45 + Math.max(0, (i - i0) * 0.6)); ctx.lineTo(x, y); }
+          ctx.closePath(); ctx.fill();
+        };
+        for (let i = mid - span; i <= mid + span + 1; i++) {
+          const k = ((i % n) + n) % n, up = i <= mid + span && m.h[k] - m.h[(k - 1 + n) % n] > 0.2;
+          if (up && run === null) run = i - 1;
+          else if (!up && run !== null) { face(run, i - 1); run = null; }
+        }
+        // Crater mouths: one flat shape, a shade darker
+        const colPx = (TAU * (R0 - 6)) / n;
+        ctx.fillStyle = tint(mix(m.col, '#000000', 0.42).match(/\d+/g).slice(0, 3).map((v) => (+v).toString(16).padStart(2, '0')).reduce((a, b) => a + b, '#'), hazeK);
+        for (const c of m.craters) {
+          const off = ((((c.c - mid) % n) + n + n / 2) % n) - n / 2;
+          if (Math.abs(off) > span) continue;
+          const a = (c.c / n) * TAU + rot, r = R0 - 6 + c.height;
+          ctx.save(); ctx.translate(cx + r * Math.sin(a), my - r * Math.cos(a)); ctx.rotate(a);
+          ctx.beginPath(); ctx.ellipse(0, 0, c.w * colPx * 0.85, Math.max(4, c.w * colPx * 0.17), 0, 0, TAU); ctx.fill();
+          ctx.restore();
+        }
+      } else if (m.rims) {
         // Sunlit crater rims: a bright edge along the top
         ctx.strokeStyle = tint(m.snow, hazeK * 0.6); ctx.lineWidth = 3;
         ctx.beginPath();
@@ -1698,12 +1734,14 @@
     for (const c of world.craters) {
       if (!vis(c.c)) continue;
       const w = Math.round(c.w);
-      ctx.strokeStyle = '#757284'; ctx.lineWidth = 26; seg(c.c - w, c.c + w);
-      ctx.strokeStyle = '#4a4858'; ctx.lineWidth = 14; seg(c.c - w, c.c - Math.round(w * 0.1));
-      ctx.strokeStyle = '#d4d2dc'; ctx.lineWidth = 7; seg(c.c + Math.round(w * 0.3), c.c + w);
-      ctx.strokeStyle = '#eeedf3'; ctx.lineWidth = 5; seg(c.c - Math.round(w * 1.3), c.c - w); seg(c.c + w, c.c + Math.round(w * 1.3));
+      ctx.strokeStyle = '#8f8c9c'; ctx.lineWidth = 22; seg(c.c - w, c.c + w);
     }
     ctx.lineCap = 'butt';
+    ctx.fillStyle = 'rgba(58,54,78,0.32)';
+    for (const q of world.spots) {
+      if (Math.abs(wrap(q.a + theta)) * R0 > (view.x1 - view.x0) / 2 + 60) continue;
+      at(q.a + theta, R0 + surfAt(q.a) - q.off, () => { ctx.beginPath(); ctx.ellipse(0, 0, q.rx, q.rx * 0.42, 0, 0, TAU); ctx.fill(); }, 50);
+    }
     ctx.strokeStyle = '#e4e2ea'; ctx.lineWidth = 4; ctx.stroke(outline);
     ctx.restore();
     ctx.font = '8px "Press Start 2P", monospace';
