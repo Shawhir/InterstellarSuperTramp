@@ -120,5 +120,11 @@
 <script src="scoreboard.js"></script>
 <script src="audio.js"></script>
 <script src="game.js"></script>
+<script>
+  // Play offline once the game has been opened (on the public site only)
+  if ('serviceWorker' in navigator && /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname)) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 {
   "name": "Interstellar SuperTramp",
   "short_name": "SuperTramp",
-  "description": "Bounce from the Earth to the Moon while the world turns under your feet.",
+  "description": "Bounce from the Earth to the Moon, then on to Mars or Venus, while the world turns under your feet.",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
