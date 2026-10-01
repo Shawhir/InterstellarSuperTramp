@@ -105,11 +105,10 @@ says so if that happens.
 Reach the Moon and you can carry straight on (your score comes with you), or
 start level 2 from the title screen once you've landed there once.
 
-- **The Moon base.** You start at a base drawn in a clean flat vector style:
-  pale domes with arched doors, a rocket on its pad between two service
-  towers, a tall tower, a dish and a lander hovering overhead. Two small
-  Philip K. Dick nods: a door that wants five cents and an electric sheep
-  grazing in its pen (walk up to them). The Moon is shown in cross-section
+- **The Moon base.** You start below a base drawn in a clean flat vector style,
+  standing as one group on a flat stretch of the distant horizon under a big
+  Earth: a rocket on its pad between two boosters, domes, a dish, a railing,
+  a tall twin tower and a lander hovering overhead. The Moon is shown in cross-section
   like Earth: crust with pale highland rock, polar ice, meteorite iron, orange
   volcanic glass and lava tubes; a cold mantle with moonquake cracks; a partly
   molten layer; and a small iron core. On the surface: Apollo 11's landing
