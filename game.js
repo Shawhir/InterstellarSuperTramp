@@ -1217,7 +1217,7 @@
   // Round worlds seen from space: the Moon, Earth, Mars and Venus
   const PLANET = {
     moon: { glow: '230,228,240', body: '#e6e4ec', spots: '#c3c0cc' },
-    earth: { glow: '170,210,235', body: '#5f97c2', spots: '#a7c3d4' },
+    earth: { glow: '120,190,255', body: '#2f6fd0', spots: '#4fb34a' },
     mars: { glow: '255,140,100', body: '#c8553a', spots: '#9a3b2a' },
     venus: { glow: '255,230,160', body: '#efd9a0', spots: '#dcc07a' },
   };
@@ -1240,13 +1240,11 @@
         ctx.fillRect(x - r, y + i * r * 0.28 + Math.sin(clock * 0.3 + i) * r * 0.05, r * 2, r * 0.14);
       }
     } else if (type === 'earth') {
-      // Mottled cloud and land, like Earth seen from the Moon
-      for (let i = 0; i < 34; i++) {
-        const h1 = Math.sin(i * 12.9898) * 43758.5453, h2 = Math.sin(i * 78.233) * 12345.678, h3 = Math.sin(i * 39.425) * 9876.54;
-        const fx = (h1 - Math.floor(h1)) * 2 - 1, fy = (h2 - Math.floor(h2)) * 2 - 1, fr = h3 - Math.floor(h3);
-        ctx.fillStyle = i % 3 === 0 ? '#86aac2' : i % 3 === 1 ? '#dce9f0' : '#b4cddb';
-        ctx.beginPath(); ctx.ellipse(x + fx * r * 0.85, y + fy * r * 0.85, r * (0.08 + fr * 0.2), r * (0.05 + fr * 0.11), fx * 2, 0, TAU); ctx.fill();
+      for (const [cxo, cyo, cr] of [[-0.35, -0.2, 0.32], [0.3, 0.25, 0.26], [0.1, -0.5, 0.18], [-0.1, 0.55, 0.16]]) {
+        ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill();
       }
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      for (const [cxo, cyo, w] of [[-0.6, -0.45, 0.7], [0.0, 0.05, 0.8], [-0.2, 0.4, 0.6]]) ctx.fillRect(x + cxo * r, y + cyo * r, w * r, Math.max(1, r * 0.08));
     } else {
       const spots = type === 'mars' ? [[-0.3, 0.1, 0.3], [0.35, -0.15, 0.2], [0.1, 0.45, 0.22]] : [[-0.3, -0.2, 0.22], [0.35, 0.25, 0.15], [0.05, 0.5, 0.18], [-0.45, 0.35, 0.1], [0.4, -0.4, 0.09]];
       for (const [cxo, cyo, cr] of spots) { ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill(); }
@@ -1280,15 +1278,15 @@
     ctx.fillStyle = sg; ctx.fillRect(sx - sr * 5, sy - sr * 5, sr * 10, sr * 10);
     ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
     // Earth hangs in the black sky, shrinking behind you as you go
-    drawPlanet('earth', W * 0.5, H * 0.17 + tf * 26, 84 / (1 + tf * 0.45));
+    drawPlanet('earth', W * 0.84, H * 0.17 + tf * 22, 46 / (1 + tf * 0.45));
     if (fx.visitor) drawVisitor(fx.visitor);
     if (route) drawSkyMoon();
     else {
       // From the base you can see both: Venus off to the left, Mars to the right
-      drawPlanet('venus', W * 0.16, H * 0.3, 7);
-      drawPlanet('mars', W * 0.84, H * 0.3, 6);
+      drawPlanet('venus', W * 0.36, H * 0.2, 7);
+      drawPlanet('mars', W * 0.62, H * 0.22, 6);
       ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(238,241,255,0.75)';
-      ctx.fillText('VENUS', W * 0.16, H * 0.3 + 20); ctx.fillText('MARS', W * 0.84, H * 0.3 + 19);
+      ctx.fillText('VENUS', W * 0.36, H * 0.2 + 20); ctx.fillText('MARS', W * 0.62, H * 0.22 + 19);
       ctx.textAlign = 'start';
     }
   }
