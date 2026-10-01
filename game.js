@@ -386,7 +386,7 @@
       const r = rnd();
       const kind = r < 0.42 ? 'rock' : r < 0.6 ? 'ice' : r < 0.76 ? 'meteorite' : r < 0.92 ? 'glass' : 'tube';
       // Lava tubes run deep, well below the craters
-      crust.push({ a: rnd() * TAU, rf: kind === 'tube' ? 0.91 + rnd() * 0.012 : 0.905 + rnd() * 0.022, kind, hue: Math.floor(rnd() * 3) });
+      crust.push({ a: rnd() * TAU, rf: kind === 'tube' ? 0.91 + rnd() * 0.025 : 0.905 + rnd() * 0.07, kind, hue: Math.floor(rnd() * 3) });
     }
     const swirls = [];
     for (let i = 0; i < 18; i++) swirls.push({ a: rnd() * TAU, rf: 0.4 + rnd() * 0.46, len: 0.1 + rnd() * 0.25 });
@@ -398,32 +398,30 @@
       [0.72, 0.84, '#514f60', '#706e7e', 105],
       [0.88, 0.93, '#5b596b', '#7d7b8b', 50],
     ].map(([f, sink, col, snow, hMax]) => {
-      const n = 480, h = new Array(n).fill(0);
-      const peaks = 22 + Math.floor(rnd() * 10);
-      for (let i = 0; i < peaks; i++) {
-        // Crater rims: wide, flat-topped humps rather than sharp peaks
-        const c = rnd() * n, width = 10 + rnd() * 26, height = hMax * (0.3 + rnd() * 0.7);
-        for (let j = -Math.ceil(width); j <= Math.ceil(width); j++) {
-          const idx = (Math.round(c) + j + n) % n;
-          const k = Math.abs(j) / width;
-          h[idx] = Math.max(h[idx], height * Math.min(1, (1 - k) * 2.2) * (k < 0.4 ? 0.88 + k * 0.3 : 1));
+      // Instead of mountains, the skyline is craters seen from the side: a steep
+      // outer wall up to the rim, a bowl dipping between the two rims, and a
+      // little central peak in the big ones
+      const n = 480, h = new Array(n).fill(0), cr = [];
+      const colPx = (TAU * R0) / n;
+      const count = 14 + Math.floor(rnd() * 6);
+      for (let i = 0; i < count; i++) {
+        // A wide, low mound with a flat top (the rim), sloping walls outside
+        const c = Math.round(rnd() * n), w = 7 + rnd() * 13;
+        const height = Math.round(Math.min(hMax * (0.45 + rnd() * 0.55), w * colPx * 0.62));
+        cr.push({ c, w, height });
+        for (let j = -Math.ceil(w * 1.8); j <= Math.ceil(w * 1.8); j++) {
+          const idx = (c + j + n) % n, k = Math.abs(j) / w;
+          const v = k <= 1 ? height : height * Math.pow(Math.max(0, 1 - (k - 1) / 0.8), 1.3);
+          h[idx] = Math.max(h[idx], v);
         }
       }
-      return { f, sink, col, snow, hMax, rims: true, h: h.map((v) => Math.round(v / 4) * 4) };
+      // Only craters whose rim is the skyline (not hidden behind a bigger one) show their mouth
+      const top = cr.filter((q) => h[q.c] <= q.height + 0.5);
+      return { f, sink, col, snow, hMax, rims: true, craters: top, h };
     });
     const sky = [];
     for (let i = 0; i < 240; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.12 ? 2 : 1, tw: rnd() * TAU });
-    // Craggy: a little roughness all along the edge
-    for (let i = 0; i < SN; i++) surf[i] += (rnd() - 0.5) * 2.2 + Math.sin(i * 0.9) * 0.6;
-    // The ground's face, seen at a slant, is packed with craters big and small:
-    // small ones near the horizon, bigger ones nearer to you
-    const pits = [];
-    for (let i = 0; i < 190; i++) {
-      const depth = rnd();
-      pits.push({ a: rnd() * TAU, off: 5 + depth * 26, rx: 5 + depth * 16 + rnd() * rnd() * 22, hue: Math.floor(rnd() * 3) });
-    }
-    pits.sort((x, y) => x.off - y.off);
-    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat: null, beams, dust, surf, craters, pits };
+    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat: null, beams, dust, surf, craters };
   }
 
   // ---- State ----------------------------------------------------------------
@@ -1547,6 +1545,23 @@
         ctx.beginPath();
         for (let i = mid - span; i <= mid + span; i++) { const [x, y] = pt((i + n) % n); i === mid - span ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
         ctx.stroke();
+        // Each crater's mouth, seen slightly from above: a dark bowl inside the
+        // rim, its far wall catching the sunlight
+        const colPx = (TAU * (R0 - 6)) / n;
+        for (const c of m.craters) {
+          const off = ((c.c - mid) % n + n + n / 2) % n - n / 2;
+          if (Math.abs(off) > span) continue;
+          const a = (c.c / n) * TAU + rot, r = R0 - 6 + c.height;
+          const x = cx + r * Math.sin(a), y = my - r * Math.cos(a);
+          const rx = c.w * colPx, ry = Math.max(4, rx * 0.24);
+          ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+          // the mouth: bright rim, dark floor, the far wall lit by the Sun
+          ctx.fillStyle = tint(m.snow, hazeK * 0.6); ctx.beginPath(); ctx.ellipse(0, 0, rx, ry + 2, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = tint('#3a3848', hazeK); ctx.beginPath(); ctx.ellipse(0, 1, rx - 4, ry - 1, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = tint(m.col, hazeK * 0.7); ctx.beginPath(); ctx.ellipse(rx * 0.1, -ry * 0.05, rx * 0.86, ry * 0.7, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
+          if (c.w > 13) { ctx.fillStyle = tint(m.snow, hazeK * 0.7); ctx.beginPath(); ctx.moveTo(-rx * 0.1, ry * 0.45); ctx.lineTo(0, -ry * 0.1); ctx.lineTo(rx * 0.1, ry * 0.45); ctx.fill(); } // central peak
+          ctx.restore();
+        }
       } else if (m.snow) {
         ctx.fillStyle = tint(m.snow, hazeK * 0.6);
         for (let i = mid - span; i <= mid + span; i++) {
@@ -1674,21 +1689,7 @@
       }, 34);
     }
     // Grey regolith: dust and broken rock, pounded by billions of years of impacts
-    // The ground's face: a band of dusty regolith, packed with cartoon craters
-    ctx.strokeStyle = '#8f8aac'; ctx.lineWidth = 76; ctx.stroke(outline);
-    ctx.strokeStyle = '#b3afc9'; ctx.lineWidth = 64; ctx.stroke(outline);
-    const reachP = (view.x1 - view.x0) / 2 + 80;
-    for (const q of world.pits) {
-      if (Math.abs(wrap(q.a + theta)) * R0 > reachP) continue;
-      at(q.a + theta, R0 + surfAt(q.a) - q.off, () => {
-        const rx = q.rx, ry = Math.max(2, rx * 0.36);
-        ctx.fillStyle = '#e3e0f2'; ctx.beginPath(); ctx.ellipse(0, 1, rx + 3, ry + 2.5, 0, 0, TAU); ctx.fill();   // bright rim
-        ctx.fillStyle = ['#7a7596', '#706b8e', '#837e9f'][q.hue]; ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, TAU); ctx.fill(); // bowl
-        ctx.fillStyle = '#9a96b6'; ctx.beginPath(); ctx.ellipse(rx * 0.22, ry * 0.3, rx * 0.68, ry * 0.6, 0, 0, TAU); ctx.fill(); // sunlit wall
-        ctx.fillStyle = '#5c5778'; ctx.beginPath(); ctx.ellipse(-rx * 0.35, -ry * 0.35, rx * 0.5, ry * 0.45, 0, 0, TAU); ctx.fill(); // shadow
-        if (rx > 14) { ctx.fillStyle = '#c9c5dc'; ctx.beginPath(); ctx.ellipse(rx * 0.05, ry * 0.15, rx * 0.12, ry * 0.18, 0, 0, TAU); ctx.fill(); } // central peak
-      }, 60);
-    }
+    ctx.strokeStyle = '#b8b6c2'; ctx.lineWidth = 22; ctx.stroke(outline);
     // Each crater: the wall facing away from the Sun in shadow, the other lit,
     // and a dark floor of older, compacted dust
     const vis = (c) => Math.abs(wrap((c / n) * TAU + theta)) * R0 < (view.x1 - view.x0) / 2 + 200;
@@ -1697,17 +1698,17 @@
     for (const c of world.craters) {
       if (!vis(c.c)) continue;
       const w = Math.round(c.w);
-      ctx.strokeStyle = '#7a7596'; ctx.lineWidth = 26; seg(c.c - w, c.c + w);
-      ctx.strokeStyle = '#4e4a68'; ctx.lineWidth = 14; seg(c.c - w, c.c - Math.round(w * 0.1));
-      ctx.strokeStyle = '#d2cfe4'; ctx.lineWidth = 7; seg(c.c + Math.round(w * 0.3), c.c + w);
-      ctx.strokeStyle = '#f0eef8'; ctx.lineWidth = 5; seg(c.c - Math.round(w * 1.3), c.c - w); seg(c.c + w, c.c + Math.round(w * 1.3));
+      ctx.strokeStyle = '#757284'; ctx.lineWidth = 26; seg(c.c - w, c.c + w);
+      ctx.strokeStyle = '#4a4858'; ctx.lineWidth = 14; seg(c.c - w, c.c - Math.round(w * 0.1));
+      ctx.strokeStyle = '#d4d2dc'; ctx.lineWidth = 7; seg(c.c + Math.round(w * 0.3), c.c + w);
+      ctx.strokeStyle = '#eeedf3'; ctx.lineWidth = 5; seg(c.c - Math.round(w * 1.3), c.c - w); seg(c.c + w, c.c + Math.round(w * 1.3));
     }
     ctx.lineCap = 'butt';
-    ctx.strokeStyle = '#ece9f6'; ctx.lineWidth = 4; ctx.stroke(outline);
+    ctx.strokeStyle = '#e4e2ea'; ctx.lineWidth = 4; ctx.stroke(outline);
     ctx.restore();
     ctx.font = '8px "Press Start 2P", monospace';
     ctx.textAlign = 'center';
-    const labels = [['CRUST', 0.905], ['MANTLE', 0.62], ['PARTLY MOLTEN', 0.29], ['OUTER CORE', 0.225], ['INNER CORE', 0.1]];
+    const labels = [['CRUST', 0.95], ['MANTLE', 0.62], ['PARTLY MOLTEN', 0.29], ['OUTER CORE', 0.225], ['INNER CORE', 0.1]];
     for (const [t, rf] of labels) {
       const x = cx - Math.sin(0.3) * rf * R0 * (rf > 0.2 ? 1 : 0), y = cy - Math.cos(0.3) * rf * R0 + 3;
       if (y > H + 10) continue;
