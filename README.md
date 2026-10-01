@@ -100,6 +100,32 @@ says so if that happens.
 - `scoreboard.js`: shared scoreboard of fastest Moon landings per mode (see below).
 - `style.css`: HUD, overlays and the touch pad.
 
+## Level 2: the Moon to Mars or Venus
+
+Reach the Moon and you can carry straight on (your score comes with you), or
+start level 2 from the title screen once you've landed there once.
+
+- **Moon base 2050.** You start at a future Moon base, designed from a drawing:
+  a long block with windows, a big glass dome and little flags on the aerials.
+  The Moon is shown in cross-section like Earth: crust with pale highland rock,
+  polar ice, meteorite iron, orange volcanic glass and lava tubes; a cold mantle
+  with moonquake cracks; a partly molten layer; and a small iron core. On the
+  surface: craters, boulders, Apollo 11's landing site, a rover and its tracks,
+  a radio telescope, solar arrays, a greenhouse, a lander and a mining rig.
+- **Two routes.** The launch pad on the right heads for Mars, the one on the
+  left for Venus. Once you pick, the other route turns into see-through ghosts.
+- **Gravity.** Lower than Earth's, so you float (softened from the real values
+  to keep it playable). Venus pulls harder as you get close.
+- **Hazards.** Flaming meteors (with a warning at the screen edge), the solar
+  wind pushing you sideways, dust clouds that sandblast you if you linger, and
+  radiation bursts that flicker before they fire. Each costs your multiplier.
+- **Rides.** On the Mars route, Lumen the roadside drifter cruises past in his
+  old convertible: land on it for a headlight shield and a slingshot. On the
+  Venus route, hitch a ride on comet Borisov.
+- **Real things out there.** Kamo'oalewa, Cruithne, 'Oumuamua, 3I/ATLAS, Phobos,
+  a Mars meteorite, Venera 7, and a city in Venus's clouds at the end.
+- Dedicated to David Bowie, who looked up and made the rest of us look too.
+
 ## Online scoreboard
 
 The scoreboard lists the highest scores reaching the Moon for each mode (ties go to the faster run), best run per name.
