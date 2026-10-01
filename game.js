@@ -96,6 +96,13 @@
     TOP = TIERS.length - 1;
     CHECKPOINTS = checkpointsFor(TIERS);
   }
+  // How far the Moon's cratered ground sits above (+) or below (-) the base radius
+  function surfAt(a) {
+    const sf = world && world.surf;
+    if (!sf) return 0;
+    const n = sf.length, f = ((((a / TAU) * n) % n) + n) % n, i = Math.floor(f), k = f - i;
+    return sf[i] * (1 - k) + sf[(i + 1) % n] * k;
+  }
   const gravAt = (k) => (level === 2 ? TIERS[Math.max(0, Math.min(TOP, k))].g || 0.6 : 1);
   const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220,
     pad: 80, rocket: 116, kamo: 84, car: 150, comet: 140, phobos: 110, deimos: 80, cloudv: 140, mars: 220, venus: 220 };
@@ -330,13 +337,8 @@
     }
     stars.forEach((st, i) => { st.id = i; });
 
-    // The Moon's surface: craters and boulders first, landmarks drawn on top
+    // The Moon's surface: boulders first, landmarks drawn on top
     const decor = [];
-    for (let i = 0; i < 38; i++) {
-      let a = rnd() * TAU - Math.PI;
-      if (Math.abs(a) < 0.4) a += Math.sign(a || 1) * 0.5;
-      decor.push({ a, kind: 'crater', size: 0.6 + rnd() * 1.3, hue: Math.floor(rnd() * 3) });
-    }
     for (let i = 0; i < 34; i++) {
       const a = rnd() * TAU - Math.PI;
       if (Math.abs(a) > 0.36) decor.push({ a, kind: 'boulder', size: 0.5 + rnd() * 0.9, hue: Math.floor(rnd() * 3) });
@@ -352,22 +354,49 @@
       { a: -2.18, kind: 'tracks' }, { a: -1.98, kind: 'rover' }, { a: -1.8, kind: 'tracks' },
       { a: -2.6, kind: 'dish' }, { a: -2.95, kind: 'monolith' },
     );
+    // The ground itself is pitted with craters: bowls dug into the surface with
+    // raised rims. The base, the launch pads and the landmarks sit on flat ground.
+    const SN = 720, surf = new Float32Array(SN), craters = [];
+    const flat = [[0, 0.42], [0.62, 0.13], [-0.62, 0.13], [1.7, 0.13], [-1.7, 0.13]];
+    for (const d of decor) if (d.kind !== 'boulder') flat.push([d.a, 0.11]);
+    const isFlat = (a, w) => flat.some(([fa, fr]) => Math.abs(wrap(a - fa)) < fr + w);
+    const dig = (c, w, depth) => {
+      craters.push({ c, w, depth });
+      for (let j = -Math.ceil(w * 1.35); j <= Math.ceil(w * 1.35); j++) {
+        const i = (((c + j) % SN) + SN) % SN, k = Math.abs(j) / w;
+        // Bowl inside, a raised lip just outside it
+        const h = k < 1 ? -depth * (1 - k * k) + depth * 0.32 * k ** 6 : depth * 0.32 * Math.max(0, 1 - (k - 1) / 0.35);
+        if (h < 0) surf[i] = Math.min(surf[i], h);
+        else if (surf[i] >= 0) surf[i] = Math.max(surf[i], h); // a rim never fills an older bowl
+      }
+    };
+    // A wide old basin or two, then craters big and small
+    for (const [n, w0, w1, d0, d1] of [[2, 34, 46, 22, 28], [22, 9, 22, 12, 22], [30, 3, 7, 5, 9]]) {
+      for (let t = 0, made = 0; t < 200 && made < n; t++) {
+        const c = Math.floor(rnd() * SN), w = w0 + rnd() * (w1 - w0), a = (c / SN) * TAU;
+        if (isFlat(a, (w * 1.4 * TAU) / SN)) continue;
+        dig(c, w, d0 + rnd() * (d1 - d0));
+        made++;
+      }
+    }
     // Inside the crust: pale highland rock, polar ice, meteorite iron, orange
     // volcanic glass beads (Apollo 17 found some) and the odd lava tube
     const crust = [];
     for (let i = 0; i < 90; i++) {
       const r = rnd();
-      crust.push({ a: rnd() * TAU, rf: 0.905 + rnd() * 0.08, kind: r < 0.42 ? 'rock' : r < 0.6 ? 'ice' : r < 0.76 ? 'meteorite' : r < 0.92 ? 'glass' : 'tube', hue: Math.floor(rnd() * 3) });
+      const kind = r < 0.42 ? 'rock' : r < 0.6 ? 'ice' : r < 0.76 ? 'meteorite' : r < 0.92 ? 'glass' : 'tube';
+      // Lava tubes run deep, well below the craters
+      crust.push({ a: rnd() * TAU, rf: kind === 'tube' ? 0.91 + rnd() * 0.025 : 0.905 + rnd() * 0.07, kind, hue: Math.floor(rnd() * 3) });
     }
     const swirls = [];
     for (let i = 0; i < 18; i++) swirls.push({ a: rnd() * TAU, rf: 0.4 + rnd() * 0.46, len: 0.1 + rnd() * 0.25 });
     // Grey crater rims and highlands behind the base, farthest (darkest) first
     const ranges = [
-      [0.3, 0.55, '#4a4856', '#5e5c6a', 240],
-      [0.42, 0.64, '#5b5967', '#73717f', 200],
-      [0.55, 0.74, '#6e6c7a', '#8a8896', 150],
-      [0.72, 0.84, '#83818f', '#a19fad', 105],
-      [0.88, 0.93, '#9a98a6', '#b8b6c2', 50],
+      [0.3, 0.55, '#33313f', '#4a4856', 240],
+      [0.42, 0.64, '#3d3b4a', '#565463', 200],
+      [0.55, 0.74, '#474555', '#636171', 150],
+      [0.72, 0.84, '#514f60', '#706e7e', 105],
+      [0.88, 0.93, '#5b596b', '#7d7b8b', 50],
     ].map(([f, sink, col, snow, hMax]) => {
       const n = 480, h = new Array(n).fill(0);
       const peaks = 22 + Math.floor(rnd() * 10);
@@ -384,7 +413,7 @@
     });
     const sky = [];
     for (let i = 0; i < 240; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.12 ? 2 : 1, tw: rnd() * TAU });
-    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat: null, beams, dust };
+    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat: null, beams, dust, surf, craters };
   }
 
   // ---- State ----------------------------------------------------------------
@@ -1597,9 +1626,17 @@
   function drawMoonBody() {
     if (cy - R0 > view.y1 + 60) return;
     const disc = (r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill(); };
+    // The cratered outline: everything inside is clipped to it
+    const sf = world.surf, n = sf.length;
+    const sp = (i) => { const a = (i / n) * TAU + theta, r = R0 + sf[((i % n) + n) % n]; return [cx + r * Math.sin(a), cy - r * Math.cos(a)]; };
+    const outline = new Path2D();
+    for (let i = 0; i <= n; i++) { const [x, y] = sp(i); i ? outline.lineTo(x, y) : outline.moveTo(x, y); }
+    outline.closePath();
+    ctx.save();
+    ctx.clip(outline);
     const crustG = ctx.createRadialGradient(cx, cy, R0 * 0.9, cx, cy, R0);
     crustG.addColorStop(0, '#6f6b7a'); crustG.addColorStop(1, '#a19eab');
-    disc(R0, crustG);
+    disc(R0 + 24, crustG);
     const mantle = ctx.createRadialGradient(cx, cy, R0 * 0.32, cx, cy, R0 * 0.9);
     mantle.addColorStop(0, '#5a4f63'); mantle.addColorStop(1, '#7a7585');
     disc(R0 * 0.9, mantle);
@@ -1623,14 +1660,27 @@
         else if (c.kind === 'ice') { px(-2, -5, 4, 10, '#9fd8ff'); px(-5, -2, 10, 4, '#9fd8ff'); px(-1, -4, 2, 2, '#ffffff'); }
         else if (c.kind === 'meteorite') { px(-5, -4, 10, 8, '#3b3844'); px(-3, -3, 3, 3, '#9aa3b5'); px(1, 0, 2, 2, '#c9ced9'); }
         else if (c.kind === 'glass') { for (const [x, y] of [[-4, -2], [0, -4], [3, 0], [-1, 2]]) px(x, y, 3, 3, c.hue ? '#ff9a3a' : '#ffb23a'); }
-        else { ctx.fillStyle = '#3b3844'; ctx.beginPath(); ctx.ellipse(0, 0, 26, 6, 0, 0, TAU); ctx.fill(); px(-22, -6, 44, 2, '#5d5563'); }
+        else { px(-18, -2, 36, 5, '#4a4757'); px(-18, -3, 36, 1, '#8a8796'); px(-20, -1, 2, 3, '#4a4757'); px(18, -1, 2, 3, '#4a4757'); } // lava tube
       }, 34);
     }
     // Grey regolith: dust and broken rock, pounded by billions of years of impacts
-    ctx.strokeStyle = '#a8a6b2'; ctx.lineWidth = 10;
-    ctx.beginPath(); ctx.arc(cx, cy, R0 - 5, 0, TAU); ctx.stroke();
-    ctx.strokeStyle = '#cfcdd8'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(cx, cy, R0 - 1, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = '#b8b6c2'; ctx.lineWidth = 22; ctx.stroke(outline);
+    // Each crater: the wall facing away from the Sun in shadow, the other lit,
+    // and a dark floor of older, compacted dust
+    const vis = (c) => Math.abs(wrap((c / n) * TAU + theta)) * R0 < (view.x1 - view.x0) / 2 + 200;
+    const seg = (i0, i1) => { ctx.beginPath(); for (let i = i0; i <= i1; i++) { const [x, y] = sp(i); i === i0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); };
+    ctx.lineCap = 'round';
+    for (const c of world.craters) {
+      if (!vis(c.c)) continue;
+      const w = Math.round(c.w);
+      ctx.strokeStyle = '#757284'; ctx.lineWidth = 26; seg(c.c - w, c.c + w);
+      ctx.strokeStyle = '#4a4858'; ctx.lineWidth = 14; seg(c.c - w, c.c - Math.round(w * 0.1));
+      ctx.strokeStyle = '#d4d2dc'; ctx.lineWidth = 7; seg(c.c + Math.round(w * 0.3), c.c + w);
+      ctx.strokeStyle = '#eeedf3'; ctx.lineWidth = 5; seg(c.c - Math.round(w * 1.3), c.c - w); seg(c.c + w, c.c + Math.round(w * 1.3));
+    }
+    ctx.lineCap = 'butt';
+    ctx.strokeStyle = '#e4e2ea'; ctx.lineWidth = 4; ctx.stroke(outline);
+    ctx.restore();
     ctx.font = '8px "Press Start 2P", monospace';
     ctx.textAlign = 'center';
     const labels = [['CRUST', 0.95], ['MANTLE', 0.62], ['PARTLY MOLTEN', 0.29], ['OUTER CORE', 0.225], ['INNER CORE', 0.1]];
@@ -1645,12 +1695,6 @@
 
   // Things on the Moon's surface, old and new
   const MOON_DECOR = {
-    crater(d) {
-      ctx.scale(d.size, d.size);
-      ctx.fillStyle = '#6e6c7a'; ctx.beginPath(); ctx.ellipse(0, 2, 22, 5, 0, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#55536a'; ctx.beginPath(); ctx.ellipse(-4, 2, 15, 3, 0, 0, TAU); ctx.fill();
-      px(-28, -4, 7, 5, '#c3c0cc'); px(21, -4, 7, 5, '#b4b2be'); px(-26, -6, 4, 2, '#dcdae2');
-    },
     boulder(d) {
       ctx.scale(d.size, d.size);
       ctx.fillStyle = ['#8a8896', '#9e9caa', '#77758a'][d.hue];
@@ -1774,7 +1818,7 @@
     },
   };
   function drawMoonDecor() {
-    for (const d of world.decor) at(d.a + theta, R0 - 2, () => MOON_DECOR[d.kind](d), d.kind === 'base' ? 360 : 240);
+    for (const d of world.decor) at(d.a + theta, R0 - 2 + surfAt(d.a), () => MOON_DECOR[d.kind](d), d.kind === 'base' ? 360 : 240);
   }
 
   function drawDecor() {
@@ -2246,7 +2290,8 @@
     for (const s of world.stars) drawStar(s);
     drawGeoms();
 
-    const feetX = cx, feetY = Math.round(cy - player.r);
+    const onSurface = level === 2 && player.onGround && player.r <= R0 + 0.5;
+    const feetX = cx, feetY = Math.round(cy - player.r - (onSurface ? surfAt(-theta) : 0));
     let frame = 'stand';
     if (!player.onGround) frame = 'jump';
     else if ((state === 'title') || Math.abs(player.vx) > 5) frame = WALK_CYCLE[Math.floor(player.walkT) % 4];
