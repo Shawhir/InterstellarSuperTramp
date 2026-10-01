@@ -344,7 +344,15 @@
       if (Math.abs(a) > 0.36) decor.push({ a, kind: 'boulder', size: 0.5 + rnd() * 0.9, hue: Math.floor(rnd() * 3) });
     }
     decor.push(
-      { a: -74 / R0, kind: 'base' }, { a: -170 / R0, kind: 'kipple' }, { a: 48 / R0, kind: 'hoarding' }, { a: 120 / R0, kind: 'sheep' },
+      // The base: a row of pale buildings, each standing on the curve
+      { a: -170 / R0, kind: 'rocketpad' }, { a: -128 / R0, kind: 'dish2' },
+      { a: -108 / R0, kind: 'dome', w: 26, h: 16, ant: true },
+      { a: -70 / R0, kind: 'dome', w: 54, h: 30, door: true },
+      { a: -34 / R0, kind: 'fence' },
+      { a: 12 / R0, kind: 'dome', w: 74, h: 30, wins: 3, ant: true },
+      { a: 64 / R0, kind: 'tower' },
+      { a: 108 / R0, kind: 'dome', w: 46, h: 24 },
+      { a: 150 / R0, kind: 'sheep' }, { a: 120 / R0, kind: 'hover' },
       { a: -0.45, kind: 'sign', text: '< VENUS', col: '#ffd23f' },
       { a: 0.45, kind: 'sign', text: 'MARS >', col: '#ff6a4a' },
       { a: 0.95, kind: 'solar' }, { a: -0.95, kind: 'solar' },
@@ -862,9 +870,8 @@
   let monolithSeen = false;
   // Little discoveries round the conapt (angles from the base's centre)
   const MOON_NOTES = [
-    { a: -50 / R0, text: "The door won't open. It wants five cents." },
-    { a: 125 / R0, text: "An electric sheep. Its owner can't afford a real one." },
-    { a: -172 / R0, text: "Kipple: useless junk that piles up whenever nobody's looking." },
+    { a: -70 / R0, text: "The door won't open. It wants five cents." },
+    { a: 150 / R0, text: "An electric sheep. Its owner can't afford a real one." },
   ];
   function updateSpace(dt) {
     if (fx.dedication > 0) fx.dedication -= dt;
@@ -1755,78 +1762,89 @@
       ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-9, -10); ctx.lineTo(2, -14); ctx.lineTo(11, -7); ctx.lineTo(12, 0); ctx.closePath(); ctx.fill();
       px(-7, -11, 7, 3, '#e6e2d2'); px(6, -6, 5, 6, '#8a8679');
     },
-    base() {
-      // Lunar Conapt 7: a drab corporate housing block, Philip K. Dick style,
-      // with a flickering neon sign, a coin-operated door, an ad hoarding,
-      // an electric sheep in a pen, and a heap of kipple
-      const flick = (seed) => Math.sin(clock * 13 + seed * 7.1) + Math.sin(clock * 3.7 + seed) > -1.6;
-      ctx.translate(74, 0);
-      // Moon dust banked up under the block, cut exactly along the Moon's curve
+    // The base, in a clean flat vector style: pale buildings, soft shading
+    // (lit from the left), dark doors and windows
+    dome(d) {
+      const { w, h } = d, B = '#dfe6ea', S = '#aab6be', D = '#3d4a57';
+      px(-w / 2 - 3, -3, w + 6, 4, S);
       ctx.save();
-      ctx.beginPath(); ctx.rect(-240, -240, 480, 300); ctx.translate(-74, 0); ctx.arc(0, R0 - 2, R0 - 1, 0, TAU); ctx.translate(74, 0); ctx.clip('evenodd');
-      ctx.fillStyle = '#ddd8c6';
-      ctx.beginPath(); ctx.moveTo(-160, -4); ctx.lineTo(-170, 40); ctx.lineTo(16, 40); ctx.lineTo(10, -4); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, -2, w / 2, h, 0, Math.PI, TAU); ctx.closePath();
+      ctx.fillStyle = S; ctx.fill(); ctx.clip();
+      ctx.fillStyle = B; ctx.beginPath(); ctx.ellipse(-w * 0.09, 0, w * 0.44, h * 0.96, 0, Math.PI, TAU); ctx.fill();
+      ctx.fillStyle = '#f4f7f9'; ctx.beginPath(); ctx.ellipse(-w * 0.18, -h * 0.72, w * 0.12, h * 0.12, -0.3, 0, TAU); ctx.fill();
+      ctx.strokeStyle = '#c3ccd2'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(0, -2, w / 2, h * 0.5, 0, Math.PI, TAU); ctx.stroke();
       ctx.restore();
-      px(-160, -6, 168, 2, '#eeeadb');
-      // The conapt block: grey concrete, three identical floors
-      px(-152, -102, 140, 96, '#5d5a55');
-      px(-150, -100, 136, 94, '#a39f97');
-      px(-150, -100, 10, 94, '#8f8b84'); px(-24, -100, 10, 94, '#8f8b84');
-      for (let f = 0; f < 3; f++) {
-        const y = -94 + f * 30;
-        px(-150, y + 24, 136, 4, '#7d7a74'); // floor slab
-        for (let i = 0; i < 6; i++) {
-          const x = -136 + i * 19, id = f * 6 + i;
-          px(x - 1, y + 3, 12, 13, '#4a4743');
-          // Some lit, some cold blue with a TV on, some dark
-          const kind = (id * 7) % 5;
-          px(x, y + 4, 10, 11, kind < 2 ? '#ffe08a' : kind === 2 ? (flick(id) ? '#7fb4ff' : '#4a6a9a') : '#3a3a48');
-        }
+      if (d.door) {
+        px(-7, -14, 14, 12, '#5d6b78');
+        ctx.fillStyle = '#5d6b78'; ctx.beginPath(); ctx.arc(0, -14, 7, Math.PI, TAU); ctx.fill();
+        px(-5, -13, 10, 11, D); ctx.fillStyle = D; ctx.beginPath(); ctx.arc(0, -13, 5, Math.PI, TAU); ctx.fill();
+        px(-1, -10, 2, 2, Math.sin(clock * 2) > 0 ? '#52e07a' : '#2a5a3a');
       }
-      // Roof clutter: aerials, a water tank, sagging cables
-      px(-140, -112, 18, 10, '#7d7a74'); px(-138, -116, 14, 4, '#8f8b84');
-      for (const [x, h] of [[-100, 26], [-84, 18], [-40, 30]]) { px(x, -102 - h, 2, h, '#9aa3b5'); px(x - 5, -102 - h + 4, 12, 2, '#9aa3b5'); }
-      ctx.strokeStyle = '#3b3b4f'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(-99, -120); ctx.quadraticCurveTo(-70, -104, -39, -126); ctx.stroke();
-      // Coin-operated front door
-      px(-62, -30, 24, 24, '#3b3b4f'); px(-60, -28, 20, 22, '#5d5563');
-      px(-34, -24, 10, 8, '#1b1530');
-      ctx.font = '5px "Press Start 2P", monospace'; ctx.textAlign = 'center';
-      ctx.fillStyle = flick(3) ? '#ffab3d' : '#7a4a1a'; ctx.fillText('5¢', -29, -18);
-      // Vertical neon sign
-      px(-12, -98, 16, 66, '#1b1530');
-      ctx.font = '7px "Press Start 2P", monospace';
-      'REKAL'.split('').forEach((ch, i) => {
-        ctx.fillStyle = flick(10 + i) ? '#ff4fa3' : '#5a1f3a';
-        ctx.fillText(ch, -4, -86 + i * 12);
-      });
+      for (let i = 0; i < (d.wins || 0); i++) {
+        const x = (i - (d.wins - 1) / 2) * 16;
+        px(x - 4, -h * 0.42, 8, 4, D); px(x - 4, -h * 0.42, 8, 1, '#7fa8c8');
+      }
+      if (d.ant) { px(-1, -h - 10, 2, 9, '#7d8a95'); ctx.fillStyle = '#dfe6ea'; ctx.beginPath(); ctx.arc(0, -h - 11, 2.5, 0, TAU); ctx.fill(); }
     },
-    kipple() {
-      // Kipple: the junk that piles up when nobody's looking
-      ctx.translate(170, 0);
-      px(-182, -14, 16, 9, '#8a5a3b'); px(-178, -22, 12, 8, '#7d869a'); px(-166, -12, 10, 7, '#5d5563');
-      ctx.strokeStyle = '#3b3b4f'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(-158, -10, 5, 0, TAU); ctx.stroke();
-      px(-172, -26, 14, 3, '#c9a27a'); px(-186, -8, 6, 3, '#9aa3b5');
+    tower() {
+      // A tall rounded tower with side tubes and a capsule on top
+      const B = '#dfe6ea', S = '#aab6be', D = '#3d4a57';
+      for (const x of [-21, 13]) { px(x, -72, 8, 70, S); px(x, -72, 4, 70, B); ctx.fillStyle = B; ctx.beginPath(); ctx.arc(x + 4, -72, 4, Math.PI, TAU); ctx.fill(); }
+      px(-13, -100, 26, 98, S); px(-13, -100, 17, 98, B);
+      ctx.fillStyle = S; ctx.beginPath(); ctx.ellipse(0, -100, 13, 9, 0, Math.PI, TAU); ctx.fill();
+      ctx.fillStyle = B; ctx.beginPath(); ctx.ellipse(-4, -100, 9, 8, 0, Math.PI, TAU); ctx.fill();
+      px(-8, -124, 16, 18, S); px(-8, -124, 11, 18, B);
+      ctx.fillStyle = B; ctx.beginPath(); ctx.arc(0, -124, 8, Math.PI, TAU); ctx.fill();
+      px(-13, -46, 26, 4, '#c3ccd2');
+      for (const y of [-88, -70, -58]) px(-3, y, 6, 5, D);
+      px(-5, -16, 10, 14, D);
+      px(-1, -132, 2, 6, '#7d8a95'); if (Math.sin(clock * 3) > 0) px(-2, -135, 4, 3, '#ff5a4a');
     },
-    hoarding() {
-      ctx.translate(-48, 0);
-      const flick = () => true;
-      // Ad hoarding on stilts
-      px(14, -48, 3, 42, '#5d5563'); px(78, -48, 3, 42, '#5d5563');
-      px(6, -92, 84, 46, '#3b3b4f'); px(8, -90, 80, 42, '#1b1530');
-      ctx.font = '12px "Press Start 2P", monospace';
-      ctx.fillStyle = '#ffd23f'; ctx.fillText('UBIK', 40, -66);
-      ctx.font = '4px "Press Start 2P", monospace';
-      ctx.fillStyle = '#eef1ff'; ctx.fillText('SAFE WHEN USED', 40, -58); ctx.fillText('AS DIRECTED', 40, -53);
-      px(74, -84, 8, 14, '#e0433b'); px(76, -87, 4, 3, '#c9ced9'); // the spray can
-      ctx.textAlign = 'start';
+    rocketpad() {
+      // A rocket waiting on its pad, between two service towers
+      const B = '#dfe6ea', S = '#aab6be', D = '#3d4a57';
+      px(-36, -5, 72, 5, S); px(-36, -5, 72, 2, B);
+      for (const x of [-30, 22]) {
+        px(x, -50, 8, 45, S); px(x, -50, 5, 45, B);
+        ctx.fillStyle = B; ctx.beginPath(); ctx.moveTo(x, -50); ctx.lineTo(x + 4, -60); ctx.lineTo(x + 8, -50); ctx.fill();
+      }
+      px(-9, -82, 18, 77, S); px(-9, -82, 12, 77, B);
+      ctx.fillStyle = B; ctx.beginPath(); ctx.moveTo(-9, -82); ctx.lineTo(0, -102); ctx.lineTo(9, -82); ctx.fill();
+      ctx.fillStyle = S; ctx.beginPath(); ctx.moveTo(3, -82); ctx.lineTo(0, -102); ctx.lineTo(9, -82); ctx.fill();
+      ctx.fillStyle = B;
+      ctx.beginPath(); ctx.moveTo(-9, -24); ctx.lineTo(-18, -6); ctx.lineTo(-9, -12); ctx.fill();
+      ctx.fillStyle = S; ctx.beginPath(); ctx.moveTo(9, -24); ctx.lineTo(18, -6); ctx.lineTo(9, -12); ctx.fill();
+      ctx.fillStyle = D; ctx.beginPath(); ctx.arc(0, -62, 3, 0, TAU); ctx.fill();
+      px(-9, -40, 18, 2, '#c3ccd2');
+    },
+    dish2() {
+      px(-1, -22, 2, 22, '#7d8a95');
+      ctx.fillStyle = '#dfe6ea'; ctx.beginPath(); ctx.ellipse(0, -26, 10, 6, -0.6, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#aab6be'; ctx.beginPath(); ctx.ellipse(2, -25, 6, 3.5, -0.6, 0, TAU); ctx.fill();
+    },
+    fence() {
+      px(-14, -12, 28, 2, '#c3ccd2'); px(-14, -6, 28, 2, '#c3ccd2');
+      for (let x = -14; x <= 12; x += 4) px(x, -12, 2, 12, '#dfe6ea');
+    },
+    hover() {
+      // A lander hovering above the base
+      ctx.translate(0, -170 + Math.sin(clock * 1.3) * 5);
+      px(-6, -10, 12, 10, '#dfe6ea'); px(1, -10, 5, 10, '#aab6be');
+      ctx.fillStyle = '#dfe6ea'; ctx.beginPath(); ctx.arc(0, -10, 5, Math.PI, TAU); ctx.fill();
+      px(-2, -8, 4, 3, '#3d4a57');
+      ctx.strokeStyle = '#aab6be'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(-10, 8); ctx.moveTo(5, 0); ctx.lineTo(10, 8); ctx.stroke();
+      px(-12, 8, 4, 1, '#aab6be'); px(8, 8, 4, 1, '#aab6be');
+      ctx.globalAlpha = 0.5 + 0.3 * Math.sin(clock * 20); px(-2, 2, 4, 6, '#ffd36b'); ctx.globalAlpha = 1;
     },
     sheep() {
+      // An electric sheep, plugged in and grazing in its pen
       ctx.translate(-120, 0);
       const flick = (seed) => Math.sin(clock * 13 + seed * 7.1) + Math.sin(clock * 3.7 + seed) > -1.6;
       // The electric sheep, plugged in and grazing in its pen
-      for (const x of [100, 124, 148]) px(x, -18, 2, 18, '#8a5a3b');
-      px(100, -16, 50, 2, '#8a5a3b'); px(100, -8, 50, 2, '#8a5a3b');
+      for (const x of [100, 124, 148]) px(x, -18, 2, 18, '#c3ccd2');
+      px(100, -16, 50, 2, '#c3ccd2'); px(100, -8, 50, 2, '#c3ccd2');
       const bob = Math.sin(clock * 2) > 0.3 ? 2 : 0;
       ctx.fillStyle = '#f4f6fb';
       for (const [x, y, r] of [[118, -16, 6], [126, -18, 7], [134, -16, 6], [124, -12, 6], [131, -12, 5]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
