@@ -2857,9 +2857,10 @@
     mustPost = false;
     if (!board || board.kind === 'none') return;
     if (board.needsName) {
-      // No way on until the score is posted
+      // The name box comes first; post your score, or skip it
       mustPost = true;
       $('won-actions').hidden = true;
+      $('post-skip').hidden = false;
       setTimeout(() => { try { $('post-name').focus(); } catch (e) { /* ignore */ } }, 950);
     }
     if (board.viaGithub) {
