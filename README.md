@@ -64,16 +64,19 @@ says so if that happens.
   off and fly to Earth, past the Space Station and satellites, and straight
   in: the globe becomes the game world as space fades to blue sky. Tap during
   the flight to skip to the zoom.
-- Arriving at a new world (the Moon, Mars, Venus, Mercury, the belt worlds,
-  and daylight at the end of the hollow Earth): after you've watched it grow
-  in the sky, its gravity grabs you as you get close, swinging you over and
-  pulling you down onto it faster and faster, while it swells to fill the
-  view. By the time you touch down it's the same world, the same size, as the
-  next level, so there's no change of scene: you just carry on playing there,
-  with that world's own gravity, the score carried on and the
-  whole trip counted as one run. Mercury and Europa are the ends of the line,
-  with a results screen: at Mercury the view turns over behind the Sun's
-  glare and you land on its real landscape and plant a flag.
+- Climbing out to the next world (the Moon from Earth, Mars or Venus from the
+  Moon, and daylight from the hollow Earth): the world you're heading for
+  grows in the sky as you climb, then slides up out of sight above you. Your
+  bounce off the last platform carries you on up after it, faster and faster,
+  as its gravity takes over. The view turns right over (you stay upright; home
+  swings round overhead), and you fall feet first onto the next level's
+  ground and carry straight on playing, with that world's own gravity, the
+  score carried on and the whole trip counted as one run.
+- Reaching a belt world on level 3, the destination swells to the size of the
+  next level's world as you touch down, and you play on there. Mercury and
+  Europa are the ends of the line, with a results screen: at Mercury the view
+  turns over behind the Sun's glare and you land on its real landscape and
+  plant a flag.
 - Hopping on: walk up to a trampoline or launch pad and you hop on in one
   smooth arc that lands you on its middle.
 - Juice: screen shake on landings, squash and stretch, afterimage trail, landing
