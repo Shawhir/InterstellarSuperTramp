@@ -56,13 +56,23 @@ says so if that happens.
   from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow
   minor drift with echo in space, and speeds up with the bounce multiplier.
   Music and sound effects have separate on/off buttons.
-- Intro: on the Moon. Its grey, cratered horizon turns slowly beneath you,
-  an old lander and its flag drift by on the skyline, and Earth rises over it,
-  like Apollo 8's "Earthrise" photo. Tap and you lift off and fly to Earth,
-  past the Space Station and satellites, and straight in: the globe becomes the
-  game world as space fades to blue sky (no geoms in the way). The last
-  satellites carry on flying past as you drop. Tap during the flight to skip
-  to the zoom.
+- Intro: on the Moon, drawn as a pixel globe from a real map: the dark seas
+  in their true places (Ocean of Storms, Sea of Rains, Sea of Tranquillity,
+  Sea of Crises and the rest), big craters like Tycho and Copernicus with
+  their bright rays, and the seas labelled, with the Apollo 11 site marked.
+  It turns slowly beneath you as Earth rises over its edge. Tap and you lift
+  off and fly to Earth, past the Space Station and satellites, and straight
+  in: the globe becomes the game world as space fades to blue sky. Tap during
+  the flight to skip to the zoom.
+- Arriving at a new world (the Moon, Mars, Venus, Mercury, the belt worlds,
+  and daylight at the end of the hollow Earth): after you've watched it grow
+  in the sky, the whole view turns upside down (it was above you; now it's
+  under your feet) while something of that world hides the change. That's a
+  dust cloud on the Moon, an entry fireball at Mars, acid clouds at Venus,
+  glare at Mercury, rubble at the belt worlds. Then you drop onto its real
+  landscape (slowly where gravity is weak), plant a flag, and hear about it.
+- Hopping on: walk up to a trampoline or launch pad and you hop on in one
+  smooth arc that lands you on its middle.
 - Juice: screen shake on landings, squash and stretch, afterimage trail, landing
   rings, PERFECT! for centre landings, streak counter, layer banners, speed lines,
   a sun, drifting clouds, aurora, shooting stars.
@@ -333,7 +343,10 @@ switches it off. You get:
     machines (a nod to Burroughs' Iron Mole);
   - **the way out**, with roots, bats and daylight.
 
-  Each cavern's floor is a crust of its own, right round: land on it, walk
+  Nothing floats without a reason: mushrooms, tree ferns and crystals grow up
+  from the floor, girders and lava rock stand on struts and columns, rafts and
+  ledges hang on ropes and roots, and Agartha's golden discs hover on the glow
+  of vril. Each cavern's floor is a crust of its own, right round: land on it, walk
   about, and drop through its gap into the cavern below if you wander in.
   On every floor stands a whole town (a back row for depth, then the front
   row), with its people and creatures walking about: dinosaurs and gorilla-like

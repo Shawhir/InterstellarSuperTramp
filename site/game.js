@@ -1090,7 +1090,7 @@
       if (p.world) landedOn = p.world;
       player.vr = 0; player.onGround = true;
       lastTier = TOP; bestTier = TOP;
-      win();
+      startArrival(p);
       return;
     }
     // Rebound: a platform throws you back as high as you fell from. Each repeat
@@ -2033,6 +2033,149 @@
     hud.alt.textContent = R.phase === 'ocean' ? `${fmtKm((R.od / OCEAN_LEN) * 100)} down` : fmtKm(runKm());
     hud.layer.textContent = layerName();
   }
+  // ---- Arriving at a new world --------------------------------------------------------
+  // When you reach a world you've watched grow in the sky, the whole view
+  // turns upside down (it was above you; now it's under your feet) while
+  // something of that world's own hides the change: a dust cloud, an entry
+  // fireball, acid clouds, glare. Then you drop onto its real landscape.
+  const ARR_TURN = [0.25, 1.45], ARR_SWAP = 1.5;
+  const ARRIVE = {
+    moon: { g: 0.17, cover: 'dust', sky: ['#000000', '#05060c'], ground: ['#b9b6c2', '#5c5a66'], curve: 3, note: "On the Moon! Gravity here is a sixth of Earth's, so you float down. Earth hangs in the sky and hardly moves: the Moon always keeps the same face towards it." },
+    mars: { g: 0.38, cover: 'fire', sky: ['#c99a6e', '#e6c29a'], ground: ['#c8603c', '#7a2e1c'], curve: 5, note: 'On Mars: rusty red dust under a butterscotch sky. At sunset the sky round the Sun turns blue!' },
+    venus: { g: 0.9, cover: 'cloud', sky: ['#d9a94e', '#f6dfa0'], ground: ['#f2e2a0', '#cdb06a'], curve: 5, note: 'In the clouds of Venus, 50 km up: the air pressure and temperature here are the most Earth-like anywhere else in the Solar System.' },
+    mercury: { g: 0.38, cover: 'glare', sky: ['#000000', '#0a0806'], ground: ['#a9a39c', '#5f5a54'], curve: 3, note: "On Mercury: the Sun looks about three times as big as it does from Earth, and there's almost no air, so the sky is black even in the day." },
+    ceres: { g: 0.03, cover: 'rubble', sky: ['#000000', '#05060c'], ground: ['#8d8a86', '#4c4a48'], curve: 1.4, note: "On Ceres: hardly any gravity, so you'd jump many metres high here. The bright spots are salt." },
+    vesta: { g: 0.025, cover: 'rubble', sky: ['#000000', '#05060c'], ground: ['#a39a8a', '#5d5649'], curve: 1.4, note: 'On Vesta: the mountain on the horizon, in the giant Rheasilvia crater, is more than twice as tall as Everest.' },
+    pallas: { g: 0.02, cover: 'rubble', sky: ['#000000', '#05060c'], ground: ['#7f8a94', '#454d54'], curve: 1.4, note: 'On Pallas: its path round the Sun is tilted steeply, so it swings far above and below most of the other asteroids.' },
+    hygiea: { g: 0.01, cover: 'rubble', sky: ['#000000', '#05060c'], ground: ['#5d5a5e', '#2e2c30'], curve: 1.2, note: 'On Hygiea: almost perfectly round, so it may count as a dwarf planet. Its dark surface is carbon-rich rock.' },
+    earth: { g: 1, cover: 'daylight', sky: ['#58b4f0', '#d4f0ff'], ground: ['#4fb34a', '#2f6f2a'], curve: 5, note: "Back in daylight! You climbed right out of the hollow Earth. Nobody's ever going to believe you." },
+  };
+  function startArrival(p) {
+    const key = level === 6 ? 'earth' : level === 3 && p.world ? p.world.name.toLowerCase() : p.type;
+    if (!ARRIVE[key]) { win(); return; }
+    fx.arrive = { key, t: 0, landed: false, bits: [], time: playTime };
+    player.vr = 0; player.vx = 0; player.onGround = true; player.spin = 0; player.heat = 0; fx.flames = [];
+    sfx.whoosh();
+  }
+  function updateArrive(dt) {
+    const A = fx.arrive, D = ARRIVE[A.key];
+    A.t += dt;
+    if (A.t > ARR_SWAP && !A.started) { A.started = true; sfx.tier(); }
+    const fall = clamp(0.45 / Math.sqrt(D.g), 0.45, 1.6);
+    if (!A.landed && A.t > ARR_SWAP + 0.4 + fall) {
+      A.landed = true; A.landT = A.t; addShake(6); sfx.thud();
+      const col = D.ground[0];
+      for (let i = 0; i < 22; i++) A.bits.push({ x: W / 2 + (Math.random() - 0.5) * 30, y: H * 0.74, vx: (Math.random() - 0.5) * 300, vy: -Math.random() * 200 * (D.g < 0.1 ? 0.5 : 1), t: 0, life: 1 + (D.g < 0.1 ? 1 : 0), c: col, g: 400 * Math.max(0.15, D.g) });
+      toast(D.note, 7);
+    }
+    if (A.landed && A.t > A.landT + 1.1 && state === 'play') { playTime = A.time; win(); }
+    for (const q of A.bits) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += q.g * dt; }
+    A.bits = A.bits.filter((q) => q.t < q.life);
+  }
+  function updateArriveFrame(dt) {
+    updateArrive(dt);
+    for (const q of fx.pops) q.t += dt;
+    fx.pops = fx.pops.filter((q) => q.t < 1.1);
+    if (fx.banner) { fx.banner.t += dt; if (fx.banner.t > 2.6) fx.banner = null; }
+    shake = Math.max(0, shake - dt * 30);
+    fx.flash = Math.max(0, fx.flash - dt * 1.5);
+    if (toastTimer > 0) {
+      toastTimer -= dt;
+      if (toastTimer <= 0.4) hud.toast.style.opacity = '0';
+      if (toastTimer <= 0) hud.toast.hidden = true;
+    }
+  }
+  // The turn: how far round the view has swung (0 to π)
+  const arriveTurn = () => { const A = fx.arrive; return A && A.t < ARR_SWAP ? Math.PI * smooth(clamp((A.t - ARR_TURN[0]) / (ARR_TURN[1] - ARR_TURN[0]), 0, 1)) : 0; };
+  // Each world's own way of hiding the change: 0 to 1, peaking at the swap
+  const coverK = (t) => (t < ARR_SWAP ? clamp((t - 0.4) / (ARR_SWAP - 0.5), 0, 1) : clamp(1 - (t - ARR_SWAP - 0.15) / 0.7, 0, 1));
+  function drawArriveCover() {
+    const A = fx.arrive, k = coverK(A.t), kind = ARRIVE[A.key].cover;
+    if (k <= 0) return;
+    if (kind === 'glare' || kind === 'daylight') {
+      const g = ctx.createRadialGradient(W / 2, H * 0.4, 10, W / 2, H * 0.4, Math.max(W, H));
+      g.addColorStop(0, `rgba(255,255,245,${k})`); g.addColorStop(1, kind === 'glare' ? `rgba(255,220,140,${k * 0.9})` : `rgba(200,235,255,${k * 0.9})`);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = `rgba(255,255,255,${k * 0.6})`; ctx.lineWidth = 3;
+      for (let i = 0; i < 12; i++) { const a = i * 0.52 + clock * 0.3; ctx.beginPath(); ctx.moveTo(W / 2, H * 0.4); ctx.lineTo(W / 2 + Math.cos(a) * W, H * 0.4 + Math.sin(a) * W); ctx.stroke(); }
+      return;
+    }
+    if (kind === 'fire') {
+      // Hitting the thin Martian air: a wall of flame streaking past
+      ctx.fillStyle = `rgba(255,120,40,${k * 0.85})`; ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 40; i++) {
+        const x = (i * 97) % W, y = ((i * 53 + A.t * 900) % (H + 200)) - 100;
+        ctx.fillStyle = i % 3 ? `rgba(255,220,120,${k})` : `rgba(255,255,230,${k})`;
+        ctx.beginPath(); ctx.ellipse(x, y, 10 + (i % 4) * 6, 50 + (i % 5) * 20, 0, 0, TAU); ctx.fill();
+      }
+      return;
+    }
+    // Clouds of dust, acid cloud or rubble, billowing in to fill the view
+    const col = kind === 'cloud' ? [242, 226, 160] : kind === 'dust' ? [190, 188, 200] : [120, 105, 90];
+    for (let i = 0; i < 36; i++) {
+      const sx = (i * 0.618 % 1) * W, sy = (i * 0.414 % 1) * H, r = (60 + (i % 5) * 30) * (0.3 + k * 1.2);
+      const dx = Math.sin(i + A.t) * 20, dy = Math.cos(i * 1.3 + A.t * 1.2) * 16;
+      ctx.fillStyle = `rgba(${col[0] - (i % 3) * 18},${col[1] - (i % 3) * 18},${col[2] - (i % 3) * 18},${Math.min(1, k * 1.1)})`;
+      ctx.beginPath(); ctx.arc(sx + dx, sy + dy, r, 0, TAU); ctx.fill();
+    }
+    if (kind === 'rubble') for (let i = 0; i < 30; i++) px((i * 131 + A.t * 200) % W, (i * 71 + A.t * 140 * (i % 2 ? 1 : -1) + H * 2) % H, 5, 4, `rgba(60,55,50,${k})`);
+  }
+  // The world's real landscape, with you dropping onto it
+  function drawArrival() {
+    const A = fx.arrive, D = ARRIVE[A.key], key = A.key, gy = H * 0.74;
+    const Rm = Math.max(W, H) * D.curve, mx = W / 2, my = gy + Rm;
+    const yAt = (x) => my - Math.sqrt(Math.max(0, Rm * Rm - (x - mx) * (x - mx)));
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    const sky = ctx.createLinearGradient(0, 0, 0, gy);
+    sky.addColorStop(0, D.sky[0]); sky.addColorStop(1, D.sky[1]);
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    const airless = D.sky[0] === '#000000';
+    if (airless) for (const st of world.sky) px(st.x * W, st.y * gy, st.s, st.s, '#c9d7f0');
+    // In the sky: Earth from the Moon, the huge Sun from Mercury, Mars's moons, and so on
+    if (key === 'moon') drawGlobe(W * 0.72, H * 0.24, Math.min(W, H) * 0.09, clock * 0.02 + 0.4, 1, 0.3);
+    else if (key === 'mercury') { const g = ctx.createRadialGradient(W * 0.25, H * 0.22, 20, W * 0.25, H * 0.22, 260); g.addColorStop(0, 'rgba(255,240,190,0.9)'); g.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, gy); ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(W * 0.25, H * 0.22, 56, 0, TAU); ctx.fill(); }
+    else if (key === 'mars') { ctx.fillStyle = '#fff3e0'; ctx.beginPath(); ctx.arc(W * 0.78, H * 0.18, 12, 0, TAU); ctx.fill(); px(W * 0.3, H * 0.14, 5, 3, '#8a7a6a'); px(W * 0.55, H * 0.1, 3, 2, '#8a7a6a'); ctx.fillStyle = '#a5552f'; ctx.beginPath(); ctx.ellipse(W * 0.2, gy, W * 0.3, 70, 0, Math.PI, TAU); ctx.fill(); }
+    else if (key === 'venus') { ctx.fillStyle = 'rgba(255,250,220,0.6)'; ctx.beginPath(); ctx.arc(W * 0.7, H * 0.2, 30, 0, TAU); ctx.fill(); }
+    else if (key === 'earth') { ctx.fillStyle = '#fff3b0'; ctx.beginPath(); ctx.arc(W * 0.8, H * 0.16, 24, 0, TAU); ctx.fill(); for (const [x, y] of [[0.2, 0.18], [0.5, 0.1]]) { ctx.fillStyle = '#ffffff'; for (const [ox, r] of [[0, 18], [20, 24], [42, 16]]) { ctx.beginPath(); ctx.arc(W * x + ox, H * y, r, 0, TAU); ctx.fill(); } } }
+    else { drawJupiter(W * 0.76, H * 0.2, 9); ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(W * 0.2, H * 0.15, 6, 0, TAU); ctx.fill(); if (key === 'vesta') { ctx.fillStyle = '#7d7466'; ctx.beginPath(); ctx.moveTo(W * 0.45, yAt(W * 0.6) + 4); ctx.lineTo(W * 0.62, gy - 150); ctx.lineTo(W * 0.68, gy - 140); ctx.lineTo(W * 0.85, yAt(W * 0.85) + 4); ctx.fill(); } }
+    // The ground: curved by the size of the world, with its own surface
+    const gg = ctx.createLinearGradient(0, gy - 40, 0, H);
+    gg.addColorStop(0, D.ground[0]); gg.addColorStop(1, D.ground[1]);
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(mx, my, Rm, 0, TAU); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(mx, my, Rm, 0, TAU); ctx.clip();
+    for (let row = 0; row < 6; row++) {
+      const depth = row / 5, yb = gy + 8 + Math.pow(depth, 1.5) * (H - gy), sc = 0.4 + depth * 1.3;
+      for (let i = 0; i < 9 + row * 2; i++) {
+        const h = Math.sin(i * 12.9898 + row * 78.233) * 43758.5453, fr = h - Math.floor(h);
+        const x = ((i + fr) / (9 + row * 2)) * W, y = Math.max(yb, yAt(x) + 6), r = (6 + fr * 14) * sc;
+        if (key === 'venus') { ctx.fillStyle = 'rgba(255,248,220,0.6)'; ctx.beginPath(); ctx.arc(x, y, r * 1.4, 0, TAU); ctx.fill(); }
+        else if (key === 'earth') { if (fr > 0.6) { px(x - 2, y - 10 * sc, 4 * sc, 10 * sc, '#6b4226'); ctx.fillStyle = '#3aa047'; ctx.beginPath(); ctx.arc(x, y - 14 * sc, 9 * sc, 0, TAU); ctx.fill(); } else px(x, y, 3, 2, '#3a8f3a'); }
+        else if (key === 'mars') { ctx.fillStyle = fr > 0.5 ? '#5a2418' : 'rgba(255,200,160,0.35)'; ctx.beginPath(); ctx.ellipse(x, y, r * (fr > 0.5 ? 0.6 : 1.4), r * 0.3, 0, 0, TAU); ctx.fill(); }
+        else {
+          // Craters, lit from one side; on Ceres some are bright with salt
+          ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(x, y, r, r * (0.25 + depth * 0.2), 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = key === 'ceres' && fr > 0.85 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.25)'; ctx.beginPath(); ctx.ellipse(x + r * 0.2, y + r * 0.06, r * 0.8, r * (0.18 + depth * 0.15), 0, 0, Math.PI); ctx.fill();
+        }
+      }
+    }
+    ctx.restore();
+    // A few things standing on it
+    if (key === 'venus') { for (const x of [W * 0.2, W * 0.82]) { ctx.fillStyle = 'rgba(191,232,255,0.6)'; ctx.beginPath(); ctx.arc(x, yAt(x), 36, Math.PI, TAU); ctx.fill(); px(x - 44, yAt(x), 88, 8, '#d6dce8'); } }
+    if (key === 'earth') { for (const x of [W * 0.18, W * 0.84]) { const y = yAt(x); px(x - 16, y - 24, 32, 24, '#f2e6d0'); ctx.fillStyle = '#b8403a'; ctx.beginPath(); ctx.moveTo(x - 20, y - 24); ctx.lineTo(x, y - 40); ctx.lineTo(x + 20, y - 24); ctx.fill(); } }
+    if (key === 'mars') { const x = W * 0.8, y = yAt(x); px(x - 20, y - 14, 40, 10, '#e8e4dc'); px(x - 4, y - 26, 4, 12, '#9aa3b5'); for (const wx of [-16, 0, 16]) { ctx.fillStyle = '#3b3b4f'; ctx.beginPath(); ctx.arc(x + wx, y - 3, 4, 0, TAU); ctx.fill(); } }
+    // You, dropping down (slowly where gravity is weak), then standing proud
+    const fall = clamp(0.45 / Math.sqrt(D.g), 0.45, 1.6), k = clamp((A.t - ARR_SWAP - 0.4) / fall, 0, 1);
+    const y = lerp(-60, gy, k * k), sq = A.landed ? Math.max(0, 1 - (A.t - A.landT) * 4) : 0;
+    const pal = level === 1 && !player.suit ? PAL : SUIT;
+    drawSprite(A.landed ? 'stand' : 'jump', W / 2, y, false, 1 - sq * 0.25, 1 + sq * 0.2, 1, pal);
+    if (conspiracy) drawFoilHat(W / 2, y, 0);
+    if (A.landed && key !== 'venus' && key !== 'earth') { px(W / 2 + 30, gy - 40, 3, 40, '#e8e8f0'); px(W / 2 + 33, gy - 40, 22, 14, '#e0433b'); px(W / 2 + 36, gy - 36, 6, 6, '#ffd23f'); }
+    for (const q of A.bits) { ctx.globalAlpha = 1 - q.t / q.life; px(q.x - 3, q.y - 3, 6, 6, q.c); }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    drawArriveCover();
+  }
   // ---- Secret: conspiracy mode ---------------------------------------------------
   // Click the shooting star that crosses the title screen to switch it on. The
   // tramp gets a tinfoil hat, the odd prop turns up (a film set on the Moon,
@@ -2284,7 +2427,7 @@
       if (Z.key === 'crystal') roof(40, (a) => decor.push({ a, R: top, kind: 'glowworm', len: 20 + rnd() * 70 }));
       if (Z.key === 'crystal') roof(6, (a) => decor.push({ a, R: top, kind: 'chandelier', len: 40 + rnd() * 30, ph: rnd() * 9 }));
       if (Z.key === 'shaft' || Z.key === 'fungus') roof(30, (a) => decor.push({ a, R: top, kind: 'root', len: 30 + rnd() * 90 }));
-      if (Z.key === 'morlock') roof(20, (a) => decor.push({ a, R: base + 60 + rnd() * (top - base - 120), kind: 'eyes', ph: rnd() * 9 }));
+      if (Z.key === 'morlock') roof(16, (a) => decor.push({ a, R: base, kind: 'eyes', ph: rnd() * 9 }));
       if (Z.key === 'pellucidar') roof(6, (a) => decor.push({ a, R: R0 + 260 + rnd() * 400, kind: 'mahar', ph: rnd() * TAU }));
       if (Z.key === 'pellucidar') roof(5, (a) => decor.push({ a, R: R0 + 160 + rnd() * 500, kind: 'mist', ph: rnd() * 9, w: 120 + rnd() * 160 }));
       if (Z.key === 'agartha') roof(3, (a) => decor.push({ a, R: base + 200 + rnd() * 300, kind: 'vimana', ph: rnd() * 9 }));
@@ -2292,19 +2435,6 @@
       if (Z.key === 'pellucidar') decor.push({ a: 0.2, R: R0, kind: 'sign', text: 'PELLUCIDAR', col: '#8fff6a' });
       if (Z.key === 'agartha') decor.push({ a: around + 320 / base, R: base, kind: 'sign', text: 'AGARTHA', col: '#ffd23f' });
     });
-    // Floating islands of rock near the way up, so there's always something
-    // to see: each cavern's buildings, creatures and waterfalls
-    const ISLAND = { pellucidar: ['dino', 'hut', 'fernbush'], sea: ['plesio', 'bigmush', 'ichthyo'], agartha: ['dome', 'spire', 'dome'], crystal: ['crystals', 'crystals', 'bigmush'],
-      fungus: ['bigmush', 'bigmush', 'pool'], morlock: ['machine', 'wellshaft', 'machine'], lava: ['lavarock', 'lavarock', 'machine'], city: ['tower', 'lizard', 'tower'], shaft: ['fernbush', 'hut', 'fernbush'] };
-    for (let k = 1; k < TOP; k++) {
-      const Z = HOLLOW[T[k].zone], R = tierR(k) + 110 + rnd() * 40;
-      for (const side of [-1, 1]) {
-        if (rnd() < 0.25) continue;
-        const items = ISLAND[Z.key], item = items[Math.floor(rnd() * items.length)];
-        decor.push({ a: pathA[k] + (side * (380 + rnd() * 380)) / R, R, kind: 'island', item, size: 0.7 + rnd() * 0.5, h: 90 + rnd() * 120, ph: rnd() * 9, w: 90 + rnd() * 50,
-          fall: Z.key === 'sea' || Z.key === 'agartha' || Z.key === 'fungus' || Z.key === 'lava' ? rnd() < 0.6 : rnd() < 0.15, lava: Z.key === 'lava', gold: Z.key === 'agartha', len: 160 + rnd() * 160, text: Z.key === 'city' ? ['LIZARD HQ', 'AREA 52', 'NOTHING TO SEE HERE'][Math.floor(rnd() * 3)] : '' });
-      }
-    }
     const sky = [];
     for (let i = 0; i < 160; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.15 ? 2 : 1, tw: rnd() * TAU });
     return { seed, plats, stars, decor, crust: [], swirls: [], sky, ranges: [], issPlat: null, beams, dust: [], movers, shells };
@@ -2718,6 +2848,7 @@
           ctx.font = '5px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#8fff6a'; ctx.fillText('FLIES 2 FOR 1', 0, -22); ctx.textAlign = 'start';
         } else if (k === 'monorail') {
           px(-400, 0, 800, 4, '#4a5260');
+          for (let x = -360; x <= 360; x += 180) { px(x - 3, 4, 6, 226, '#3a4250'); px(x - 10, 226, 20, 6, '#3a4250'); }
           const x = ((clock * 120 + d.ph * 100) % 1000) - 500;
           px(x - 50, -20, 100, 20, '#c9ced9'); for (let i = 0; i < 6; i++) px(x - 44 + i * 16, -16, 10, 8, '#8fff6a'); px(x + 46, -18, 6, 16, '#e0433b');
         } else if (k === 'bunker') {
@@ -2856,7 +2987,9 @@
           if (Math.sin(clock * 0.9 + d.a * 30) > 0.3) { px(-5, -60, 3, 3, '#ff5a4a'); px(3, -60, 3, 3, '#ff5a4a'); }
         } else if (k === 'eyes') {
           // Morlock eyes, glowing in the dark, and blinking
-          if (Math.sin(clock * 0.7 + d.ph) > -0.6) { px(-7, 0, 5, 4, '#ff4a3a'); px(3, 0, 5, 4, '#ff4a3a'); }
+          ctx.fillStyle = '#08080c'; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-14, -24); ctx.arc(0, -24, 14, Math.PI, TAU); ctx.lineTo(14, 0); ctx.fill();
+          px(-18, -42, 36, 4, '#3a3a42');
+          if (Math.sin(clock * 0.7 + d.ph) > -0.6) { px(-7, -24, 5, 4, '#ff4a3a'); px(3, -24, 5, 4, '#ff4a3a'); }
         } else if (k === 'tower') {
           px(-30, -d.h, 60, d.h, '#232b33');
           for (let wy = 10; wy < d.h - 10; wy += 16) for (let wx = -22; wx < 22; wx += 14) if ((wx + wy + Math.floor(d.ph)) % 3) px(wx, -d.h + wy, 8, 8, (wx * wy + Math.floor(d.ph)) % 5 ? 'rgba(140,255,120,0.6)' : 'rgba(255,106,213,0.6)');
@@ -2936,6 +3069,14 @@
   // Movers: bat swarms and the Iron Mole drills
   function drawHollowMovers() {
     for (const q of world.movers || []) {
+      if (q.kind !== 'mole') continue;
+      const down = q.R - zoneBase(hollowZone((q.R - R0 - 30) / TIER_GAP));
+      at(q.a0 + theta, q.R, () => {
+        px(-q.amp - 50, 16, (q.amp + 50) * 2, 6, '#4a5260'); px(-q.amp - 50, 16, (q.amp + 50) * 2, 2, '#8a93a4');
+        for (let x = -q.amp - 40; x <= q.amp + 40; x += 160) px(x - 3, 22, 6, down - 22, '#3a4250');
+      }, q.amp + down + 100);
+    }
+    for (const q of world.movers || []) {
       at(q.a + theta, q.R, () => {
         if (q.kind === 'bats') {
           for (let i = 0; i < 6; i++) {
@@ -2953,6 +3094,21 @@
         }
       }, 80);
     }
+  }
+  // What holds each platform up: stalks and trunks growing from the cavern
+  // floor, crystal pillars, struts and basalt columns, ropes or roots from the
+  // roof, or (in Agartha) the glow of the vril that keeps the discs aloft
+  function hollowSupport(p, w) {
+    const z = hollowZone(p.tier), floorR = z === 0 ? R0 : zoneBase(z), ceilR = z < HOLLOW.length - 1 ? zoneBase(z + 1) - 48 : tierR(TOP) + 200;
+    const down = Math.max(0, p.R - floorR), up = Math.max(0, ceilR - p.R), t = p.type;
+    if (t === 'mush' || t === 'sway') { px(-5, 10, 10, down - 10, '#cfc2a6'); px(-5, 10, 3, down - 10, '#e6dcc4'); px(-12, down - 6, 24, 6, '#8a7a5a'); }
+    else if (t === 'fern') { px(-4, 8, 8, down - 8, '#5a3a20'); for (let y = 30; y < down; y += 40) px(-6, y, 12, 3, '#4a2a18'); }
+    else if (t === 'crystal') { ctx.fillStyle = 'rgba(109,211,255,0.35)'; ctx.fillRect(-9, 16, 18, down - 16); px(-3, 16, 2, down - 16, 'rgba(230,250,255,0.6)'); }
+    else if (t === 'girder') { for (const x of [-w / 2 + 8, w / 2 - 12]) px(x, 8, 4, down - 8, '#5a4a3a'); for (let y = 30; y < down; y += 36) { ctx.strokeStyle = '#4a3a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-w / 2 + 10, y); ctx.lineTo(w / 2 - 10, y + 30); ctx.stroke(); } }
+    else if (t === 'rock') { px(-w / 4, 24, w / 2, down - 24, '#3a1a12'); for (let y = 40; y < down; y += 50) px(-2, y, 4, 20, '#ff6a1a'); }
+    else if (t === 'neon') { for (const x of [-w / 2 + 6, w / 2 - 8]) px(x, 10, 2, down - 10, '#4a5260'); }
+    else if (t === 'raft' || t === 'ledge') { ctx.strokeStyle = t === 'raft' ? '#a5824a' : '#6b4a2a'; ctx.lineWidth = 2; for (const x of [-w / 2 + 6, w / 2 - 6]) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x * 0.6, -up); ctx.stroke(); } }
+    else if (t === 'gold') { const g = ctx.createLinearGradient(0, 10, 0, 140); g.addColorStop(0, `rgba(180,255,255,${0.35 + 0.15 * Math.sin(clock * 4 + p.spin)})`); g.addColorStop(1, 'rgba(180,255,255,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-w * 0.3, 10); ctx.lineTo(w * 0.3, 10); ctx.lineTo(w * 0.15, 140); ctx.lineTo(-w * 0.15, 140); ctx.fill(); }
   }
   // Platforms for the hollow Earth (drawn with the level 2 set)
   const HOLLOW_PLATS = {
@@ -3001,6 +3157,7 @@
     clock += dt;
     if (state === 'splash' || state === 'tour' || state === 'descend') { updateIntro(dt); return; }
     if (fx.run) { updateRunFrame(dt); return; }
+    if (fx.arrive) { updateArriveFrame(dt); return; }
     for (const p of world.plats) {
       if (p.sway) p.a = p.a0 + p.sway * Math.sin(clock * p.freq + p.phase);
       if (p.ride) updateRide(p, dt);
@@ -3022,7 +3179,8 @@
       const sp = player.speed;
       const maxV = player.onGround ? WALK : AIR * Math.sqrt(sp);
       // In the belt's zero gravity, sideways speed carries on until you steer
-      if (beltFlight() && Math.abs(dir) < 0.1) player.vx = clamp(player.vx, -900, 900);
+      if (player.hopLock > 0 && !player.onGround) player.vx = player.hopVx || 0;
+      else if (beltFlight() && Math.abs(dir) < 0.1) player.vx = clamp(player.vx, -900, 900);
       else player.vx = approach(player.vx, dir * maxV, (player.onGround ? 1800 : 1200 * sp) * dt);
       theta -= (player.vx * dt) / player.r;
       if (player.onGround && Math.abs(player.vx) > 5) {
@@ -3043,7 +3201,15 @@
       if (player.onGround && (player.r <= R0 + 1 || level === 6)) {
         for (const q of world.plats) {
           if ((level === 6 ? !(q.R > player.r + 20 && q.R < player.r + 150) : q.tier !== 0) || ghost(q) || q.broken) continue;
-          if (Math.abs(wrap(q.a + theta) * q.R) < q.w / 2 - 6) { jumpBuffer = 0.1; theta = -q.a; player.vx = 0; player.hopLock = 3; break; }
+          // Close enough and heading its way (or already under it): hop on in
+          // one smooth arc that lands you on its middle
+          const d = wrap(q.a + theta) * q.R;
+          if (Math.abs(d) < q.w / 2 + 46 && (Math.abs(d) < q.w / 2 - 6 || Math.sign(d) === Math.sign(player.vx))) {
+            const g = gravAt(0), vr = Math.min(HOP_V, Math.sqrt(2 * G * g * 160)), a = G * g, h = Math.max(0, q.R - player.r);
+            const tFly = (vr + Math.sqrt(Math.max(0, vr * vr - 2 * a * h))) / a;
+            jumpBuffer = 0.1; player.hopVx = clamp(d / tFly, -600, 600); player.hopLock = 3;
+            break;
+          }
         }
       }
       jumpBuffer -= dt;
@@ -5612,7 +5778,7 @@
     const sq = p.squash;
     at(p.a + theta, p.R, () => {
       const w = p.w;
-      if (level === 6 && HOLLOW_PLATS[p.type]) HOLLOW_PLATS[p.type](p, w);
+      if (level === 6 && HOLLOW_PLATS[p.type]) { hollowSupport(p, w); HOLLOW_PLATS[p.type](p, w); }
       else if (p.type === 'trampoline') {
         px(-w / 2 + 6, 4, 4, 26, '#3b3b4f'); px(w / 2 - 10, 4, 4, 26, '#3b3b4f');
         px(-w / 2, 0, w, 6, '#e0433b');
@@ -5696,7 +5862,7 @@
           }
         }
       }
-    }, 220);
+    }, level === 6 ? 1200 : 220);
   }
 
   function drawRide(p) {
@@ -6368,6 +6534,20 @@
 
   function render() {
     if (state === 'splash' || state === 'tour') { drawIntro(); return; }
+    if (fx.arrive) {
+      if (fx.arrive.t >= ARR_SWAP) { drawArrival(); drawBanner(); return; }
+      // The world turning over (scaled up a little so the corners stay covered)
+      ctx.save();
+      const turn = arriveTurn(), zs = 1 + Math.sin(turn) * 0.45;
+      ctx.translate(W / 2, H / 2); ctx.rotate(turn); ctx.scale(zs, zs); ctx.translate(-W / 2, -H / 2);
+      renderWorld();
+      ctx.restore();
+      drawArriveCover();
+      return;
+    }
+    renderWorld();
+  }
+  function renderWorld() {
     if (fx.run) {
       drawRun(); drawBanner();
       if (fx.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${fx.flash * 0.5})`; ctx.fillRect(0, 0, W, H); }
@@ -6692,6 +6872,104 @@
     ctx.restore();
   }
 
+  // ---- The intro's Moon: a real map, in the same pixel style as the Earth ----------
+  // The dark "seas" (maria) are old lava plains; the bright highlands are older
+  // and covered in craters. Positions are selenographic longitude and latitude
+  // on the side that always faces Earth.
+  const MARIA = [
+    { name: 'OCEAN OF STORMS', poly: [[-75, 10], [-66, 30], [-52, 44], [-38, 42], [-30, 26], [-26, 10], [-34, -4], [-44, -14], [-58, -18], [-72, -6]] },
+    { name: 'SEA OF RAINS', c: [-16, 33], r: 17 }, { name: 'SEA OF SERENITY', c: [17, 28], r: 9 },
+    { name: 'SEA OF TRANQUILLITY', c: [30, 9], r: 11 }, { name: 'SEA OF CRISES', c: [59, 17], r: 7 },
+    { name: 'SEA OF FERTILITY', c: [51, -8], r: 9 }, { name: 'SEA OF NECTAR', c: [34, -15], r: 5 },
+    { name: 'SEA OF CLOUDS', c: [-17, -21], r: 10 }, { name: 'SEA OF MOISTURE', c: [-39, -24], r: 5 },
+    { c: [4, 13], r: 4 }, { c: [-23, -10], r: 5 }, { c: [12, 20], r: 4 },
+    { name: 'SEA OF COLD', poly: [[-45, 54], [-20, 58], [10, 60], [40, 58], [42, 53], [10, 55], [-20, 53], [-44, 50]] },
+  ];
+  const MOON_CRATERS = [
+    { name: 'TYCHO', c: [-11, -43], r: 2.6, rays: 9 }, { name: 'COPERNICUS', c: [-20, 10], r: 2.9, rays: 5 }, { c: [-38, 8], r: 1.5, rays: 3 },
+    { name: 'PLATO', c: [-9, 51], r: 2.2, dark: true }, { c: [-47, 24], r: 1.4, bright: true }, { c: [-14, -58], r: 3.6 }, { c: [-68, -5], r: 2.6, dark: true },
+    { c: [5, -48], r: 2.2 }, { c: [27, -50], r: 2.6 }, { c: [-5, -12], r: 2.4 }, { c: [60, -40], r: 2.8 }, { c: [40, 40], r: 2.3 },
+  ];
+  const MOON_MAP = (() => {
+    const inPoly = (x, y, poly) => { let inside = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside; } return inside; };
+    const dist = (lo1, la1, lo2, la2) => { const r = Math.PI / 180; return Math.acos(clamp(Math.sin(la1 * r) * Math.sin(la2 * r) + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.cos((lo1 - lo2) * r), -1, 1)) / r; };
+    const hsh = (a, b) => { const h = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return h - Math.floor(h); };
+    // Lots of small craters scattered about, more on the highlands
+    const small = [];
+    for (let i = 0; i < 520; i++) small.push({ c: [hsh(i, 1) * 360 - 180, Math.asin(hsh(i, 2) * 2 - 1) * 57.3], r: 0.6 + hsh(i, 3) * 1.8 });
+    const cells = [];
+    for (let lat = -89.6875; lat < 90; lat += 0.625) {
+      for (let lon = -179.6875; lon < 180; lon += 0.625) {
+        let col = null;
+        // Smooth, blotchy variation (not speckle), and wavy edges to the seas
+        const n = Math.sin(lon * 0.13 + 1.3) * Math.sin(lat * 0.17 - 0.4) + 0.5 * Math.sin(lon * 0.41 + lat * 0.29);
+        const mare = MARIA.some((m) => (m.poly ? inPoly(lon + 2 * Math.sin(lat * 0.5), lat, m.poly) : dist(lon, lat, m.c[0], m.c[1]) < m.r * (1 + 0.12 * Math.sin(lon * 0.7 + lat * 0.9))));
+        if (mare) col = n > 0.2 ? '#6f6d79' : n < -0.4 ? '#5f5d69' : '#67656f';
+        else if (n > 0.95) col = '#d4d1da';
+        else if (n < -0.95) col = '#b4b1bc';
+        for (const k of MOON_CRATERS) {
+          const d = dist(lon, lat, k.c[0], k.c[1]);
+          if (d < k.r * 0.75) col = k.dark ? '#5e5c68' : k.bright ? '#f2f0f6' : '#9e9ba8';
+          else if (d < k.r * 1.15) col = '#eceaf2';
+          else if (k.rays && d < k.r * 12) {
+            // Bright rays splashed out from the impact
+            const r = Math.PI / 180, b = Math.atan2(Math.sin((lon - k.c[0]) * r) * Math.cos(lat * r), Math.cos(k.c[1] * r) * Math.sin(lat * r) - Math.sin(k.c[1] * r) * Math.cos(lat * r) * Math.cos((lon - k.c[0]) * r));
+            const lane = ((b / TAU) * k.rays * 2 + 10) % 1;
+            if (lane < 0.16 && hsh(Math.round(d), Math.round(b * 10)) > 0.25 - (k.r * 12 - d) / (k.r * 40)) col = mare ? '#a8a6b2' : '#e6e4ec';
+          }
+        }
+        if (!col || mare) for (const k of small) { const d = Math.abs(lon - k.c[0]) < 6 && Math.abs(lat - k.c[1]) < 6 ? dist(lon, lat, k.c[0], k.c[1]) : 99; if (d < k.r) { col = d < k.r * 0.55 ? (mare ? '#56545f' : '#9f9ca9') : (mare ? '#8a8894' : '#dedbe4'); break; } }
+        if (!col) continue;
+        const la = (lat * Math.PI) / 180, lo = (lon * Math.PI) / 180;
+        cells.push({ cl: Math.cos(la), sl: Math.sin(la), co: Math.cos(lo), so: Math.sin(lo), col });
+      }
+    }
+    return cells;
+  })();
+  // The Moon drawn as a globe, turned by rot (radians) and tipped by tilt
+  function drawMoonGlobe(x, y, r, rot, tilt = -0.35) {
+    if (y - r > H + 10) return;
+    ctx.save();
+    const g = ctx.createRadialGradient(x, y, r * 0.95, x, y, r * 1.08);
+    g.addColorStop(0, 'rgba(220,220,235,0.35)'); g.addColorStop(1, 'rgba(220,220,235,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 1.08, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c4c1cb'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip();
+    const ct = Math.cos(tilt), st = Math.sin(tilt), cr = Math.cos(rot), sr = Math.sin(rot), sz = Math.max(1.2, r * 0.0112);
+    for (const c of MOON_MAP) {
+      const sinL = c.so * cr + c.co * sr, cosL = c.co * cr - c.so * sr;
+      const px0 = c.cl * sinL, pz0 = c.cl * cosL;
+      const gy = c.sl * ct - pz0 * st, gz = pz0 * ct + c.sl * st;
+      if (gz <= 0) continue;
+      const sx = x + px0 * r, sy = y - gy * r;
+      if (sy < -sz || sy > H + sz || sx < -sz || sx > W + sz) continue;
+      ctx.fillStyle = c.col;
+      ctx.fillRect(Math.round(sx - sz / 2), Math.round(sy - sz / 2), Math.ceil(sz * (0.5 + gz * 0.5)) + 1, Math.ceil(sz * gz * 0.6 + sz * 0.4) + 1);
+    }
+    // Labels on the big seas, and where Apollo 11 landed
+    if (r > 260) {
+      ctx.font = `${r > 600 ? 8 : 6}px "Press Start 2P", monospace`; ctx.textAlign = 'center';
+      const put = (lon, lat, text, col) => {
+        const lo = (lon * Math.PI) / 180 + rot, la = (lat * Math.PI) / 180, cl = Math.cos(la);
+        const gx = cl * Math.sin(lo), pz = cl * Math.cos(lo), gy = Math.sin(la) * ct - pz * st, gz = pz * ct + Math.sin(la) * st;
+        if (gz < 0.25) return;
+        const sx = x + gx * r, sy = y - gy * r;
+        if (sy < 8 || sy > H - 4) return;
+        ctx.globalAlpha = Math.min(1, (gz - 0.25) * 3);
+        ctx.fillStyle = 'rgba(20,20,30,0.7)'; ctx.fillText(text, sx + 1, sy + 1); ctx.fillStyle = col; ctx.fillText(text, sx, sy);
+        ctx.globalAlpha = 1;
+      };
+      for (const m of MARIA) if (m.name) { const c = m.c || [m.poly.reduce((s, p) => s + p[0], 0) / m.poly.length, m.poly.reduce((s, p) => s + p[1], 0) / m.poly.length]; put(c[0], c[1], m.name, '#eef1ff'); }
+      for (const k of MOON_CRATERS) if (k.name) put(k.c[0], k.c[1] - k.r - 1.5, k.name, '#ffe9a0');
+      put(23.5, 0.7, '▲ APOLLO 11', '#ffd23f');
+      ctx.textAlign = 'start';
+    }
+    // Sunlight from the upper right; the night side creeping in on the left
+    const sh = ctx.createLinearGradient(x - r, y, x + r, y - r * 0.4);
+    sh.addColorStop(0, 'rgba(5,6,16,0.85)'); sh.addColorStop(0.28, 'rgba(5,6,16,0.25)'); sh.addColorStop(0.45, 'rgba(5,6,16,0)'); sh.addColorStop(1, 'rgba(255,255,255,0.06)');
+    ctx.fillStyle = sh; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.restore();
+  }
   // ---- The intro's journey -----------------------------------------------------------
   // It opens on the Moon: its grey, cratered horizon turning slowly beneath
   // you, an old lander and its flag on the skyline, and the Earth rising
@@ -6719,42 +6997,6 @@
       px(-6 * s, -6 * s, 12 * s, 12 * s, '#d9a63a'); px(-26 * s, -3 * s, 18 * s, 6 * s, '#2b4fb8'); px(8 * s, -3 * s, 18 * s, 6 * s, '#2b4fb8');
       if (Math.sin(clock * 6 + x) > 0.6) px(-1 * s, -9 * s, 2 * s + 1, 2 * s + 1, '#ff5a4a');
     }
-    ctx.restore();
-  }
-  // The Moon as a horizon: a vast grey curve, its craters and hills turning
-  // slowly past, lit from the side so every crater has a shadow
-  function drawMoonHorizon(top) {
-    if (top > H + 40) return;
-    const Rm = Math.max(W, H) * 1.6, mx = W / 2, my = top + Rm, spin = clock * 0.012;
-    const yAt = (x) => my - Math.sqrt(Math.max(0, Rm * Rm - (x - mx) * (x - mx)));
-    // A thin bright rim where sunlight catches the edge
-    ctx.fillStyle = '#d9d7e0'; ctx.beginPath(); ctx.arc(mx, my, Rm + 2, 0, TAU); ctx.fill();
-    const g = ctx.createLinearGradient(0, top, 0, H);
-    g.addColorStop(0, '#b9b6c2'); g.addColorStop(0.4, '#8f8c99'); g.addColorStop(1, '#5c5a66');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, Rm, 0, TAU); ctx.fill();
-    ctx.save(); ctx.beginPath(); ctx.arc(mx, my, Rm, 0, TAU); ctx.clip();
-    // Craters: rows of them, squashed flatter the nearer the horizon, sliding by
-    for (let row = 0; row < 7; row++) {
-      const depth = row / 6, yb = top + 10 + Math.pow(depth, 1.6) * (H - top), sc = 0.3 + depth * 1.4;
-      const n = 10 + row * 2, off = (spin * (0.6 + depth * 2) * W) % (W * 1.4);
-      for (let i = 0; i < n; i++) {
-        const h = Math.sin(i * 12.9898 + row * 78.233) * 43758.5453, fr = h - Math.floor(h);
-        let x = ((i / n) * W * 1.4 + off + fr * 60) % (W * 1.4) - W * 0.2;
-        const y = Math.max(yb, yAt(x) + 6), r = (6 + fr * 16) * sc;
-        ctx.fillStyle = 'rgba(70,68,80,0.55)'; ctx.beginPath(); ctx.ellipse(x, y, r, r * (0.25 + depth * 0.25), 0, 0, TAU); ctx.fill();
-        ctx.fillStyle = 'rgba(230,228,240,0.45)'; ctx.beginPath(); ctx.ellipse(x + r * 0.2, y + r * 0.08, r * 0.85, r * (0.2 + depth * 0.2), 0, 0, Math.PI); ctx.fill();
-      }
-    }
-    // Low hills on the skyline
-    ctx.fillStyle = '#a9a6b2';
-    for (let i = 0; i < 6; i++) { let x = ((i * 0.19 + spin * 0.6) % 1.2) * W * 1.2 - W * 0.1; const y = yAt(x); ctx.beginPath(); ctx.ellipse(x, y + 4, 60 + i * 12, 10, 0, Math.PI, TAU); ctx.fill(); }
-    ctx.restore();
-    // An old lunar lander and its flag, drifting past on the skyline
-    let lx = ((0.3 + spin * 0.6) % 1.2) * W * 1.2 - W * 0.1;
-    const ly = yAt(lx);
-    ctx.save(); ctx.translate(lx, ly); ctx.rotate(Math.asin(clamp((lx - mx) / Rm, -1, 1)));
-    px(-12, -16, 24, 10, '#d9a63a'); px(-14, -6, 4, 6, '#9aa3b5'); px(10, -6, 4, 6, '#9aa3b5'); px(-6, -24, 12, 8, '#c9ced9');
-    px(26, -30, 2, 30, '#e8e8f0'); px(28, -30, 14, 9, '#e0433b'); px(28, -30, 6, 5, '#3f6fd8');
     ctx.restore();
   }
   function drawFlyby(f, t) {
@@ -6794,8 +7036,9 @@
     // Earth (half in shadow, as from the Moon), then the Moon's horizon in front
     const E = tourEarth(t);
     drawGlobe(E.x, E.y, E.r, clock * 0.05 + 0.4, 1, 0.3);
-    const lift = smooth(clamp(t / 2.6, 0, 1));
-    drawMoonHorizon(lerp(H * 0.74, H * 1.3, lift));
+    // The Moon below you, turning slowly; as you lift off it drops away
+    const lift = smooth(clamp(t / 2.8, 0, 1)), mr = Math.max(W, H) * lerp(0.85, 0.5, lift);
+    drawMoonGlobe(W / 2, lerp(H * 0.74, H * 1.2, lift) + mr * 0.97, mr, clock * 0.04 - 0.2, lerp(-0.55, -0.2, lift));
     if (state === 'tour' && t > 1.4 && E.r < 70) { ctx.globalAlpha = clamp((t - 1.4) * 2, 0, 1); ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,210,255,0.9)'; ctx.fillText('EARTH', E.x, E.y - E.r - 12); ctx.textAlign = 'start'; ctx.globalAlpha = 1; }
     for (const f of FLYBY) drawFlyby(f, t);
     if (titleAlpha > 0) {
