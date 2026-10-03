@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
-<link rel="stylesheet" href="style.css?v=f0cdbdc">
+<link rel="stylesheet" href="style.css?v=f4c2f5b">
 </head>
 <body>
 <canvas id="game" tabindex="0" aria-label="Interstellar SuperTramp game"></canvas>
@@ -63,6 +63,7 @@
     </div>
     <button id="l2-start" class="level2" type="button" hidden>Level 2: start on the Moon<span>Mars or Venus?</span></button>
     <button id="l3-start" class="level2" type="button">Level 3: start on Mars<span>Out to the asteroid belt</span></button>
+    <button id="l4-start" class="level2" type="button">Level 4: start on Venus<span>Through the solar storms to Mercury</span></button>
     <button id="belt-start" class="level2" type="button">Straight to the asteroid belt<span>Skip ahead to the turn</span></button>
     <button id="open-board" class="secondary" type="button" hidden>Full scoreboard</button>
     <p>The world turns under your feet. Hop on a trampoline and bounce from cloud to balloon to satellite, all the way to the Moon.</p>
@@ -91,6 +92,7 @@
     <div class="won-actions" id="won-actions">
       <button id="to-l2" class="level2" type="button" hidden>On to Mars or Venus<span>Level 2, score carried on</span></button>
       <button id="to-l3" class="level2" type="button" hidden>On to the asteroid belt<span>Level 3, score carried on</span></button>
+      <button id="to-l4" class="level2" type="button" hidden>On to Mercury<span>Level 4, score carried on</span></button>
       <button id="again" type="button">Bounce again</button>
       <button id="change-mode" class="secondary" type="button">Change mode</button>
       <button id="won-board" class="secondary" type="button" hidden>Scoreboard</button>
@@ -119,10 +121,10 @@
   <button type="button" class="jump" data-key="jump" aria-label="Hop">HOP</button>
 </div>
 
-<script src="scoreboard-config.js?v=f0cdbdc"></script>
-<script src="scoreboard.js?v=f0cdbdc"></script>
-<script src="audio.js?v=f0cdbdc"></script>
-<script src="game.js?v=f0cdbdc"></script>
+<script src="scoreboard-config.js?v=f4c2f5b"></script>
+<script src="scoreboard.js?v=f4c2f5b"></script>
+<script src="audio.js?v=f4c2f5b"></script>
+<script src="game.js?v=f4c2f5b"></script>
 <script>
   // Play offline once the game has been opened (on the public site only)
   if ('serviceWorker' in navigator && /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname)) {
