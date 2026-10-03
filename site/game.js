@@ -2067,23 +2067,51 @@
     if (!ARRIVE[key]) { win(); return; }
     // The clock starts below zero: first the world's pull takes you, then the turn
     const pull = player.onGround ? 0 : ARR_PULL;
-    fx.arrive = { key, t: -pull, landed: false, bits: [], time: playTime, next: nextLevel(), aim: -p.a, th0: theta, r0: player.r, R: p.R };
+    fx.arrive = { key, t: -pull, landed: false, bits: [], time: playTime, next: nextLevel(), aim: -p.a, th0: theta, r0: player.r, R: p.R, globe: level === 3 && p.world ? p.world.r : level === 6 ? R0 * 0.35 : MOON_R };
     player.vx = 0; player.spin = 0; player.heat = 0; fx.flames = [];
     sfx.whoosh();
     if (pull) { addShake(4); banner(level === 6 ? 'DAYLIGHT!' : `${destName().replace('the ', '').toUpperCase()}'S PULL`, level === 6 ? 'UP AND OUT' : 'HERE WE GO'); }
   }
-  // Straight on into the next level: it's built behind the cover, and you
-  // drop onto its ground with its own gravity
+  // Straight on into the next level, with no change of scene: the little
+  // world you've just touched down on IS the next level's world, seen from
+  // far off. It swells under your feet into the landscape you play on, while
+  // the old view (home, now overhead) turns over and fades away.
+  const LAND_T = 2.4;
+  let landSnap = null, snapping = false;
   function goOn() {
     const A = fx.arrive, from = level;
+    // Keep a picture of the old view to turn and fade out
+    landSnap = landSnap || document.createElement('canvas');
+    landSnap.width = canvas.width; landSnap.height = canvas.height;
+    fx.banner = null; snapping = true; renderWorld(); snapping = false; // just the world: no banner or rail
+    const sc = landSnap.getContext('2d'), k = canvas.width / W, fy0 = H * (cam.anchor || 0.46);
+    sc.globalCompositeOperation = 'copy'; sc.drawImage(canvas, 0, 0);
+    // Soft edges, so no corners show as it turns
+    const m = sc.createRadialGradient(W / 2 * k, fy0 * k, Math.min(W, H) * 0.22 * k, W / 2 * k, fy0 * k, Math.min(W, H) * 0.55 * k);
+    m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)');
+    sc.globalCompositeOperation = 'destination-in'; sc.fillStyle = m; sc.fillRect(0, 0, landSnap.width, landSnap.height);
+    sc.globalCompositeOperation = 'source-over';
+    const feetY = H * (cam.anchor || 0.46);
     playTime = A.time;
     const bonus = win(true);
     startGame(A.next, { score, mult, ...lastWin });
-    player.r = R0 + 240; player.vr = 0; player.onGround = false; player.apexR = player.r;
-    cam.r = player.r; cam.anchor = 0.34;
-    fx.cover = { key: A.key, t: ARR_SWAP };
+    const z0 = clamp(A.globe / R0, 0.1, 1);
+    cam.r = R0; cam.anchor = feetY / H; cam.zoom = z0;
+    fx.land = { t: 0, z0, fx: W / 2, fy: feetY };
     pop(`LEVEL ${from} DONE! +${fmtScore(bonus)}`, '#ffd23f', player.r + 110);
     sfx.tier();
+  }
+  // The old view, turning over and fading as the new world grows
+  function drawLandSnap() {
+    const L = fx.land, u = clamp(L.t / 1.4, 0, 1), a = 1 - smooth(clamp((L.t - 0.1) / 0.9, 0, 1));
+    if (!landSnap || a <= 0) return;
+    const s = cam.zoom / L.z0;
+    ctx.save();
+    ctx.globalAlpha = a;
+    // Turned over about you: where home was below, it's now overhead
+    ctx.translate(L.fx, L.fy); ctx.rotate(Math.PI * smooth(u)); ctx.scale(s, s); ctx.translate(-L.fx, -L.fy);
+    ctx.drawImage(landSnap, 0, 0, W, H);
+    ctx.restore();
   }
   function updateArrive(dt) {
     const A = fx.arrive, D = ARRIVE[A.key];
@@ -2101,7 +2129,7 @@
       A.down = true; player.r = A.R; player.onGround = true; player.squash = 1; theta = A.aim;
       if (A.r0 !== A.R) { addShake(8); sfx.thud(); burst(-theta, A.R, ARRIVE[A.key].ground[0], 14, 160); }
     }
-    if (A.t > ARR_SWAP && A.next) { goOn(); return; }
+    if (A.t >= 0 && A.next) { goOn(); return; }
     if (A.t > ARR_SWAP && !A.started) { A.started = true; sfx.tier(); }
     const fall = clamp(0.45 / Math.sqrt(D.g), 0.45, 1.6);
     if (!A.landed && A.t > ARR_SWAP + 0.4 + fall) {
@@ -3204,7 +3232,6 @@
     if (state === 'splash' || state === 'tour' || state === 'descend') { updateIntro(dt); return; }
     if (fx.run) { updateRunFrame(dt); return; }
     if (fx.arrive) { updateArriveFrame(dt); return; }
-    if (fx.cover && (fx.cover.t += dt) > ARR_SWAP + 1) fx.cover = null;
     for (const p of world.plats) {
       if (p.sway) p.a = p.a0 + p.sway * Math.sin(clock * p.freq + p.phase);
       if (p.ride) updateRide(p, dt);
@@ -3468,6 +3495,12 @@
     const onRide = player.lastPlat && player.lastPlat.ride && (player.lastPlat.ride.state === 'moving') && riding(player.lastPlat);
     const zWant = onRide ? clamp((H * 0.42) / (player.r - R0 + 80), 0.1, 1) : 1;
     cam.zoom = lerp(cam.zoom, zWant, Math.min(1, dt * (onRide ? 1.6 : 1.2)));
+    if (fx.land) {
+      // Coming in to land on the new world: it grows steadily under your feet
+      const L = fx.land; L.t += dt;
+      cam.zoom = L.z0 * Math.pow(1 / L.z0, smooth(clamp(L.t / LAND_T, 0, 1)));
+      if (L.t > LAND_T) { cam.zoom = 1; fx.land = null; }
+    }
 
     if (toastTimer > 0) {
       toastTimer -= dt;
@@ -6629,7 +6662,7 @@
       return;
     }
     renderWorld();
-    if (fx.cover) drawArriveCover(fx.cover);
+    if (fx.land) drawLandSnap();
   }
   function renderWorld() {
     if (fx.run) {
@@ -6712,7 +6745,9 @@
     if (!hidden) {
       drawGuide(feetX, feetY);
       drawFire(feetX, feetY);
-      drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx, 1, player.heat > 0.55 ? HOT : player.suit ? SUIT : PAL, player.spin || 0);
+      // (kept full size while the new world grows in under you)
+      const iz = fx.land ? 1 / cam.zoom : 1;
+      drawSprite(frame, feetX, feetY, player.facing < 0, sy * iz, sx * iz, 1, player.heat > 0.55 ? HOT : player.suit ? SUIT : PAL, player.spin || 0);
       if (conspiracy) drawFoilHat(feetX, feetY, player.spin || 0, player.facing < 0);
       if (level >= 2 && player.shield > 0 && (player.shield > 3 || Math.sin(clock * 20) > 0)) {
         ctx.fillStyle = 'rgba(143,208,255,0.14)'; ctx.strokeStyle = 'rgba(143,208,255,0.8)'; ctx.lineWidth = 2;
@@ -6756,7 +6791,7 @@
     }
     if (fx.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${fx.flash * 0.5})`; ctx.fillRect(0, 0, W, H); }
     if (state === 'descend') drawIntroOverlay();
-    else drawRail();
+    else if (!snapping) drawRail();
   }
 
   // ---- Intro: a comet writes the title in space; tap to fall to Earth --------

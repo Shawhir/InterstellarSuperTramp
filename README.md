@@ -67,15 +67,14 @@ says so if that happens.
 - Arriving at a new world (the Moon, Mars, Venus, Mercury, the belt worlds,
   and daylight at the end of the hollow Earth): after you've watched it grow
   in the sky, its gravity grabs you as you get close, swinging you over and
-  pulling you down onto it faster and faster. Then the whole view turns
-  upside down (it was above you; now it's under your feet) while something of
-  that world hides the change. That's a dust cloud on the Moon, an entry
-  fireball at Mars, acid clouds at Venus, glare at Mercury, rubble at the belt
-  worlds. When it clears you're dropping onto the playable next level, with
-  that world's own gravity (slowly on the Moon), the score carried on and the
-  whole trip counted as one run. Mercury and Europa are the ends of the line:
-  there you land on the real landscape, plant a flag and get the results
-  screen.
+  pulling you down onto it faster and faster. There's no change of scene: the
+  little world you touch down on is the next level's world seen from far off,
+  and it swells under your feet into the landscape you play on, while the old
+  view (home, now overhead) turns upside down and fades away. You carry
+  straight on with that world's own gravity, the score carried on and the
+  whole trip counted as one run. Mercury and Europa are the ends of the line,
+  with a results screen: at Mercury the view turns over behind the Sun's
+  glare and you land on its real landscape and plant a flag.
 - Hopping on: walk up to a trampoline or launch pad and you hop on in one
   smooth arc that lands you on its middle.
 - Juice: screen shake on landings, squash and stretch, afterimage trail, landing
