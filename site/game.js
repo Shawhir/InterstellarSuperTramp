@@ -746,7 +746,9 @@
   // Level 5. Around the belt world you start on: the outer belt, a ring of
   // dark asteroids scattered through its whole depth, with pinball and pop
   // bumpers between, and the miners' mass drivers along the top.
-  const RUN_LEN = 24000; // how far the flat-out run goes, px
+  const RUN_LEN = 24000; // how far the flat-out run to Jupiter goes, px
+  const DIVE_LEN = 7000; // then right through Jupiter
+  const OCEAN_LEN = 5200; // and at the end, down into Europa's ocean
   function buildWorld5(seed) {
     const rnd = mulberry32(seed);
     const plats = [], stars = [], rocks = [], pops = [];
@@ -787,33 +789,29 @@
     for (const p of plats.filter((q) => q.tier === 0)) for (let i = 0; i < 3; i++) stars.push({ a: p.a + 0.03 * i, R: tierR(0) + 90 + i * 50, taken: false });
     // The mass drivers: long rails with magnet coils that fling ore (and you) out
     for (let i = 0; i < 6; i++) { const d = mk(TOP, 0.55 + (i * TAU) / 6 + (rnd() - 0.5) * 0.2, 'driver'); d.main = true; d.launch = true; }
-    // The run: asteroids, comet pieces and radiation sparks all the way to
-    // Jupiter, and geoms to grab. Sorted by how far along they are.
+    // The run: bands of asteroids (then comet pieces, radiation, and storms
+    // inside Jupiter) right across the way, each with a gap. Through cleanly
+    // and your multiplier goes up; hit one and it costs you points.
     const run = [];
-    let d = 700;
-    const rock = (dd, u, r, extra) => run.push({ d: dd, u, r, kind: 'rock', spin: rnd() * TAU, turn: (rnd() - 0.5) * 3, shape: Array.from({ length: 9 }, () => 0.72 + rnd() * 0.28), dark: rnd() < 0.7, ...extra });
-    while (d < RUN_LEN - 400) {
-      const f = d / RUN_LEN;
-      if (f < 0.26) { rock(d, rnd() * 2 - 1, 12 + rnd() * 22); d += 75 + rnd() * 80; }
-      else if (f < 0.42 || (f >= 0.56 && f < 0.6)) { rock(d, rnd() * 2 - 1, 10 + rnd() * 16); d += 220 + rnd() * 160; }
-      else if (f < 0.56) { rock(d, rnd() * 2 - 1, 10 + rnd() * 18, { hilda: true }); d += 62 + rnd() * 50; }
-      else if (f < 0.72) {
-        // A string of comet fragments, drifting across the way
-        const side = rnd() < 0.5 ? -1 : 1, u0 = side * (0.6 + rnd() * 0.5);
-        for (let i = 0; i < 5; i++) run.push({ d: d + i * 46, u: u0 - side * i * 0.16, r: 9 + rnd() * 8, kind: 'frag', vu: -side * (0.12 + rnd() * 0.1), spin: rnd() * TAU, turn: 2 });
-        d += 330 + rnd() * 120;
-      } else {
-        if (rnd() < 0.55) run.push({ d, u: rnd() * 1.6 - 0.8, r: 10, kind: 'spark', ph: rnd() * TAU });
-        else rock(d, rnd() * 2 - 1, 10 + rnd() * 14);
-        d += 150 + rnd() * 110;
+    let d = 900, gap = 0;
+    while (d < RUN_LEN + DIVE_LEN - 300) {
+      const f = d / RUN_LEN, dive = d >= RUN_LEN;
+      const kind = dive ? 'storm' : f < 0.3 ? 'rock' : f < 0.45 ? 'open' : f < 0.6 ? 'hilda' : f < 0.75 ? 'frag' : 'spark';
+      gap = clamp(gap + (rnd() - 0.5) * 1.1, -0.72, 0.72);
+      const gw = kind === 'open' ? 0.42 : dive ? 0.34 : 0.3, rocks = [];
+      const gaps = kind === 'open' ? [gap, gap > 0 ? gap - 1.1 : gap + 1.1] : [gap];
+      for (let u = -1.2; u <= 1.2;) {
+        const r = kind === 'spark' ? 11 : kind === 'frag' ? 10 + rnd() * 6 : 14 + rnd() * 14;
+        const step = (r * 2 + 10) / 330;
+        if (!gaps.some((g) => Math.abs(u - g) < gw + step / 2)) rocks.push({ u, r, spin: rnd() * TAU, turn: (rnd() - 0.5) * 3, ph: rnd() * TAU, shape: Array.from({ length: 9 }, () => 0.72 + rnd() * 0.28) });
+        u += step;
       }
+      run.push({ d, kind, rocks, gap, vu: kind === 'frag' ? (rnd() < 0.5 ? -1 : 1) * (0.1 + rnd() * 0.08) : 0, off: 0 });
+      if (run.length % 2 === 0) stars.push({ run: true, d: d + 2, u: gap, taken: false });
+      d += kind === 'open' ? 820 : dive ? 520 + rnd() * 80 : 540 + rnd() * 100;
     }
-    for (let g = 900; g < RUN_LEN - 200; g += 420 + rnd() * 260) {
-      const u = rnd() * 1.6 - 0.8;
-      if (run.some((o) => Math.abs(o.d - g) < 160 && Math.abs(o.u - u) < 0.25)) continue;
-      for (let i = 0; i < 3; i++) stars.push({ run: true, d: g + i * 55, u, taken: false });
-    }
-    run.sort((p, q) => p.d - q.d);
+    // Europa's ocean: glowing geoms to grab on the way down
+    for (let od = 500; od < OCEAN_LEN - 400; od += 380 + rnd() * 200) stars.push({ ocean: true, d: od, u: rnd() * 1.6 - 0.8, taken: false });
     stars.forEach((st, i) => { st.id = i; });
     // On the ground: craters, a miners' camp, a drill rig, a sign the way to go,
     // and each world's own landmarks
@@ -989,9 +987,10 @@
   function layerName() {
     if (fx.run) {
       const R = fx.run;
-      if (R.phase !== 'run') return R.phase === 'flyby' ? 'Jupiter' : 'Europa';
-      const f = runF();
-      return `${f < 0.26 ? 'Outer belt' : f < 0.42 ? 'Past the belt' : f < 0.56 ? 'Hilda asteroids' : f < 0.6 ? 'Open space' : f < 0.72 ? 'Comet pieces' : f < 0.86 ? 'Jupiter approach' : 'Radiation belts'} ×${(R.v / 340).toFixed(2)}`;
+      if (R.phase !== 'run') return R.phase === 'exit' ? 'Past Jupiter' : R.phase === 'ocean' ? "Europa's ocean" : 'Europa';
+      const f = runF(), k = diveK();
+      const name = R.d >= RUN_LEN ? (k < 0.2 || k > 0.85 ? 'Jupiter: cloud tops' : k < 0.4 || k > 0.65 ? 'Jupiter: deep down' : 'Jupiter: the middle') : f < 0.26 ? 'Outer belt' : f < 0.44 ? 'Past the belt' : f < 0.6 ? 'Hilda asteroids' : f < 0.75 ? 'Comet pieces' : 'Radiation belts';
+      return `${name} ×${(R.v / 340).toFixed(2)}`;
     }
     if (level === 5 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? `On ${l5Start.name}` : `${l5Start.name} base`;
     if (player.onGround) return lastTier === TOP ? `On ${destName()}` : level === 4 ? 'Above Venus' : level === 3 ? 'On Mars' : level === 2 ? 'On the Moon' : 'On the ground';
@@ -1828,61 +1827,81 @@
   }
 
   // ---- Level 5: the run --------------------------------------------------------
-  // Flung off a mass driver you fly straight out, faster and faster. Steer left
-  // and right round what's coming; a hit slows you and costs the multiplier
-  // (never the game). Then the slingshot round the back of Jupiter, and the
-  // landing on Europa.
+  // Flung off a mass driver you fly straight out, faster and faster, and the
+  // speed never lets up. Bands of asteroids stretch right across the way,
+  // each with a gap: get through cleanly and your multiplier goes up, clip one
+  // and it costs you points. Then, in a force field, straight through Jupiter
+  // and out the other side, down onto Europa, and into the ocean under its ice.
   const RUN_Y = 0.76; // where you fly on the screen, from the top
   const RUN_NOTES = [
-    [0.26, 'EDGE OF THE BELT', "The outer edge of the main belt. Beyond here, Jupiter's pull has swept most of the asteroids away."],
-    [0.42, 'HILDA ASTEROIDS', "The Hildas go round the Sun three times for every two of Jupiter's orbits, and bunch up in a giant triangle. Here comes a corner of it!"],
-    [0.6, 'COMET PIECES', "A comet torn apart by Jupiter's gravity, like Shoemaker-Levy 9: its pieces smashed into Jupiter in 1994."],
-    [0.72, 'JUPITER', 'Jupiter: so big that all the other planets would fit inside it. Its Great Red Spot is a storm wider than Earth.'],
-    [0.86, 'RADIATION BELTS', "Jupiter's radiation belts are the fiercest of any planet. Europa Clipper keeps its electronics in a thick metal vault. Dodge the sparks!"],
+    [0.26 * RUN_LEN, 'EDGE OF THE BELT', "The outer edge of the main belt. Beyond here, Jupiter's pull has swept most of the asteroids away."],
+    [0.44 * RUN_LEN, 'HILDA ASTEROIDS', "The Hildas go round the Sun three times for every two of Jupiter's orbits, and bunch up in a giant triangle. Here comes a corner of it!"],
+    [0.6 * RUN_LEN, 'COMET PIECES', "A comet torn apart by Jupiter's gravity, like Shoemaker-Levy 9: its pieces smashed into Jupiter in 1994. These bands drift!"],
+    [0.75 * RUN_LEN, 'RADIATION BELTS', "Jupiter's radiation belts are the fiercest of any planet. Europa Clipper keeps its electronics in a thick metal vault."],
+    [0.9 * RUN_LEN, 'JUPITER', "Jupiter: so big that all the other planets would fit inside it. It has no solid surface to hit… so you're going in."],
+    [RUN_LEN + 0.12 * DIVE_LEN, 'LIGHTNING', 'Jupiter has lightning too: the Juno probe has seen flashes deep in its clouds.'],
+    [RUN_LEN + 0.3 * DIVE_LEN, 'LIQUID HYDROGEN', 'Deeper in, the squeeze is so huge that hydrogen turns to liquid. Some scientists think it may even rain diamonds deep inside giant planets.'],
+    [RUN_LEN + 0.48 * DIVE_LEN, 'METALLIC HYDROGEN', "The middle: hydrogen squeezed so hard it carries electricity like a metal, powering Jupiter's huge magnetic field. (Game physics: nothing could really fly through here!)"],
+    [RUN_LEN + 0.88 * DIVE_LEN, 'OUT THE OTHER SIDE', 'Out through the cloud tops on the far side of Jupiter! The force field held.'],
   ];
   const runLane = () => Math.min(W / 2 - 30, 330);
   const runF = () => (fx.run ? clamp(fx.run.d / RUN_LEN, 0, 1) : 0);
+  const diveK = () => (fx.run ? clamp((fx.run.d - RUN_LEN) / DIVE_LEN, 0, 1) : 0);
+  const bandU = (b, o) => o.u + b.off;
   function startRun(p) {
-    fx.run = { d: 0, v: 260, x: 0, vx: 0, t: 0, hitT: 0, phase: 'run', pt: 0, told: 0, closeT: 0, trail: [], from: p };
+    fx.run = { d: 0, v: 300, x: 0, vx: 0, t: 0, hitT: 0, phase: 'run', pt: 0, told: 0, trail: [], from: p, field: 0, od: 0, flashT: 0, bolt: null };
+    document.body.classList.add('run');
     player.onGround = false; player.vr = 0; player.vx = 0; player.spin = 0; player.heat = 0; fx.flames = []; fx.trail = [];
     fx.pops = []; particles = [];
     addScore(1000);
     banner('MASS DRIVER!', 'FLAT OUT FOR JUPITER');
-    toast(touch ? 'A mass driver: miners use these magnet rails to fling ore. It flung you! Steer round the asteroids with ◀ ▶ (or tilt).'
-      : 'A mass driver: miners use these magnet rails to fling ore. It flung you! Steer round the asteroids with ← →.', 5);
+    toast(touch ? 'Flung by a mass driver! Steer with ◀ ▶ (or tilt) through the gap in each band: clean through and your multiplier goes up, clip one and it costs you points.'
+      : 'Flung by a mass driver! Steer with ← → through the gap in each band: clean through and your multiplier goes up, clip one and it costs you points.', 6);
     sfx.whoosh(); sfx.tier(); addShake(10); fx.flash = 0.5; buzz([30, 30, 60]);
+  }
+  function runSteer(dt, lane) {
+    const R = fx.run;
+    const kdir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    const dir = kdir !== 0 ? kdir : tilt.on ? tilt.axis : 0;
+    if (Math.abs(dir) > 0.1) player.facing = Math.sign(dir);
+    R.vx = approach(R.vx, dir * 600, 3200 * dt);
+    R.x += R.vx * dt;
+    if (Math.abs(R.x) > lane) { R.x = Math.sign(R.x) * lane; R.vx = 0; }
   }
   function updateRun(dt) {
     const R = fx.run, lane = runLane();
-    R.pt += dt; R.closeT = Math.max(0, R.closeT - dt);
-    const py = H * RUN_Y, px0 = W / 2 + R.x;
+    R.pt += dt; R.flashT = Math.max(0, R.flashT - dt);
+    const py = H * RUN_Y;
     if (R.phase === 'run') {
-      const f = runF();
-      const want = lerp(340, 880, Math.pow(f, 1.1)) * (R.hitT > 0 ? 0.6 : 1);
-      R.v = approach(R.v, want, (R.v < want ? 240 : 900) * dt);
+      const want = lerp(340, 900, Math.pow(runF(), 1.1)) + (R.d > RUN_LEN ? 80 : 0);
+      R.v = approach(R.v, want, 260 * dt);
       R.d += R.v * dt;
       R.hitT = Math.max(0, R.hitT - dt);
-      const kdir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-      const dir = kdir !== 0 ? kdir : tilt.on ? tilt.axis : 0;
-      if (Math.abs(dir) > 0.1) player.facing = Math.sign(dir);
-      R.vx = approach(R.vx, dir * 560, 3000 * dt);
-      R.x += R.vx * dt;
-      if (Math.abs(R.x) > lane) { R.x = Math.sign(R.x) * lane; R.vx = 0; }
+      runSteer(dt, lane);
       const bx = W / 2 + R.x, by = py - 24;
-      for (const o of world.run) {
-        const y = py - (o.d - R.d);
-        if (y > H + 120 || y < -120) continue;
-        if (o.vu) o.u += o.vu * dt;
-        const ox = W / 2 + runU(o) * lane;
-        if (!o.hit && R.hitT <= 0 && Math.hypot(ox - bx, y - by) < o.r + 14) {
-          o.hit = true; R.hitT = 1.1; R.v *= 0.55; R.vx = Math.sign(bx - ox || 1) * 420;
-          loseMult(); fx.flash = 0.3; addShake(10); sfx.thud(); buzz([40, 30, 60]);
-          pop(o.kind === 'spark' ? 'ZAPPED!' : o.kind === 'frag' ? 'COMET!' : 'BONK!', '#ff5a4a', player.r + 90);
-          for (let i = 0; i < 10; i++) R.trail.push({ x: ox, y, vx: (Math.random() - 0.5) * 300, vy: (Math.random() - 0.5) * 300, t: 0, life: 0.5, c: o.kind === 'spark' ? '#ff6ad5' : '#9a92a2' });
+      for (const b of world.run) {
+        const y = py - (b.d - R.d);
+        if (y > H + 80 || y < -120) continue;
+        if (b.vu) { b.off += b.vu * dt; if (Math.abs(b.off) > 0.5) b.vu = -b.vu; }
+        if (!b.hit && R.hitT <= 0 && Math.abs(y - by) < 40) {
+          for (const o of b.rocks) {
+            const ox = W / 2 + bandU(b, o) * lane + (b.kind === 'spark' ? 6 * Math.sin(clock * 9 + o.ph) : 0);
+            if (Math.hypot(ox - bx, y - by) < o.r + 13) {
+              // Clipped it: points off (the speed doesn't drop)
+              b.hit = true; R.hitT = 0.5; R.vx = Math.sign(bx - ox || 1) * 380;
+              const loss = Math.min(Math.round(score), 200 + Math.round(score * 0.04));
+              score -= loss; updateScoreHud();
+              if (R.d > RUN_LEN) R.field = Math.max(0, R.field - 20);
+              fx.flash = 0.25; addShake(9); sfx.thud(); buzz([40, 30, 60]);
+              pop(`-${fmtScore(loss)}`, '#ff5a4a', player.r + 90);
+              for (let i = 0; i < 10; i++) R.trail.push({ x: ox, y, vx: (Math.random() - 0.5) * 300, vy: (Math.random() - 0.5) * 300, t: 0, life: 0.5, c: b.kind === 'spark' ? '#ff6ad5' : '#9a92a2' });
+              break;
+            }
+          }
         }
-        if (!o.passed && y > by) {
-          o.passed = true;
-          if (!o.hit && Math.abs(ox - bx) < o.r + 44 && R.closeT <= 0) { R.closeT = 0.5; addScore(50); pop('CLOSE!', '#8fd0ff', player.r + 70); }
+        if (!b.passed && y > by + 10) {
+          b.passed = true;
+          if (!b.hit) { addMult(); addScore(50); pop(`x${mult}`, '#6dff7a', player.r + 70); }
         }
       }
       for (const g of world.stars) {
@@ -1890,26 +1909,44 @@
         const y = py - (g.d - R.d);
         if (y > H + 40 || y < -40) continue;
         const gx = W / 2 + g.u * lane;
-        if (Math.hypot(gx - bx, y - by) < 90) g.u += ((bx - W / 2) / lane - g.u) * Math.min(1, dt * 6);
-        if (Math.hypot(gx - bx, y - by) < 30) {
-          g.taken = true; addMult(); addScore(25); sfx.star(mult); updateStarsHud(true);
+        if (Math.hypot(gx - bx, y - by) < 34) {
+          g.taken = true; addScore(100); sfx.star(mult); updateStarsHud(true);
           for (let i = 0; i < 8; i++) R.trail.push({ x: gx, y, vx: (Math.random() - 0.5) * 220, vy: (Math.random() - 0.5) * 220, t: 0, life: 0.45, c: '#6dff7a' });
         }
       }
-      while (R.told < RUN_NOTES.length && f >= RUN_NOTES[R.told][0]) {
+      while (R.told < RUN_NOTES.length && R.d >= RUN_NOTES[R.told][0]) {
         const [, title, text] = RUN_NOTES[R.told++];
-        banner(title, fmtKm(runKm())); toast(text, 6); sfx.tier();
+        banner(title, fmtKm(runKm())); toast(text, 5.5); sfx.tier();
       }
-      // Engine glow trailing behind you, longer the faster you go
+      // Into Jupiter: the force field comes on
+      if (R.d >= RUN_LEN && !R.field && !R.inJ) {
+        R.inJ = true; R.field = 100; fx.flash = 0.9; addShake(14); sfx.whoosh();
+        banner('FORCE FIELD ON!', 'INTO JUPITER');
+        toast('FORCE FIELD ON! Straight into Jupiter. Each storm you clip weakens the field; what\'s left when you come out is bonus points.', 5.5);
+      }
+      if (R.inJ) {
+        R.field = Math.min(100, R.field + 3 * dt);
+        // Lightning: a warning flicker down a column, then a bolt
+        if (!R.bolt && Math.random() < dt * 0.5 && diveK() < 0.8) R.bolt = { u: R.x / lane + (Math.random() - 0.5) * 0.6, t: 0 };
+        if (R.bolt) {
+          R.bolt.t += dt;
+          if (R.bolt.t > 0.9 && !R.bolt.hit) {
+            R.bolt.hit = true; R.flashT = 0.2; sfx.thud();
+            if (Math.abs(W / 2 + R.bolt.u * lane - bx) < 34 && R.hitT <= 0) { R.field = Math.max(0, R.field - 20); R.hitT = 0.5; pop('ZAP!', '#8fd0ff', player.r + 90); addShake(8); }
+          }
+          if (R.bolt.t > 1.2) R.bolt = null;
+        }
+      }
       R.trail.push({ x: bx + (Math.random() - 0.5) * 10, y: py + 4, vx: (Math.random() - 0.5) * 40, vy: 120 + R.v * 0.3, t: 0, life: 0.35, c: Math.random() < 0.5 ? '#ffd23f' : '#ff8a3a' });
-      if (R.d >= RUN_LEN) {
-        R.phase = 'flyby'; R.pt = 0; R.x0 = bx;
-        banner('SLINGSHOT!', 'ROUND THE BACK OF JUPITER');
-        toast('Swinging round behind Jupiter: Voyager, Cassini and New Horizons all used its gravity to fling them onwards.', 5.5);
-        sfx.whoosh(); addScore(2000);
+      if (R.d >= RUN_LEN + DIVE_LEN) {
+        R.phase = 'exit'; R.pt = 0; R.x0 = bx;
+        const bonus = Math.round(R.field) * 30;
+        addScore(bonus); pop(`FIELD BONUS ${fmtScore(bonus)}`, '#8fd0ff', player.r + 100);
+        sfx.perfect();
       }
-    } else if (R.phase === 'flyby') {
-      if (R.pt > 4.6) {
+    } else if (R.phase === 'exit') {
+      runSteer(dt, lane);
+      if (R.pt > 2.4) {
         R.phase = 'europa'; R.pt = 0;
         banner('EUROPA', 'AN OCEAN UNDER THE ICE');
         toast("Europa: a moon of ice, a bit smaller than ours. Under the ice is a salty ocean that may hold twice as much water as all of Earth's oceans.", 6);
@@ -1917,21 +1954,40 @@
       }
     } else if (R.phase === 'europa') {
       if (R.pt > 3.5 && !R.landed) {
-        R.landed = true;
-        addShake(6); sfx.thud();
-        for (let i = 0; i < 16; i++) R.trail.push({ x: W / 2, y: H * 0.7, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 120, t: 0, life: 0.9, c: '#eef4ff' });
-        lastTier = TOP; bestTier = TOP;
-        win();
+        R.landed = true; addShake(6); sfx.thud();
+        for (let i = 0; i < 16; i++) R.trail.push({ x: W / 2, y: H * 0.72, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 120, t: 0, life: 0.9, c: '#eef4ff' });
       }
+      if (R.pt > 5) {
+        // Down a crack in the ice, into the ocean
+        R.phase = 'ocean'; R.pt = 0; R.od = 0; R.x = 0; R.vx = 0;
+        banner('INTO THE OCEAN', 'UNDER THE ICE');
+        toast("Down a crack and through Europa's ice shell, probably 15 to 25 km thick. Steer for the glowing geoms on the way down.", 6);
+        sfx.whoosh();
+      }
+    } else if (R.phase === 'ocean') {
+      runSteer(dt, lane);
+      R.od += 330 * dt;
+      const by = H * 0.4 + 24;
+      for (const g of world.stars) {
+        if (!g.ocean || g.taken) continue;
+        const y = H * 0.4 + (g.d - R.od), gx = W / 2 + g.u * lane;
+        if (Math.hypot(gx - (W / 2 + R.x), y - by) < 34) {
+          g.taken = true; addMult(); addScore(50); sfx.star(mult); updateStarsHud(true);
+          for (let i = 0; i < 8; i++) R.trail.push({ x: gx, y, vx: (Math.random() - 0.5) * 220, vy: (Math.random() - 0.5) * 220, t: 0, life: 0.45, c: '#8fffe0' });
+        }
+      }
+      if (R.od > 1400 && !R.toldSea) { R.toldSea = true; toast("Europa's ocean may be 60 to 150 km deep: far deeper than any ocean on Earth.", 5); }
+      if (R.od > OCEAN_LEN - 700 && !R.toldVents) { R.toldVents = true; toast('The seafloor. If anything lives on Europa, it might be round hot vents like these, as creatures do round deep-sea vents on Earth. Nobody knows yet: Europa Clipper is on its way.', 7); }
+      if (R.od >= OCEAN_LEN && state === 'play') { R.od = OCEAN_LEN; lastTier = TOP; bestTier = TOP; win(); }
     }
     for (const q of R.trail) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; }
     R.trail = R.trail.filter((q) => q.t < q.life);
   }
-  const runU = (o) => o.u + (o.kind === 'spark' ? 0.22 * Math.sin(clock * 2.2 + o.ph) : 0);
   const runKm = () => {
     const R = fx.run;
     if (!R) return 0;
-    return R.phase === 'run' ? lerp(TIERS[TOP].km, JUPITER_KM, runF()) : JUPITER_KM + (R.phase === 'europa' ? EUROPA_KM * clamp(R.pt / 3.5, 0, 1) : 0);
+    if (R.phase === 'run') return R.d < RUN_LEN ? lerp(TIERS[TOP].km, JUPITER_KM, runF()) : JUPITER_KM;
+    return JUPITER_KM + EUROPA_KM;
   };
   // The parts of the frame update that still matter during the run
   function updateRunFrame(dt) {
@@ -1948,7 +2004,8 @@
       if (toastTimer <= 0.4) hud.toast.style.opacity = '0';
       if (toastTimer <= 0) hud.toast.hidden = true;
     }
-    hud.alt.textContent = fmtKm(runKm());
+    const R = fx.run;
+    hud.alt.textContent = R.phase === 'ocean' ? `${fmtKm((R.od / OCEAN_LEN) * 100)} down` : fmtKm(runKm());
     hud.layer.textContent = layerName();
   }
   // ---- Secret: conspiracy mode ---------------------------------------------------
@@ -3328,6 +3385,17 @@
   function drawBanner() {
     const b = fx.banner;
     if (!b) return;
+    if (fx.run) {
+      // During the run: just the words, small and see-through, so nothing
+      // coming at you is hidden
+      const a = clamp(Math.min(b.t / 0.3, (2.6 - b.t) / 0.5), 0, 1) * 0.7;
+      ctx.globalAlpha = a; ctx.textAlign = 'center';
+      ctx.font = '12px "Press Start 2P", monospace';
+      ctx.fillStyle = '#1b1530'; ctx.fillText(b.text, W / 2 + 2, 112);
+      ctx.fillStyle = '#ffd23f'; ctx.fillText(b.text, W / 2, 110);
+      ctx.textAlign = 'start'; ctx.globalAlpha = 1;
+      return;
+    }
     const inT = clamp(b.t / 0.35, 0, 1), outT = clamp((b.t - 2.1) / 0.5, 0, 1);
     const ease = 1 - Math.pow(1 - inT, 3);
     const x = W / 2 + (1 - ease) * -W + outT * W * 0.6, y = H * 0.27;
@@ -5275,7 +5343,7 @@
       drawJupiter(x, top - 12, 8);
       const yD = bottom - (bottom - top) / 3;
       px(x - 8, yD, 16, 2, '#6dd3ff');
-      const f = fx.run ? (fx.run.phase === 'run' ? 1 / 3 + (2 / 3) * runF() : 1) : (tierFloat(player.r) / TOP) / 3;
+      const f = fx.run ? (fx.run.phase === 'run' ? 1 / 3 + (2 / 3) * Math.min(1, fx.run.d / (RUN_LEN + DIVE_LEN)) : 1) : (tierFloat(player.r) / TOP) / 3;
       const yy = bottom - f * (bottom - top);
       px(x - 5, yy - 5, 10, 10, '#1b1530'); px(x - 4, yy - 4, 8, 8, '#e0433b');
       return;
@@ -5468,81 +5536,6 @@
       }, 200);
     }
   }
-  // The run, drawn straight onto the screen: stars streaming past, the Sun
-  // falling behind, the belt thinning out, and Jupiter growing ahead
-  function drawRun() {
-    const R = fx.run, f = runF(), lane = runLane();
-    const py = H * RUN_Y;
-    ctx.fillStyle = '#04050b'; ctx.fillRect(0, 0, W, H);
-    ctx.save();
-    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
-    if (R.phase === 'europa' && R.pt > 1.6) { drawEuropaLanding(R); ctx.restore(); return; }
-    const sp = R.phase === 'run' ? R.v : 300;
-    const scroll = R.phase === 'run' ? R.d : RUN_LEN + R.pt * 300;
-    for (const st of world.sky) {
-      const y = (st.y * H + scroll * 0.05 * st.s) % H;
-      const len = st.s * (1 + sp / 300);
-      px(st.x * W, y, st.s, len, st.s > 1 ? '#fff3c4' : '#c9d7f0');
-    }
-    // The Sun, behind you and shrinking away
-    const sg = ctx.createRadialGradient(W / 2, H * 1.15, 4, W / 2, H * 1.15, H * 0.5);
-    sg.addColorStop(0, `rgba(255,236,190,${0.35 * (1 - f)})`); sg.addColorStop(1, 'rgba(255,236,190,0)');
-    ctx.fillStyle = sg; ctx.fillRect(0, H * 0.6, W, H * 0.4);
-    drawFarRocks(0, scroll * 0.4, clamp(1 - (f - 0.25) * 3, 0, 1));
-    if (R.phase === 'run') {
-      const jr = lerp(10, Math.min(W, H) * 0.36, Math.pow(f, 2.2)), jy = lerp(H * 0.12, H * 0.2, f);
-      drawJupiter(W / 2, jy, jr);
-      drawGalileans(W / 2, jy, jr, clamp((f - 0.6) * 4, 0, 1));
-      // Speed lines down the sides
-      ctx.fillStyle = `rgba(220,235,255,${0.12 + f * 0.25})`;
-      for (let i = 0; i < 14; i++) {
-        const x = ((i * 97.3) % 1) * 0 + (i / 14) * W, y = (i * 211 + scroll * 1.6) % (H + 200) - 100;
-        if (Math.abs(x - W / 2) < lane * 0.6) continue;
-        ctx.fillRect(x, y, 2, 40 + sp * 0.12);
-      }
-      for (const o of world.run) {
-        const y = py - (o.d - R.d);
-        if (y > H + 60 || y < -60) continue;
-        const x = W / 2 + runU(o) * lane;
-        drawRunThing(o, x, y);
-      }
-      for (const g of world.stars) {
-        if (!g.run || g.taken) continue;
-        const y = py - (g.d - R.d);
-        if (y > H + 30 || y < -30) continue;
-        drawGeomAt(W / 2 + g.u * lane, y);
-      }
-      // The edges of the way, faintly
-      ctx.fillStyle = 'rgba(109,211,255,0.12)';
-      ctx.fillRect(W / 2 - lane - 22, 0, 2, H); ctx.fillRect(W / 2 + lane + 20, 0, 2, H);
-      for (const q of R.trail) { ctx.globalAlpha = 1 - q.t / q.life; px(q.x - 2, q.y - 2, 4, 4, q.c); }
-      ctx.globalAlpha = 1;
-      const bx = W / 2 + R.x;
-      if (R.hitT <= 0 || Math.sin(clock * 30) > 0) drawSprite('jump', bx, py, player.facing < 0, 1, 1, 1, SUIT, clamp(R.vx / 2000, -0.3, 0.3));
-      if (conspiracy) drawFoilHat(bx, py, clamp(R.vx / 2000, -0.3, 0.3));
-    } else if (R.phase === 'flyby') drawFlyby(R);
-    else {
-      // Straight at Europa, growing until it fills the view
-      const k = clamp(R.pt / 1.6, 0, 1), er = lerp(14, Math.max(W, H) * 1.2, Math.pow(k, 3)), ey = lerp(H * 0.12, H * 0.45, k);
-      ctx.fillStyle = '#eee6d6'; ctx.beginPath(); ctx.arc(W / 2, ey, er, 0, TAU); ctx.fill();
-      ctx.save(); ctx.beginPath(); ctx.arc(W / 2, ey, er, 0, TAU); ctx.clip();
-      ctx.strokeStyle = 'rgba(160,88,52,0.6)'; ctx.lineWidth = Math.max(1, er * 0.02);
-      for (let i = 0; i < 7; i++) { ctx.beginPath(); ctx.arc(W / 2 + (i - 3) * er * 0.3, ey + er * 0.9, er * (0.9 + i * 0.07), Math.PI * 1.2, Math.PI * 1.8); ctx.stroke(); }
-      ctx.restore();
-      drawSprite('jump', W / 2, H * 0.62, false, 1, 1, 1, SUIT, 0);
-      if (conspiracy) drawFoilHat(W / 2, H * 0.62, 0);
-    }
-    // Floating words, rising from you
-    ctx.font = '10px "Press Start 2P", monospace'; ctx.textAlign = 'center';
-    for (const q of fx.pops) {
-      const k = q.t / 1.1, y = py - 40 - (q.R - player.r) * 0.5 - k * 40;
-      ctx.globalAlpha = 1 - k;
-      ctx.fillStyle = '#1b1530'; ctx.fillText(q.text, W / 2 + R.x + 1, y + 1);
-      ctx.fillStyle = q.color; ctx.fillText(q.text, W / 2 + R.x, y);
-    }
-    ctx.globalAlpha = 1; ctx.textAlign = 'start';
-    ctx.restore();
-  }
   function drawGeomAt(x, y) {
     const g = ctx.createRadialGradient(x, y, 2, x, y, 16);
     g.addColorStop(0, 'rgba(109,255,122,0.5)'); g.addColorStop(1, 'rgba(109,255,122,0)');
@@ -5552,108 +5545,295 @@
     ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(7, 0); ctx.lineTo(0, 9); ctx.lineTo(-7, 0); ctx.closePath(); ctx.stroke();
     ctx.restore();
   }
-  function drawRunThing(o, x, y) {
+  // The run, drawn straight onto the screen: stars streaming past, the Sun
+  // falling behind, the bands coming at you, and Jupiter growing ahead
+  function drawRun() {
+    const R = fx.run, f = runF(), lane = runLane();
+    const py = H * RUN_Y;
+    ctx.fillStyle = '#04050b'; ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    if (R.phase === 'ocean') { drawOcean(R); ctx.restore(); return; }
+    if (R.phase === 'europa' && R.pt > 1.6) { drawEuropaLanding(R); ctx.restore(); return; }
+    const inJ = R.phase === 'run' && R.d >= RUN_LEN;
+    const sp = R.phase === 'run' ? R.v : 400;
+    const scroll = R.phase === 'run' ? R.d : RUN_LEN + DIVE_LEN + R.pt * 400;
+    if (inJ) drawJupiterInside(R);
+    else {
+      for (const st of world.sky) {
+        const y = (st.y * H + scroll * 0.05 * st.s) % H;
+        px(st.x * W, y, st.s, st.s * (1 + sp / 300), st.s > 1 ? '#fff3c4' : '#c9d7f0');
+      }
+      if (R.phase === 'run') {
+        const sg = ctx.createRadialGradient(W / 2, H * 1.15, 4, W / 2, H * 1.15, H * 0.5);
+        sg.addColorStop(0, `rgba(255,236,190,${0.35 * (1 - f)})`); sg.addColorStop(1, 'rgba(255,236,190,0)');
+        ctx.fillStyle = sg; ctx.fillRect(0, H * 0.6, W, H * 0.4);
+        drawFarRocks(0, scroll * 0.4, clamp(1 - (f - 0.25) * 3, 0, 1));
+        // Jupiter grows the whole way; at the end it fills everything as you hit it
+        const m = Math.min(W, H);
+        const jr = f < 0.92 ? lerp(10, 0.36 * m, Math.pow(f / 0.92, 2.2)) : 0.36 * m * Math.exp((f - 0.92) * 40);
+        drawJupiter(W / 2, H * 0.2, jr);
+        if (f < 0.95) drawGalileans(W / 2, H * 0.2, jr, clamp((f - 0.6) * 4, 0, 1));
+      } else {
+        // Out the far side: Jupiter dropping away behind you, Europa ahead
+        const k = clamp(R.pt / 2.4, 0, 1);
+        drawJupiter(W / 2, H + Math.min(W, H) * lerp(0.2, 1.1, k), Math.min(W, H) * lerp(1.6, 0.9, k), 0.6);
+        if (R.pt < 0.5) { ctx.fillStyle = `rgba(233,216,180,${1 - R.pt / 0.5})`; ctx.fillRect(0, 0, W, H); }
+        if (R.phase === 'europa') drawEuropaApproach(R);
+        else {
+          const er = lerp(3, 14, k);
+          ctx.fillStyle = '#eee6d6'; ctx.beginPath(); ctx.arc(W / 2, H * 0.14, er, 0, TAU); ctx.fill();
+          ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#eef1ff'; ctx.fillText('EUROPA', W / 2, H * 0.14 - er - 6); ctx.textAlign = 'start';
+        }
+      }
+    }
+    if (R.phase === 'run') {
+      // Speed lines down the sides
+      ctx.fillStyle = inJ ? 'rgba(255,240,210,0.3)' : `rgba(220,235,255,${0.12 + f * 0.25})`;
+      for (let i = 0; i < 14; i++) {
+        const x = (i / 14) * W, y = (i * 211 + scroll * 1.6) % (H + 200) - 100;
+        if (Math.abs(x - W / 2) < lane * 0.6) continue;
+        ctx.fillRect(x, y, 2, 40 + sp * 0.12);
+      }
+      for (const b of world.run) {
+        const y = py - (b.d - R.d);
+        if (y > H + 60 || y < -60) continue;
+        // A faint line marks the band, green once you're through it
+        ctx.fillStyle = b.passed ? (b.hit ? 'rgba(255,90,74,0.25)' : 'rgba(109,255,122,0.3)') : 'rgba(238,241,255,0.08)';
+        ctx.fillRect(W / 2 - lane - 30, y, lane * 2 + 60, 2);
+        for (const o of b.rocks) drawRunThing(b.kind, o, W / 2 + bandU(b, o) * lane, y);
+      }
+      for (const g of world.stars) {
+        if (!g.run || g.taken) continue;
+        const y = py - (g.d - R.d);
+        if (y > H + 30 || y < -30) continue;
+        drawGeomAt(W / 2 + g.u * lane, y);
+      }
+      if (R.bolt) {
+        const x = W / 2 + R.bolt.u * lane;
+        if (R.bolt.t < 0.9) { if (Math.sin(clock * 40) > 0) for (let y = 0; y < H; y += 24) px(x - 1, y, 3, 12, 'rgba(180,220,255,0.7)'); }
+        else {
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x, 0);
+          for (let y = 30; y < H; y += 30) ctx.lineTo(x + (Math.random() - 0.5) * 30, y);
+          ctx.stroke();
+        }
+      }
+      ctx.fillStyle = 'rgba(109,211,255,0.12)';
+      ctx.fillRect(W / 2 - lane - 22, 0, 2, H); ctx.fillRect(W / 2 + lane + 20, 0, 2, H);
+    }
+    for (const q of R.trail) { ctx.globalAlpha = 1 - q.t / q.life; px(q.x - 2, q.y - 2, 4, 4, q.c); }
+    ctx.globalAlpha = 1;
+    if (R.phase === 'run' || R.phase === 'exit') {
+      const bx = W / 2 + R.x, tilt0 = clamp(R.vx / 2000, -0.3, 0.3);
+      if (R.hitT <= 0 || Math.sin(clock * 30) > 0) drawSprite('jump', bx, py, player.facing < 0, 1, 1, 1, SUIT, tilt0);
+      if (conspiracy) drawFoilHat(bx, py, tilt0);
+      if (R.inJ && R.phase === 'run') drawForceField(bx, py - 24, R.field);
+    }
+    if (R.flashT > 0) { ctx.fillStyle = `rgba(220,235,255,${R.flashT * 3})`; ctx.fillRect(0, 0, W, H); }
+    drawRunPops(W / 2 + R.x, py);
+    ctx.restore();
+  }
+  function drawRunPops(x, y) {
+    ctx.font = '10px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+    for (const q of fx.pops) {
+      const k = q.t / 1.1, yy = y - 60 - (q.R - player.r) * 0.4 - k * 40;
+      ctx.globalAlpha = 1 - k;
+      ctx.fillStyle = '#1b1530'; ctx.fillText(q.text, x + 1, yy + 1);
+      ctx.fillStyle = q.color; ctx.fillText(q.text, x, yy);
+    }
+    ctx.globalAlpha = 1; ctx.textAlign = 'start';
+  }
+  function drawForceField(x, y, field) {
+    const a = 0.25 + (field / 100) * 0.5, r = 42 + Math.sin(clock * 8) * 2;
+    ctx.fillStyle = `rgba(143,208,255,${a * 0.3})`; ctx.strokeStyle = `rgba(190,230,255,${a + 0.2})`; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke();
+    for (let i = 0; i < 6; i++) { const ang = clock * 3 + i; px(x + Math.cos(ang) * r - 2, y + Math.sin(ang) * r - 2, 4, 4, '#ffffff'); }
+    // The field's strength, as a little bar under you
+    px(x - 30, y + 54, 60, 6, 'rgba(11,15,38,0.7)'); px(x - 29, y + 55, Math.round(58 * field / 100), 4, field > 40 ? '#8fd0ff' : '#ff8a3a');
+  }
+  // Inside Jupiter: cloud layers rushing past, then deep orange, then the dark,
+  // electric metallic hydrogen at the middle, and back out the far side
+  function drawJupiterInside(R) {
+    const k = diveK(), depth = 1 - Math.abs(k - 0.5) * 2; // 0 at the cloud tops, 1 in the middle
+    const top = depth < 0.35 ? mix('#e9d8b4', '#b5794a', depth / 0.35) : depth < 0.75 ? mix('#b5794a', '#5a1a10', (depth - 0.35) / 0.4) : mix('#5a1a10', '#0a0c24', (depth - 0.75) / 0.25);
+    const bot = depth < 0.35 ? mix('#f2e6cf', '#c9a37a', depth / 0.35) : depth < 0.75 ? mix('#c9a37a', '#7a2a14', (depth - 0.35) / 0.4) : mix('#7a2a14', '#141a3a', (depth - 0.75) / 0.25);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, top); g.addColorStop(1, bot);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // Cloud bands streaming past, thinning out the deeper you go
+    const scroll = R.d * 0.9;
+    for (let i = 0; i < 9; i++) {
+      const y = ((i * 97 + scroll) % (H + 120)) - 60, h = 18 + (i % 4) * 10;
+      ctx.fillStyle = `rgba(255,248,230,${0.35 * (1 - depth)})`;
+      ctx.fillRect(0, y, W, h);
+      ctx.fillStyle = `rgba(150,90,50,${0.25 * (1 - depth)})`;
+      ctx.fillRect(0, y + h, W, 6);
+    }
+    // Deep down: glowing, and sparkles of (maybe) diamond rain
+    if (depth > 0.4) for (let i = 0; i < 30; i++) {
+      const x = (i * 131) % W, y = (i * 71 + R.d * (0.3 + (i % 3) * 0.2)) % H;
+      px(x, y, 2, 4, `rgba(220,240,255,${(depth - 0.4) * 1.2})`);
+    }
+    // The middle: blue electric shimmer
+    if (depth > 0.75) {
+      ctx.strokeStyle = `rgba(120,170,255,${(depth - 0.75) * 2})`; ctx.lineWidth = 2;
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath(); let x = (i * 223 + clock * 60) % W; ctx.moveTo(x, 0);
+        for (let y = 0; y < H; y += 40) { x += Math.sin(clock * 7 + i + y) * 18; ctx.lineTo(x, y); }
+        ctx.stroke();
+      }
+    }
+  }
+  function drawRunThing(kind, o, x, y) {
     ctx.save(); ctx.translate(x, y);
-    if (o.kind === 'spark') {
-      // A knot of radiation: crackling pink and white
-      const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 26);
+    if (kind === 'spark') {
+      ctx.translate(6 * Math.sin(clock * 9 + o.ph), 0);
+      const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 22);
       g.addColorStop(0, 'rgba(255,200,240,0.9)'); g.addColorStop(1, 'rgba(255,106,213,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 26, 0, TAU); ctx.fill();
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 22, 0, TAU); ctx.fill();
       ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
-      for (let i = 0; i < 4; i++) { const a = clock * 9 + i * 1.6; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * 12, Math.sin(a) * 12); ctx.lineTo(Math.cos(a + 0.5) * 18, Math.sin(a + 0.5) * 18); ctx.stroke(); }
-    } else if (o.kind === 'frag') {
-      // A piece of comet: icy, glowing, trailing its own little tail
+      for (let i = 0; i < 3; i++) { const a = clock * 9 + i * 2.1 + o.ph; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * 10, Math.sin(a) * 10); ctx.lineTo(Math.cos(a + 0.5) * 15, Math.sin(a + 0.5) * 15); ctx.stroke(); }
+    } else if (kind === 'frag') {
       ctx.fillStyle = 'rgba(170,225,255,0.25)';
-      ctx.beginPath(); ctx.moveTo(-o.r, 0); ctx.lineTo(-Math.sign(o.vu || 1) * 50, -36); ctx.lineTo(o.r, 0); ctx.fill();
-      const g = ctx.createRadialGradient(0, 0, 1, 0, 0, o.r * 2.2);
+      ctx.beginPath(); ctx.moveTo(-o.r, 0); ctx.lineTo(-10, -40); ctx.lineTo(o.r, 0); ctx.fill();
+      const g = ctx.createRadialGradient(0, 0, 1, 0, 0, o.r * 2);
       g.addColorStop(0, 'rgba(230,248,255,0.9)'); g.addColorStop(1, 'rgba(120,190,255,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.r * 2.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.r * 2, 0, TAU); ctx.fill();
       ctx.fillStyle = '#dff2ff'; ctx.beginPath(); ctx.arc(0, 0, o.r * 0.7, 0, TAU); ctx.fill();
+    } else if (kind === 'storm') {
+      // A knot of storm cloud, swirling, lit from inside now and then
+      ctx.rotate(clock * 2 + o.ph);
+      ctx.fillStyle = 'rgba(60,30,20,0.85)'; ctx.beginPath(); ctx.arc(0, 0, o.r + 4, 0, TAU); ctx.fill();
+      ctx.strokeStyle = Math.sin(clock * 6 + o.ph * 3) > 0.9 ? '#eef4ff' : 'rgba(200,140,90,0.8)'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, 0, o.r * 0.6, 0, 4.5); ctx.stroke();
     } else {
       ctx.rotate(o.spin + clock * o.turn);
-      ctx.fillStyle = o.hilda ? '#7a5a48' : o.dark ? '#3e3a42' : '#6f6670';
+      ctx.fillStyle = kind === 'hilda' ? '#7a5a48' : '#4e4954';
       ctx.beginPath(); o.shape.forEach((k, j) => { const ang = (j * TAU) / 9; j ? ctx.lineTo(Math.cos(ang) * o.r * k, Math.sin(ang) * o.r * k) : ctx.moveTo(o.r * k, 0); }); ctx.closePath(); ctx.fill();
       ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.arc(-o.r * 0.3, -o.r * 0.2, o.r * 0.25, 0, TAU); ctx.fill();
       ctx.rotate(-(o.spin + clock * o.turn));
-      ctx.strokeStyle = 'rgba(255,240,210,0.3)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, o.r * 0.85, 0.4, Math.PI - 0.4); ctx.stroke(); // lit from the Sun behind you
+      ctx.strokeStyle = 'rgba(255,240,210,0.3)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, o.r * 0.85, 0.4, Math.PI - 0.4); ctx.stroke();
     }
     ctx.restore();
   }
-  // Round the back of Jupiter: you swing out round its right-hand side and
-  // behind it, then the view climbs past it and you come out over the top
-  function drawFlyby(R) {
-    const t = R.pt, py = H * RUN_Y;
-    const ease = (k) => k * k * (3 - 2 * k);
-    const r0 = Math.min(W, H) * 0.36, r1 = Math.min(W, H) * 0.42;
-    const k0 = ease(clamp(t / 1, 0, 1));
-    const jr = lerp(r0, r1, k0);
-    const pan = ease(clamp((t - 2.6) / 1.8, 0, 1));
-    const jx = W / 2, jy = lerp(H * 0.2, H * 0.42, k0) + pan * H * 1.3;
-    // Your path: an orbit seen at a slant; the far half passes behind Jupiter
-    const A = jr * 1.3, B = jr * 0.5;
-    const phi = Math.PI / 2 - Math.PI * ease(clamp(t / 2.6, 0, 1));
-    let x = jx + Math.cos(phi) * A, y = jy + Math.sin(phi) * B, sc = 0.775 + 0.225 * Math.sin(phi);
-    const lead = clamp(t / 0.7, 0, 1);
-    x = lerp(R.x0, x, ease(lead)); y = lerp(py, y, ease(lead));
-    let behind = Math.sin(phi) < 0;
-    if (t > 2.6) {
-      // Out the other side: up from behind the planet as it drops away
-      const k = ease(clamp((t - 2.6) / 1.8, 0, 1));
-      x = jx; y = lerp(jy - B, H * 0.42, k); sc = lerp(0.55, 1, k); behind = y > jy - jr;
+  // Europa, as seen from space: pale ice criss-crossed with reddish-brown
+  // cracks (lineae), and patches of jumbled "chaos" terrain
+  function drawEuropaGlobe(x, y, r) {
+    ctx.save();
+    const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+    g.addColorStop(0, '#fbf8f0'); g.addColorStop(0.7, '#e6dccb'); g.addColorStop(1, '#b9ad98');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip();
+    ctx.strokeStyle = 'rgba(150,80,50,0.7)'; ctx.lineWidth = Math.max(1, r * 0.018);
+    for (let i = 0; i < 12; i++) {
+      const a = i * 0.9, ox = Math.cos(a) * r * 0.4, oy = Math.sin(a * 1.3) * r * 0.4;
+      ctx.beginPath(); ctx.arc(x + ox + r, y + oy - r * 0.5, r * (1 + (i % 3) * 0.3), Math.PI * 0.8, Math.PI * 1.25); ctx.stroke();
     }
-    const prev = R.prevPos || { x, y };
-    const rot = Math.atan2(x - prev.x, -(y - prev.y)) || 0;
-    R.prevPos = { x, y };
-    const tramp = () => {
-      ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
-      drawSprite('jump', 0, 24, false, 1, 1, 1, SUIT, rot);
-      if (conspiracy) drawFoilHat(0, 24, rot);
-      ctx.restore();
-    };
-    if (behind) tramp();
-    drawJupiter(jx, jy, jr, clamp((t - 2.2) / 2, 0, 0.75));
-    drawGalileans(jx, jy, jr, 1 - pan);
-    if (!behind) tramp();
-    // Europa, ahead, as you come out the other side
-    const ek = clamp((t - 3.4) / 1.2, 0, 1);
-    if (ek > 0) {
-      const er = lerp(3, 14, ek);
-      ctx.globalAlpha = ek;
-      ctx.fillStyle = '#eee6d6'; ctx.beginPath(); ctx.arc(W / 2, H * 0.12, er, 0, TAU); ctx.fill();
-      ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#eef1ff'; ctx.fillText('EUROPA', W / 2, H * 0.12 - er - 6); ctx.textAlign = 'start';
-      ctx.globalAlpha = 1;
-    }
+    ctx.fillStyle = 'rgba(160,100,70,0.35)';
+    for (const [cxo, cyo, cr] of [[-0.3, 0.2, 0.18], [0.35, -0.25, 0.12], [0.1, 0.5, 0.1]]) { ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'rgba(10,10,30,0.35)'; ctx.beginPath(); ctx.arc(x + r * 0.45, y + r * 0.4, r * 1.05, 0, TAU); ctx.arc(x - r * 0.15, y - r * 0.15, r * 1.05, 0, TAU, true); ctx.fill('evenodd');
+    ctx.restore();
   }
-  // Europa: you fly at it, it fills the view, then you drift down onto its
-  // cracked ice in its weak gravity, with Jupiter a dark crescent in the sky
+  function drawEuropaApproach(R) {
+    const k = clamp(R.pt / 1.6, 0, 1), er = lerp(14, Math.max(W, H) * 1.2, Math.pow(k, 3)), ey = lerp(H * 0.14, H * 0.45, k);
+    drawEuropaGlobe(W / 2, ey, er);
+    drawSprite('jump', W / 2, H * 0.66, false, 1, 1, 1, SUIT, 0);
+    if (conspiracy) drawFoilHat(W / 2, H * 0.66, 0);
+  }
+  // On Europa: down you come onto its cracked, ridged ice, with Jupiter huge
+  // in the sky, Io beside it, and a plume of water vapour on the horizon
   function drawEuropaLanding(R) {
     const t = R.pt - 1.6;
     for (const st of world.sky) px(st.x * W, st.y * H * 0.7, st.s, st.s, '#c9d7f0');
-    drawJupiter(W * 0.7, H * 0.26, Math.min(W, H) * 0.3, 0.85);
+    drawJupiter(W * 0.68, H * 0.26, Math.min(W, H) * 0.32, 0.7);
+    ctx.fillStyle = '#e8d27a'; ctx.beginPath(); ctx.arc(W * 0.22, H * 0.18, 5, 0, TAU); ctx.fill();
+    ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(238,241,255,0.7)'; ctx.fillText('IO', W * 0.22, H * 0.18 - 10); ctx.textAlign = 'start';
     const ER = Math.max(W, H) * 1.4, ecx = W / 2, ecy = H * 0.72 + ER;
-    ctx.fillStyle = '#e9e2d4'; ctx.beginPath(); ctx.arc(ecx, ecy, ER, 0, TAU); ctx.fill();
-    ctx.save(); ctx.beginPath(); ctx.arc(ecx, ecy, ER, 0, TAU); ctx.clip();
-    // Its famous cracks: long reddish-brown ridges, coloured by salts
-    ctx.strokeStyle = 'rgba(160,88,52,0.7)'; ctx.lineWidth = 3;
-    for (let i = 0; i < 9; i++) {
-      ctx.beginPath();
-      const x0 = ((i * 137) % W) - 80, y0 = H * 0.72 + (i % 3) * 18;
-      ctx.moveTo(x0, y0); ctx.bezierCurveTo(x0 + 120, y0 + 30, x0 + 240, y0 - 10, x0 + 380, y0 + 60); ctx.stroke();
+    // A plume, maybe: Hubble may have spotted water vapour spraying out
+    const px0 = W * 0.84, py0 = H * 0.72 - 8;
+    for (let i = 0; i < 26; i++) {
+      const k = ((clock * 0.6 + i / 26) % 1), sx = px0 + Math.sin(i * 2.3) * 30 * k, sy = py0 - k * H * 0.4;
+      ctx.fillStyle = `rgba(230,240,255,${0.35 * (1 - k)})`; ctx.beginPath(); ctx.arc(sx, sy, 4 + k * 14, 0, TAU); ctx.fill();
     }
+    const ice = ctx.createLinearGradient(0, H * 0.7, 0, H);
+    ice.addColorStop(0, '#f4f1ea'); ice.addColorStop(0.4, '#ddd3c0'); ice.addColorStop(1, '#a9b8c8');
+    ctx.fillStyle = ice; ctx.beginPath(); ctx.arc(ecx, ecy, ER, 0, TAU); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(ecx, ecy, ER, 0, TAU); ctx.clip();
+    // Double ridges: pairs of raised lines with a groove down the middle
+    for (let i = 0; i < 6; i++) {
+      const x0 = ((i * 173) % (W + 200)) - 100, y0 = H * 0.74 + (i % 3) * 22;
+      for (const [dy, col, lw] of [[0, 'rgba(120,70,45,0.75)', 5], [-4, 'rgba(255,255,255,0.7)', 2], [4, 'rgba(255,255,255,0.5)', 2]]) {
+        ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(x0, y0 + dy); ctx.bezierCurveTo(x0 + 130, y0 + 30 + dy, x0 + 260, y0 - 10 + dy, x0 + 420, y0 + 70 + dy); ctx.stroke();
+      }
+    }
+    // Chaos terrain: broken blocks of ice that refroze
+    for (let i = 0; i < 9; i++) { const x = W * 0.08 + i * 26, y = H * 0.8 + (i % 3) * 14; px(x, y, 20, 12, i % 2 ? '#cfd8e2' : '#e9e2d4'); px(x, y, 20, 2, '#ffffff'); }
     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(0, H * 0.72, W, 3);
+    // The crack you'll go down
+    if (R.landed) { ctx.fillStyle = '#1a3a5a'; ctx.beginPath(); ctx.moveTo(W / 2 - 40, H * 0.73); ctx.lineTo(W / 2 + 40, H * 0.73); ctx.lineTo(W / 2 + 6, H); ctx.lineTo(W / 2 - 6, H); ctx.fill(); }
     ctx.restore();
     if (conspiracy) drawMonolith(W * 0.24, H * 0.72);
-    // Down you come, feet first, slowly
     const k = clamp(t / 1.9, 0, 1), e = 1 - Math.pow(1 - k, 2);
-    const y = lerp(H * 0.05, H * 0.72, e);
+    let y = lerp(H * 0.05, H * 0.72, e);
+    if (R.landed && R.pt > 4.2) y += (R.pt - 4.2) * 500; // and down the crack you go
     const squash = R.landed ? Math.max(0, 1 - (R.pt - 3.5) * 4) : 0;
-    drawSprite(R.landed ? 'stand' : 'jump', W / 2, y, false, 1 - squash * 0.2, 1 + squash * 0.15, 1, SUIT);
+    drawSprite(R.landed && R.pt < 4.2 ? 'stand' : 'jump', W / 2, y, false, 1 - squash * 0.2, 1 + squash * 0.15, 1, SUIT);
     if (conspiracy) drawFoilHat(W / 2, y, 0);
-    if (R.landed) { px(W / 2 + 30, H * 0.72 - 40, 3, 40, '#e8e8f0'); px(W / 2 + 33, H * 0.72 - 40, 22, 14, '#e0433b'); px(W / 2 + 36, H * 0.72 - 36, 6, 6, '#ffd23f'); }
     for (const q of R.trail) { ctx.globalAlpha = 1 - q.t / q.life; px(q.x - 3, q.y - 3, 6, 6, q.c); }
     ctx.globalAlpha = 1;
-    // Fly into it: a white flash as you hit the view change
     if (t < 0.4) { ctx.fillStyle = `rgba(255,255,255,${1 - t / 0.4})`; ctx.fillRect(0, 0, W, H); }
+  }
+  // Under Europa's ice: through the ice shell, down through the dark ocean,
+  // to the seafloor and its hot vents
+  function drawOcean(R) {
+    const lane = runLane(), py = H * 0.4, k = R.od / OCEAN_LEN;
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, mix('#2a6a9a', '#020814', clamp(k * 1.4, 0, 1))); g.addColorStop(1, mix('#163a5a', '#01040a', clamp(k * 1.4, 0, 1)));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const sy = (d) => py + (d - R.od);
+    // The ice shell: walls of blue-white ice, layered, until you drop out under it
+    const iceY = sy(900);
+    if (iceY > 0) {
+      ctx.fillStyle = '#bcd8ec'; ctx.fillRect(0, 0, W, iceY);
+      for (let y = iceY - 20; y > -40; y -= 26) { ctx.fillStyle = 'rgba(140,180,210,0.5)'; ctx.fillRect(0, y, W, 4); }
+      ctx.fillStyle = '#0e2a44'; ctx.beginPath(); ctx.moveTo(W / 2 - 70, 0); ctx.lineTo(W / 2 + 70, 0); ctx.lineTo(W / 2 + 120, iceY); ctx.lineTo(W / 2 - 120, iceY); ctx.fill();
+      // Icicles hanging from the underside of the shell
+      ctx.fillStyle = '#d6ecfa';
+      for (let i = 0; i < 24; i++) { const x = (i * 41) % W; ctx.beginPath(); ctx.moveTo(x, iceY); ctx.lineTo(x + 8, iceY + 14 + (i % 4) * 8); ctx.lineTo(x + 16, iceY); ctx.fill(); }
+    }
+    // Drifting specks in the water, and bubbles from you
+    for (let i = 0; i < 40; i++) px((i * 97) % W, ((i * 53 - R.od * 0.4) % H + H) % H, 2, 2, 'rgba(180,220,255,0.35)');
+    // The seafloor: rock, and hot vents ("black smokers") with shimmering plumes
+    const floorY = sy(OCEAN_LEN + 44);
+    if (floorY < H + 200) {
+      ctx.fillStyle = '#1a1a22'; ctx.fillRect(0, floorY, W, H);
+      for (const vx of [W * 0.2, W * 0.5 + lane * 0.9, W * 0.78]) {
+        px(vx - 12, floorY - 70, 24, 70, '#2a2a30'); px(vx - 8, floorY - 78, 16, 10, '#3a3a40');
+        for (let i = 0; i < 10; i++) { const kk = ((clock * 0.5 + i / 10) % 1); ctx.fillStyle = `rgba(40,40,50,${0.6 * (1 - kk)})`; ctx.beginPath(); ctx.arc(vx + Math.sin(i + clock) * 8 * kk, floorY - 80 - kk * 160, 6 + kk * 16, 0, TAU); ctx.fill(); }
+        const vg = ctx.createRadialGradient(vx, floorY - 74, 2, vx, floorY - 74, 40);
+        vg.addColorStop(0, 'rgba(255,140,60,0.6)'); vg.addColorStop(1, 'rgba(255,140,60,0)');
+        ctx.fillStyle = vg; ctx.fillRect(vx - 40, floorY - 114, 80, 80);
+      }
+      // Imagined life, glowing round the vents
+      for (let i = 0; i < 6; i++) {
+        const x = W * 0.2 + ((i * 131 + clock * 30) % (W * 0.6)), y = floorY - 120 - (i % 3) * 30 + Math.sin(clock * 2 + i) * 6;
+        ctx.fillStyle = 'rgba(120,255,220,0.8)'; ctx.beginPath(); ctx.ellipse(x, y, 9, 4, 0, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x - 9, y); ctx.lineTo(x - 15, y - 4); ctx.lineTo(x - 15, y + 4); ctx.fill();
+      }
+      ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,255,230,0.8)'; ctx.fillText('IMAGINED LIFE?', W / 2, floorY - 190); ctx.textAlign = 'start';
+    }
+    for (const gm of world.stars) {
+      if (!gm.ocean || gm.taken) continue;
+      const y = sy(gm.d);
+      if (y > -30 && y < H + 30) drawGeomAt(W / 2 + gm.u * lane, y);
+    }
+    for (const q of R.trail) { ctx.globalAlpha = 1 - q.t / q.life; px(q.x - 2, q.y - 2, 4, 4, q.c); }
+    ctx.globalAlpha = 1;
+    const bx = W / 2 + R.x;
+    for (let i = 0; i < 4; i++) { const kk = ((clock * 0.8 + i / 4) % 1); ctx.strokeStyle = `rgba(220,240,255,${0.6 * (1 - kk)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx + 6 + Math.sin(i * 3) * 4, py - 50 - kk * 60, 3 + kk * 2, 0, TAU); ctx.stroke(); }
+    drawSprite('jump', bx, py + 24, player.facing < 0, 1, 1, 1, SUIT, Math.PI);
+    if (conspiracy) drawFoilHat(bx, py + 24, Math.PI);
+    drawRunPops(bx, py + 30);
   }
 
   function render() {
@@ -5852,7 +6032,7 @@
       intro.dT += dt;
       const p = zoomK();
       const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-      cam.zoom = ZOOM_FROM * Math.pow(1 / ZOOM_FROM, e);
+      cam.zoom = zoomFrom() * Math.pow(1 / zoomFrom(), e);
       cam.r = R0; cam.anchor = 0.46;
       player.walkT += dt * 5; // already strolling
       if (p >= 1) finishDescend();
@@ -5917,7 +6097,7 @@
   }
 
   // ---- The intro's Earth: a globe with real continents --------------------------
-  // Rough outlines (longitude, latitude), filled into a 2.5° grid once at load
+  // Rough outlines (longitude, latitude), filled into a 1.25° grid once at load
   const CONTINENTS = [
     [[-165, 68], [-140, 70], [-110, 72], [-90, 72], [-80, 65], [-62, 60], [-55, 50], [-66, 44], [-75, 35], [-81, 25], [-90, 29], [-97, 26], [-97, 20], [-88, 16], [-83, 9], [-78, 8], [-92, 15], [-105, 20], [-112, 30], [-118, 34], [-124, 40], [-124, 48], [-135, 58], [-150, 60], [-165, 60]],
     [[-55, 82], [-30, 83], [-20, 75], [-40, 65], [-50, 62], [-60, 75]],
@@ -5939,8 +6119,8 @@
       return inside;
     };
     const cells = [];
-    for (let lat = -88.75; lat < 90; lat += 2.5) {
-      for (let lon = -178.75; lon < 180; lon += 2.5) {
+    for (let lat = -89.375; lat < 90; lat += 1.25) {
+      for (let lon = -179.375; lon < 180; lon += 1.25) {
         const ice = lat < -70 || (lat > 60 && inPoly(lon, lat, CONTINENTS[1]));
         if (!ice && !CONTINENTS.some((p) => inPoly(lon, lat, p))) continue;
         const desert = (lat > 15 && lat < 32 && lon > -15 && lon < 58) || (lat > -30 && lat < -20 && lon > 118 && lon < 142) || (lat > 36 && lat < 46 && lon > 75 && lon < 110);
@@ -5952,7 +6132,7 @@
     for (let i = 0; i < 70; i++) clouds.push({ la: Math.asin(Math.random() * 1.8 - 0.9), lo: Math.random() * TAU, w: 0.08 + Math.random() * 0.2 });
     return { cells, clouds };
   })();
-  function drawGlobe(x, y, r, rot, alpha = 1) {
+  function drawGlobe(x, y, r, rot, alpha = 1, tilt = 0.4) {
     if (r < 18) { ctx.globalAlpha = alpha; drawPlanet('earth', x, y, r); ctx.globalAlpha = 1; return; }
     ctx.save(); ctx.globalAlpha = alpha;
     const atm = ctx.createRadialGradient(x, y, r * 0.96, x, y, r * 1.12);
@@ -5960,8 +6140,8 @@
     ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(x, y, r * 1.12, 0, TAU); ctx.fill();
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip();
     ctx.fillStyle = '#1f5fae'; ctx.fillRect(x - r, y - r, r * 2, r * 2);
-    const tilt = 0.4, ct = Math.cos(tilt), st = Math.sin(tilt);
-    const sz = Math.max(2, r * 0.048);
+    const ct = Math.cos(tilt), st = Math.sin(tilt);
+    const sz = Math.max(1.5, r * 0.024);
     const proj = (la, lo) => {
       const cl = Math.cos(la), px0 = cl * Math.sin(lo + rot), py0 = Math.sin(la), pz0 = cl * Math.cos(lo + rot);
       return [px0, py0 * ct - pz0 * st, pz0 * ct + py0 * st];
@@ -5986,88 +6166,73 @@
     ctx.restore();
   }
 
-  // ---- The intro's journey: a smooth flight past the planets, back to Earth --------
-  // A little 3D scene (not to scale!): the camera swoops in past Earth and the
-  // Moon, on past Venus and Mercury towards the Sun, turns round, and the Earth
-  // it's looking at becomes the real game world as it zooms in to the ground.
-  const TOUR = 7.4;      // seconds of flight
-  const SCENE = {
-    sun: { p: [0, 0, 0], r: 34 }, mercury: { p: [-30, 6, 110], r: 3, label: 'MERCURY' }, venus: { p: [42, -8, 210], r: 7, label: 'VENUS' },
-    earth: { p: [0, 0, 420], r: 12, label: 'EARTH' }, moon: { p: [-26, 7, 392], r: 3.3, label: 'THE MOON' },
-  };
-  const TOUR_KEYS = [[0, [0, 14, 455]], [1.8, [34, 8, 405]], [3.0, [14, 7, 345]], [4.6, [-6, 10, 235]], [5.6, [0, 12, 200]], [7.4, [0, 9, 196]]];
-  function tourCam(t) {
-    // A Catmull-Rom spline through the key positions, so the flight never jerks
-    const K = TOUR_KEYS;
-    let i = 0;
-    while (i < K.length - 2 && t > K[i + 1][0]) i++;
-    const [t1, p1] = K[i], [t2, p2] = K[i + 1], p0 = (K[i - 1] || K[i])[1], p3 = (K[i + 2] || K[i + 1])[1];
-    const u = clamp((t - t1) / (t2 - t1), 0, 1), u2 = u * u, u3 = u2 * u;
-    const pos = [0, 1, 2].map((j) => 0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * u + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * u2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * u3));
-    const k = clamp((t - 4.9) / 1.6, 0, 1);
-    return { pos, yaw: Math.PI * k * k * (3 - 2 * k) };
-  }
-  // Where Earth must end up for the hand-over to the game world (zoomed out)
-  const ZOOM_FROM = 0.075;
-  function tourProject(cam, b) {
-    const f = H * 1.1, rel = [b.p[0] - cam.pos[0], b.p[1] - cam.pos[1], b.p[2] - cam.pos[2]];
-    const sy = Math.sin(cam.yaw), cyw = Math.cos(cam.yaw);
-    const depth = rel[0] * -sy + rel[2] * -cyw, side = rel[0] * cyw + rel[2] * -sy;
-    if (depth < 0.8) return null;
-    return { x: W / 2 + (f * side) / depth, y: H / 2 - (f * rel[1]) / depth, r: (f * b.r) / depth, depth };
+  // ---- The intro's journey -----------------------------------------------------------
+  // It opens at dawn on Earth's horizon: the Sun just rising, with Mercury and
+  // Venus close by it, as they really are at dawn. Tap and the view rises
+  // gently off the horizon until Earth is a globe, with the Moon and Mars
+  // around it; then it zooms straight down into the game world.
+  const TOUR = 4.4;      // seconds: the rise, then a moment to look round
+  const zoomFrom = () => (Math.min(W, H) * 0.2) / R0;
+  const smooth = (k) => k * k * k * (k * (k * 6 - 15) + 10); // smootherstep: no jolt at either end
+  function tourEarth(t) {
+    const e = smooth(clamp(t / 3, 0, 1));
+    const r0 = Math.max(W, H) * 0.95, r1 = R0 * zoomFrom();
+    const r = Math.exp(lerp(Math.log(r0), Math.log(r1), e));
+    const top = lerp(H * 0.8, H * 0.46, e); // the top of the Earth: the horizon at first
+    return { x: W / 2, y: top + r, r, e };
   }
   function drawTourScene(t, titleAlpha) {
-    const cam = tourCam(t);
+    const E = tourEarth(t), e = E.e;
     const bg = ctx.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, '#02030a'); bg.addColorStop(1, '#0b1030');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    const neb = ctx.createRadialGradient(W * 0.7, H * 0.3, 10, W * 0.7, H * 0.3, W * 0.6);
-    neb.addColorStop(0, 'rgba(120,70,200,0.18)'); neb.addColorStop(1, 'rgba(120,70,200,0)');
-    ctx.fillStyle = neb; ctx.fillRect(0, 0, W, H);
-    // Far stars slide as the camera turns
-    const shift = (cam.yaw / Math.PI) * W * 1.3 + cam.pos[0] * 2;
     for (const st of world.sky) {
-      let x = (st.x * W * 1.5 - shift) % (W * 1.5); if (x < 0) x += W * 1.5;
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(clock * 2 + st.tw);
-      px(x, st.y * H, st.s, st.s, '#ffffff');
+      px(st.x * W, st.y * H * (1 - e * 0.1), st.s, st.s, '#ffffff');
     }
     ctx.globalAlpha = 1;
-    if (state === 'tour') drawWarp(0.35 * clamp(1 - t / 4, 0, 1));
-    // The bodies, furthest first
-    const seen = [];
-    for (const [key, b] of Object.entries(SCENE)) { const q = tourProject(cam, b); if (q) seen.push([key, b, q]); }
-    seen.sort((a, b2) => b2[2].depth - a[2].depth);
-    const hand = clamp((t - (TOUR - 1)) / 1, 0, 1), hk = hand * hand * (3 - 2 * hand);
-    for (const [key, b, q] of seen) {
-      if (q.x < -q.r * 3 || q.x > W + q.r * 3 || q.y < -q.r * 3 || q.y > H + q.r * 3) continue;
-      if (key === 'sun') {
-        const g = ctx.createRadialGradient(q.x, q.y, q.r * 0.3, q.x, q.y, q.r * 4);
-        g.addColorStop(0, 'rgba(255,240,180,0.95)'); g.addColorStop(0.3, 'rgba(255,190,90,0.35)'); g.addColorStop(1, 'rgba(255,160,60,0)');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q.x, q.y, q.r * 4, 0, TAU); ctx.fill();
-        ctx.fillStyle = '#fff6d0'; ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, TAU); ctx.fill();
-      } else if (key === 'earth') {
-        // At the end it glides to exactly where the game's Earth will be
-        const tx = W / 2, ty = H * 0.46 + R0 * ZOOM_FROM, tr = R0 * ZOOM_FROM;
-        drawGlobe(lerp(q.x, tx, hk), lerp(q.y, ty, hk), lerp(q.r, tr, hk), clock * 0.12);
-      } else drawPlanet(key, q.x, q.y, q.r);
-      if (b.label && q.r > 2 && t > 0.6 && state === 'tour') {
-        ctx.globalAlpha = clamp((t - 0.6) * 2, 0, 1) * (1 - hk);
-        ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
-        ctx.fillStyle = '#1b1530'; ctx.fillText(b.label, q.x + 1, q.y - q.r * 1.3 - 9);
-        ctx.fillStyle = '#eef1ff'; ctx.fillText(b.label, q.x, q.y - q.r * 1.3 - 10);
+    // The Sun, rising off the horizon as the view lifts, with its glow
+    const sx = lerp(W * 0.68, W * 0.8, e), sy = lerp(H * 0.8, H * 0.34, e);
+    const glow = ctx.createRadialGradient(sx, sy, 10, sx, sy, Math.max(W, H) * 0.5);
+    glow.addColorStop(0, `rgba(255,200,120,${0.55 - e * 0.25})`); glow.addColorStop(0.3, `rgba(255,150,80,${0.2 - e * 0.1})`); glow.addColorStop(1, 'rgba(255,120,60,0)');
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff6d0'; ctx.beginPath(); ctx.arc(sx, sy, 26, 0, TAU); ctx.fill();
+    // The first planets: Mercury and Venus close to the Sun, Mars out on the
+    // other side, and the Moon beside the Earth
+    const bodies = [
+      ['mercury', sx - 70, sy + 22, 3.5, 'MERCURY'], ['venus', sx - 150, sy + 52, 6.5, 'VENUS'],
+      ['mars', lerp(W * 0.2, W * 0.14, e), lerp(H * 0.62, H * 0.24, e), 5.5, 'MARS'], ['moon', lerp(W * 0.3, W * 0.28, e), lerp(H * 0.7, H * 0.52, e), 9, 'THE MOON'],
+    ];
+    const lab = clamp((t - 1.6) * 1.5, 0, 1) * (state === 'tour' ? 1 : 0);
+    for (const [type, x, y, r, name] of bodies) {
+      drawPlanet(type, x, y, r);
+      if (lab > 0) {
+        ctx.globalAlpha = lab; ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#1b1530'; ctx.fillText(name, x + 1, y - r - 9); ctx.fillStyle = '#eef1ff'; ctx.fillText(name, x, y - r - 10);
         ctx.textAlign = 'start'; ctx.globalAlpha = 1;
       }
     }
+    if (lab > 0) {
+      ctx.globalAlpha = lab; ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#fff3c4'; ctx.fillText('THE SUN', sx, sy - 40); ctx.textAlign = 'start'; ctx.globalAlpha = 1;
+    }
+    // Earth over everything behind it, its horizon lit orange near the Sun
+    drawGlobe(E.x, E.y, E.r, clock * 0.05 + 0.4, 1, lerp(-0.55, 0.4, e));
+    if (e < 0.6) {
+      const hz = ctx.createRadialGradient(sx, E.y - E.r, 4, sx, E.y - E.r, W * 0.6);
+      hz.addColorStop(0, `rgba(255,170,90,${0.5 * (1 - e / 0.6)})`); hz.addColorStop(1, 'rgba(255,170,90,0)');
+      ctx.fillStyle = hz; ctx.beginPath(); ctx.arc(E.x, E.y, E.r + 30, 0, TAU); ctx.arc(E.x, E.y, E.r - 4, 0, TAU, true); ctx.fill('evenodd');
+    }
     if (titleAlpha > 0) {
-      ctx.save(); ctx.translate(0, -(1 - titleAlpha) * H * 0.5);
+      ctx.save(); ctx.translate(0, -(1 - titleAlpha) * H * 0.4);
       drawComet(titleAlpha);
       ctx.restore();
-      drawIntroText(titleAlpha, (1 - titleAlpha) * H * 0.5);
+      drawIntroText(titleAlpha, (1 - titleAlpha) * H * 0.4);
     }
   }
 
   function drawIntro() {
-    if (state === 'tour') { drawTourScene(intro.tT, clamp(1 - intro.tT / 1.1, 0, 1)); return; }
+    if (state === 'tour') { drawTourScene(intro.tT, clamp(1 - intro.tT / 1.2, 0, 1)); return; }
     drawTourScene(0, 1);
     if (intro.ready && intro.t - intro.ready > 0.3 && Math.floor(intro.t * 1.8) % 2 === 0) {
       ctx.font = `${W < 480 ? 10 : 13}px "Press Start 2P", monospace`;
@@ -6082,14 +6247,14 @@
   // the black of space into the blue sky
   const zoomK = () => clamp(intro.dT / DESCEND, 0, 1);
   function drawIntroOverlay() {
-    const z = cam.zoom, a = 1 - clamp((z - 0.2) / 0.35, 0, 1);
+    const z = cam.zoom, a = 1 - clamp((z - 0.3) / 0.3, 0, 1);
     if (a <= 0) return;
     const r = R0 * z;
     drawGlobe(W / 2, H * 0.46 + r, r, clock * 0.12, a);
   }
   // Space, over the sky but under the world, until you're close in
   function drawIntroSpace() {
-    const a = 1 - clamp((cam.zoom - 0.25) / 0.6, 0, 1);
+    const a = 1 - clamp((cam.zoom - 0.3) / 0.55, 0, 1);
     if (a <= 0) return;
     ctx.globalAlpha = a;
     const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -6109,7 +6274,7 @@
   function beginZoom() {
     state = 'descend';
     intro.dT = 0;
-    cam.r = R0; cam.anchor = 0.46; cam.zoom = ZOOM_FROM;
+    cam.r = R0; cam.anchor = 0.46; cam.zoom = zoomFrom();
   }
 
   function finishDescend() {
@@ -6191,6 +6356,7 @@
     // Level 5 starts from the belt world you reached at the end of level 3
     if (lv === 5) l5Start = (from && level === 3 && landedOn) || BELT_WORLDS.ceres;
     level = lv; route = null; landedOn = null; aimFor = null; flipK = 0; useTiers();
+    document.body.classList.remove('run');
     reset(Math.floor(Math.random() * 1e9));
     carry = from;
     if (carry) { score = carry.score; mult = carry.mult; updateScoreHud(); }
@@ -6539,6 +6705,7 @@
   }
   // Back to the title: the Earth turns behind it again
   function toTitle() {
+    document.body.classList.remove('run');
     level = 1; route = null; flipK = 0; useTiers();
     reset(Math.floor(Math.random() * 1e9));
     state = 'title';
