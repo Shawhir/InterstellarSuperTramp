@@ -11,13 +11,13 @@ and points down when you are lined up to land on it.
 
 ## Play
 
-Open `index.html` in a browser. There's no build step and nothing to install.
+Open `site/index.html` in a browser. There's no build step and nothing to install.
 
 ### On your phone
 
 The game is live at **https://shawhir.github.io/InterstellarSuperTramp/**.
 GitHub Pages serves the `gh-pages` branch; `.github/workflows/pages.yml` copies
-the game files there on every push to `main`, so changes go live a minute or two
+everything in `site/` there on every push to `main`, so changes go live a minute or two
 after they are pushed.
 
 On the phone, open the link and use **Add to Home Screen** (Safari: Share button;
@@ -35,7 +35,7 @@ says so if that happens.
 
 ## How it works
 
-- `game.js`: everything lives in polar coordinates around Earth's centre. The
+- `site/game.js`: everything lives in polar coordinates around Earth's centre. The
   player is fixed at the top; walking changes `theta`, the angle the whole world
   has turned, so the ground and every platform slide past underneath.
 - Each bouncy layer (tier) sits at a fixed height and bounces you just high enough
@@ -51,7 +51,7 @@ says so if that happens.
   (parallax), so they feel further away. They also sink more slowly than the
   ground as you climb, so the first few bounces reveal the far ranges behind,
   before they fade into the haze on the way to space.
-- `audio.js`: every sound is synthesised with the Web Audio API, no audio files.
+- `site/audio.js`: every sound is synthesised with the Web Audio API, no audio files.
   Bounces climb a pentatonic scale as you go higher; the chiptune soundtrack shifts
   from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow
   minor drift with echo in space, and speeds up with the bounce multiplier.
@@ -97,8 +97,8 @@ says so if that happens.
   The stars are green geoms: they drift to you when you're close and each adds +1
   to the multiplier; PERFECT landings and new layers burst out extra geoms that
   fade after a few seconds. Any miss resets the multiplier to x1.
-- `scoreboard.js`: shared scoreboard of fastest Moon landings per mode (see below).
-- `style.css`: HUD, overlays and the touch pad.
+- `site/scoreboard.js`: shared scoreboard of fastest Moon landings per mode (see below).
+- `site/style.css`: HUD, overlays and the touch pad.
 
 ## Level 2: the Moon to Mars or Venus
 
@@ -132,7 +132,7 @@ start level 2 from the title screen once you've landed there once.
 ## Online scoreboard
 
 The scoreboard lists the highest scores reaching the Moon for each mode (ties go to the faster run), best run per name.
-It lives in `scores.json` in this repo; the **Record a score** workflow
+It lives in `site/scores.json` in this repo; the **Record a score** workflow
 (`.github/workflows/score.yml`, checks in `.github/scripts/record_score.py`) adds
 runs to it and republishes the site. Runs reach it in one of two ways:
 
@@ -164,14 +164,14 @@ The claude.ai artifact version keeps its own board in the artifact's shared stor
    Add**: type **Secret**, name `GITHUB_TOKEN`, value = the token from step 1.
    Save / deploy.
 5. Copy the Worker's address (like `https://supertramp-scores.<you>.workers.dev`)
-   into `workerUrl` in `scoreboard-config.js` and push. The Moon screen then asks
+   into `workerUrl` in `site/scoreboard-config.js` and push. The Moon screen then asks
    for a name.
 
 Opening the Worker's address in a browser should show
 `{"ok":true,"service":"Interstellar SuperTramp scores"}`.
 
 With no login, anyone can type any name or try to fake a time. Impossible numbers
-are rejected, and an owner can delete a line from `scores.json` by hand.
+are rejected, and an owner can delete a line from `site/scores.json` by hand.
 
 ### Optional: Supabase instead of GitHub
 
@@ -198,4 +198,4 @@ Scores can live in a free Supabase database instead of this repo:
    ```
 
 3. Copy the **Project URL** and **anon public** key from **Project Settings → API**
-   into `scoreboard-config.js` and push. Players then type a nickname instead.
+   into `site/scoreboard-config.js` and push. Players then type a nickname instead.

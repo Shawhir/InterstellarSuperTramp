@@ -1,7 +1,7 @@
 name: Publish to GitHub Pages
 
-# Pages serves the gh-pages branch. On every push to main, copy the game files
-# there; GitHub then rebuilds the site by itself.
+# Pages serves the gh-pages branch. On every push to main, copy everything in
+# site/ there; GitHub then rebuilds the site by itself.
 on:
   push:
     branches: [main]
@@ -22,7 +22,7 @@ jobs:
       - name: Copy the game onto gh-pages
         run: |
           mkdir /tmp/site
-          cp index.html scores.json scoreboard-config.js scoreboard.js audio.js game.js style.css manifest.webmanifest sw.js icon.svg icon-*.png /tmp/site/
+          cp -r site/. /tmp/site/
           touch /tmp/site/.nojekyll
           # Stamp every file link with this commit so phones load new code at once
           v="${GITHUB_SHA::7}"

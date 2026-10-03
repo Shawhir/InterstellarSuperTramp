@@ -80,7 +80,7 @@ def main():
             or not 0 <= entry["score"] <= 50000000:
         finish(False, "Those numbers don't look like a real run, so I haven't recorded it.")
 
-    path = os.environ.get("SCORES_FILE", "scores.json")
+    path = os.environ.get("SCORES_FILE", "site/scores.json")
     scores = json.load(open(path))
     rows = scores.setdefault(mode, [])
 

@@ -5,7 +5,7 @@ name: Record a score
 #  - a repository_dispatch "score" event from the Cloudflare Worker in worker/
 #    (name typed by the player, no GitHub account needed)
 #  - a manual run with a JSON payload, for testing
-# Each run is checked and added to scores.json (best per name per mode), then the
+# Each run is checked and added to site/scores.json (best per name per mode), then the
 # site is republished. Issues get a reply with the rank and are closed.
 on:
   issues:
@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - name: Add the run to scores.json
+      - name: Add the run to site/scores.json
         id: add
         env:
           EVENT: ${{ github.event_name }}
@@ -44,14 +44,14 @@ jobs:
           DISPATCH_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
           MANUAL_PAYLOAD: ${{ github.event.inputs.payload }}
         run: python3 .github/scripts/record_score.py
-      - name: Save scores.json
+      - name: Save site/scores.json
         if: steps.add.outputs.ok == 'true' && steps.add.outputs.changed == 'true'
         env:
           WHO: ${{ steps.add.outputs.name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scores.json
+          git add site/scores.json
           git commit -m "Record a score for $WHO"
           for i in 1 2 3; do git push origin HEAD:main && break; git pull --rebase origin main; done
       - name: Republish the site
