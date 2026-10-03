@@ -460,27 +460,35 @@
       p.aim = key; p.world = BELT_WORLDS[key];
       if (i === 1) p.main = true;
     });
-    let prevA = 0.62;
+    let prevA = 0.62, beltA = 0; // beltA: the straight line of the passage
     for (let k = 1; k <= TOP; k++) {
       const R = tierR(k), t = T[k];
       if (k === TOP) {
+        prevA = beltA;
         // Four worlds side by side, in a different order each run
         const order = Object.keys(BELT_WORLDS).sort(() => rnd() - 0.5);
         order.forEach((type, i) => { const p = mk(k, prevA + ((i - 1.5) * 240) / R, type); p.dest = true; p.world = BELT_WORLDS[type]; });
         lane.push({ R0: tierR(k - 1), R1: R, a0: prevA, a1: prevA, open: true });
         break;
       }
-      const off = (110 + (rnd() * 200) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.8 ? 1 : -1);
-      const a = prevA + off / R;
+      // Past the turn the passage runs straight on from the safe rock, and
+      // its boosters sit off to alternate sides, so you steer to hit them
+      let a;
+      if (k > FLIP) {
+        const side = (k - FLIP) % 2 ? 1 : -1;
+        a = beltA + (side * (55 + rnd() * 65)) / R;
+      } else a = prevA + ((110 + (rnd() * 200) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.8 ? 1 : -1)) / R;
+      if (k === FLIP) beltA = a;
       const mp = mk(k, a);
       mp.main = true;
-      stars.push({ a: prevA + (a - prevA) * 0.62, R: R + 50, taken: false });
+      if (k > FLIP) mp.side = Math.sign(wrap(a - beltA));
+      stars.push({ a: k > FLIP ? beltA + ((rnd() - 0.5) * 220) / R : prevA + (a - prevA) * 0.62, R: R + 50, taken: false });
       if (t.type === 'rocket') for (let i = 0; i < 3; i++) stars.push({ a: a + 24 / R, R: R + 80 + i * 36, taken: false, ring: true });
       if (t.fact) stars.push({ a: a - 110 / R, R: R + 150, taken: false, big: true, fact: t.fact });
-      if (k > FLIP) lane.push({ R0: tierR(k - 1), R1: R, a0: prevA, a1: a });
+      if (k > FLIP) lane.push({ R0: tierR(k - 1), R1: R, a0: beltA, a1: beltA });
       if (k >= FLIP) mp.sway = 0; // in the belt the way on holds still
       let nextA = a;
-      if (t.laser) for (const side of [-1, 1]) beams.push({ a: a + (side * (100 + rnd() * 50)) / R, tier: k, period: 3 + rnd() * 1.2, phase: rnd() * 4, route: 'belt', kind: 'laser' });
+      if (t.laser) for (const side of [-1, 1]) beams.push({ a: (k > FLIP ? beltA : a) + (side * (40 + rnd() * 120)) / R, tier: k, period: 3 + rnd() * 1.2, phase: rnd() * 4, route: 'belt', kind: 'laser' });
       if (t.dust) dust.push({ a: a + (150 + rnd() * 80) / R, R: R + 125, phase: rnd() * TAU, route: 'belt' }, { a: a - (210 + rnd() * 90) / R, R: R + 140, phase: rnd() * TAU, route: 'belt' });
       const spare = t.type === 'cloudm' ? 'cloudm' : t.type === 'phobos' || t.type === 'deimos' ? 'rocket' : 'asteroid';
       // From the turn on there are no spares: the safe rock is the only way
@@ -517,6 +525,13 @@
         }
       }
     }
+    // The far edge, just past the four worlds: a wall of bumpers right across
+    const edgeR = tierR(TOP) + 230;
+    for (let x = -600; x <= 600; x += 34) {
+      const r = 18 + rnd() * 12;
+      rocks.push({ a: beltA + x / edgeR, R: edgeR + (rnd() - 0.5) * 12, r, spin: rnd() * TAU, ph: rnd() * TAU, flash: 0, cool: 0, claim: false, wall: true });
+      back.push({ a: beltA + (x + 17) / edgeR, R: edgeR + 45 + rnd() * 20, r: 16 + rnd() * 14, spin: rnd() * TAU });
+    }
     // Asteroids far off in the background (just scenery)
     const far = [];
     for (let i = 0; i < 26; i++) far.push({ x: rnd(), y: rnd(), r: 3 + rnd() * 9, depth: 0.15 + rnd() * 0.5, spin: rnd() * TAU });
@@ -541,6 +556,7 @@
       { a: -0.98, kind: 'opportunity', note: 'Opportunity was meant to last 90 days. It drove for 14 years, until a dust storm covered the whole planet in 2018 and blocked out its Sun.' },
       { a: -1.42, kind: 'spirit', note: "Spirit, Opportunity's twin, got stuck in soft sand in 2009 and carried on working as a weather station for months." },
       { a: -1.86, kind: 'sojourner', note: 'Sojourner (1997): the very first rover on Mars, about the size of a microwave oven.' },
+      { a: SAUCER_FIELD, kind: 'saucers' },
       { a: -2.3, kind: 'viking', note: 'Viking 1 (1976) worked on Mars for over six years and sent back the first colour photos from its surface.' },
     );
     for (const d of decor) if (d.drive) d.dir = 1;
@@ -809,6 +825,11 @@
     player.lastPlat = p; player.lastH = bounceH; player.apexR = p.R;
     player.vr = bounceH > normalH ? player.speed * Math.sqrt(2 * G * player.g * bounceH) : p.bounce;
     if (rebound && bounceH > normalH + 150) pop('REBOUND!', '#8fd0ff', player.r + 110);
+    if (level === 3 && p.tier > FLIP) {
+      // In the belt's zero gravity every platform is a speed booster
+      player.vr = BELT_BOOST + 60 * (player.speed - 1);
+      pop('BOOST!', '#6dd3ff', player.r + 90);
+    }
     p.jig = 0; p.hit = Math.min(1.6, 0.8 + (player.vr / p.bounce - 1) * 0.6);
     const climbed = p.tier > lastTier;
     lastTier = p.tier;
@@ -1070,6 +1091,10 @@
   // tractor beam at the safe rock, which catches you at the start of the belt.
   // Miss both and it's all the way back to Mars.
   const BEAM_HALF = 260;
+  // Inside the passage, past the safe rock, the belt is zero gravity
+  const BELT_CRUISE = 70, BELT_BOOST = 380;
+  // (it starts once you've landed on the safe rock)
+  const beltFlight = () => level === 3 && flipK > 0.5 && lastTier >= FLIP && player.lost !== true && player.lost !== 'mars' && !player.onGround && player.r > tierR(FLIP) + 30;
   const safeRock = () => world.plats.find((q) => q.tier === FLIP && q.main);
   function updateLost() {
     if (player.onGround || state !== 'play' || flipK < 0.5) return;
@@ -1174,9 +1199,11 @@
         if (d.note && !d.seen && Math.abs(wrap(d.a + theta)) * R0 < 28) { d.seen = true; toast(d.note, 6); }
       }
     }
-    if (level === 3 && !fx.convoySeen && convoyK() > 0.08 && convoyK() < 0.5 && tierFloat(player.r) < 2.5) {
+    if (level === 3 && !fx.convoySeen && tierFloat(player.r) < 2.5
+      && ((convoyT() < BOARD_END && Math.abs(wrap(SAUCER_FIELD + theta)) * R0 < W * 0.45) || (convoyK() > 0.08 && convoyK() < 0.5))) {
       fx.convoySeen = true;
-      toast('A convoy of flying saucers, heading for Earth! Big brains, glass helmets, and they look in a hurry. Somebody should warn them.', 5.5);
+      toast(convoyT() < BOARD_END ? 'Martians! Big brains, glass helmets, ray guns… and they\'re climbing into their flying saucers. Where are they off to?'
+        : 'A convoy of flying saucers, heading for Earth! Big brains, glass helmets, and they look in a hurry. Somebody should warn them.', 5.5);
     }
     // The rovers that still work potter about
     for (const d of world.decor) {
@@ -1210,7 +1237,7 @@
       fx.crossT -= dt;
       if (flipK > 0.9 && lastTier > FLIP && lastTier < TOP && fx.crossT <= 0 && state === 'play') {
         const depth = (lastTier - FLIP) / (TOP - FLIP);
-        fx.crossT = lerp(6, 2.6, depth) + Math.random() * 2;
+        fx.crossT = lerp(9, 5, depth) + Math.random() * 3;
         const R = player.r + 170 + Math.random() * 250, L = laneAt(R);
         if (L) {
           const side = Math.random() < 0.5 ? -1 : 1;
@@ -1327,10 +1354,31 @@
       if (!player.onGround && !player.inside) {
         const prev = player.r;
         player.apexR = Math.max(player.apexR || player.r, player.r);
-        // Lost in space (level 3): you drift back slowly, so there's time to steer for the beam
-        const drift = player.lost === true ? 0.35 : 1;
-        player.vr = Math.max(player.vr - G * (player.g || 1) * player.speed * player.speed * dt * drift, -1600 * player.speed);
+        if (beltFlight()) {
+          // Inside the belt's passage nothing pulls you back to Mars: you keep
+          // your momentum, easing back to a gentle forward cruise
+          player.vr += (BELT_CRUISE - player.vr) * Math.min(1, dt * 0.5);
+          player.vr = clamp(player.vr, -1100, 1300);
+        } else {
+          // Lost in space (level 3): you drift back slowly, so there's time to steer for the beam
+          const drift = player.lost === true ? 0.35 : 1;
+          player.vr = Math.max(player.vr - G * (player.g || 1) * player.speed * player.speed * dt * drift, -1600 * player.speed);
+        }
         player.r += player.vr * dt;
+        if (beltFlight() && player.vr > 0) {
+          // Flying forward into a platform: it's a speed booster, and a belt
+          // world catches you as you reach its near side
+          for (const p of world.plats) {
+            if (p.tier <= FLIP) continue;
+            // A world is reached when your head touches its near side
+            const near = p.dest ? p.R - p.world.r * 2 - 44 : p.R, half = p.dest ? p.world.r * 0.9 : p.w / 2 + 8;
+            if (prev < near && player.r >= near && Math.abs(wrap(p.a + theta) * p.R) <= half) {
+              land(p);
+              if (p.dest) { player.r = near - 4; player.spin = Math.PI; } // turned round, feet on the world
+              break;
+            }
+          }
+        }
         if (player.vr < 0) {
           let landed = false;
           for (const p of world.plats) {
@@ -1416,7 +1464,7 @@
     const below = !player.onGround && player.vr < 0 ? launchR - player.r : 0;
     // A long fall turns you into a fireball on the way back down, in every
     // level (on the Moon that's game physics: there's no air to burn in)
-    const heatWant = state === 'play' ? clamp((below - 100) / 400, 0, 1) : 0;
+    const heatWant = state === 'play' && !beltFlight() ? clamp((below - 100) / 400, 0, 1) : 0;
     player.heat = (player.heat || 0) + (heatWant - (player.heat || 0)) * Math.min(1, dt * (heatWant > (player.heat || 0) ? 7 : 10));
     if (player.heat > 0.05 && state === 'play') {
       const n = Math.ceil(player.heat * 4);
@@ -1787,13 +1835,20 @@
   // Every so often a convoy of flying saucers lifts off from Mars and heads
   // for Earth: big-brained Martians under glass domes, in a V formation,
   // shrinking into the distance as they go
-  const CONVOY_EVERY = 28, CONVOY_FLIGHT = 12;
+  // The cycle: Martians hop into their parked saucers one by one, the saucers
+  // lift off together, then the convoy flies off across the sky to Earth.
+  // Afterwards they're back on the field, getting ready to go again.
+  const CONVOY_EVERY = 30, BOARD_END = 5, LIFT_END = 7, CONVOY_FLIGHT = 12;
+  const SAUCER_FIELD = -0.62, LIFT_H = 150;
   const EARTH_FROM_MARS = () => [W * 0.78, H * 0.2];
-  const convoyK = () => (clock % CONVOY_EVERY) / CONVOY_FLIGHT;
+  const convoyT = () => clock % CONVOY_EVERY;
+  const convoyK = () => (convoyT() - LIFT_END) / CONVOY_FLIGHT;
+  // Where the lifted-off saucers hover, on screen
+  const fieldOnScreen = () => { const ph = SAUCER_FIELD + theta, R = R0 - 2 + LIFT_H; return [cx + R * Math.sin(ph), cy - R * Math.cos(ph)]; };
   function drawConvoy(ex, ey, alpha) {
     const k = convoyK();
-    if (k >= 1 || alpha <= 0) return;
-    const x0 = -W * 0.04, y0 = H * 0.36;
+    if (k < 0 || k >= 1 || alpha <= 0) return;
+    const [x0, y0] = fieldOnScreen();
     const e = k * k * (3 - 2 * k);
     const dir = Math.atan2(ey - y0, ex - x0);
     ctx.save();
@@ -1815,15 +1870,40 @@
     }
     ctx.restore();
   }
-  function drawSaucer(x, y, s, tilt, i) {
+  // A Martian's head, in the style of the old trading cards and the film:
+  // a huge bare brain, a skull face, big black eyes and a toothy grin
+  function martianHead(x, y, u) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(u, u);
+    ctx.fillStyle = '#c8dcb0'; ctx.beginPath(); ctx.ellipse(0, 1, 3.6, 3.8, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ff8fc8'; ctx.beginPath(); ctx.ellipse(0, -3.4, 5.6, 4.2, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#c9508a'; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.moveTo(0, -7.4); ctx.lineTo(0, -1); ctx.moveTo(-3.5, -5); ctx.quadraticCurveTo(-2, -3, -4, -1.5); ctx.moveTo(3.5, -5); ctx.quadraticCurveTo(2, -3, 4, -1.5); ctx.stroke();
+    ctx.fillStyle = '#0b0b10'; ctx.beginPath(); ctx.ellipse(-1.5, 0.6, 1.3, 1.8, 0.2, 0, TAU); ctx.ellipse(1.5, 0.6, 1.3, 1.8, -0.2, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(-1.8, 3, 3.6, 0.9);
+    ctx.fillStyle = '#0b0b10'; for (let i = -1; i <= 1; i++) ctx.fillRect(i * 1.1 - 0.15, 3, 0.3, 0.9);
+    ctx.restore();
+  }
+  // A whole Martian standing on the ground (feet at 0,0): green suit, silver
+  // collar, ray gun, and the glass bubble helmet over that brain
+  function drawMartian(scale = 1.2, gunUp = false) {
+    ctx.save(); ctx.scale(scale, scale);
+    const suit = '#2f7f5f';
+    px(-4, -8, 3, 8, suit); px(1, -8, 3, 8, suit);
+    px(-5, -16, 10, 9, suit); px(-5, -10, 10, 1, '#1f5f45');
+    px(4, gunUp ? -18 : -15, 5, 2, suit); px(8, gunUp ? -20 : -16, 6, 3, '#9aa3b5'); px(13, gunUp ? -20 : -16, 2, 2, '#ff5a4a');
+    px(-7, -15, 3, 6, suit);
+    ctx.fillStyle = '#c9ced9'; ctx.beginPath(); ctx.ellipse(0, -16, 7, 2, 0, 0, TAU); ctx.fill();
+    martianHead(0, -21, 1);
+    ctx.fillStyle = 'rgba(191,232,255,0.22)'; ctx.strokeStyle = 'rgba(235,248,255,0.85)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.arc(0, -23, 8.5, 0, TAU); ctx.fill(); ctx.stroke();
+    px(-4, -29, 2, 2, 'rgba(255,255,255,0.8)');
+    ctx.restore();
+  }
+  function drawSaucer(x, y, s, tilt, i, empty = false) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(tilt);
-    // Glass dome with a Martian inside: a green face, bug eyes, a huge pink brain
-    ctx.fillStyle = 'rgba(191,232,255,0.45)'; ctx.beginPath(); ctx.arc(0, -s * 0.35, s * 0.85, Math.PI, TAU); ctx.fill();
-    if (s > 4) {
-      ctx.fillStyle = '#9be07a'; ctx.beginPath(); ctx.ellipse(0, -s * 0.45, s * 0.38, s * 0.42, 0, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#ff9ad5'; ctx.beginPath(); ctx.ellipse(0, -s * 0.75, s * 0.5, s * 0.35, 0, Math.PI, TAU); ctx.fill();
-      ctx.fillStyle = '#1b1530'; ctx.beginPath(); ctx.arc(-s * 0.15, -s * 0.45, s * 0.1, 0, TAU); ctx.arc(s * 0.15, -s * 0.45, s * 0.1, 0, TAU); ctx.fill();
-    }
+    // Glass dome with a Martian inside: skull face, bug eyes, a huge bare brain
+    ctx.fillStyle = 'rgba(191,232,255,0.4)'; ctx.beginPath(); ctx.arc(0, -s * 0.35, s * 0.85, Math.PI, TAU); ctx.fill();
+    if (s > 4 && !empty) martianHead(0, -s * 0.5, s * 0.11);
     ctx.strokeStyle = 'rgba(230,245,255,0.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, -s * 0.35, s * 0.85, Math.PI, TAU); ctx.stroke();
     // The saucer
     ctx.fillStyle = '#c3c8d4'; ctx.beginPath(); ctx.ellipse(0, -s * 0.2, s * 2, s * 0.55, 0, 0, TAU); ctx.fill();
@@ -2710,6 +2790,37 @@
       ctx.fillStyle = WHITE; ctx.beginPath(); ctx.ellipse(5, -36, 9, 4, -0.3, 0, TAU); ctx.fill();
       marsLabel('VIKING 1 · 1976', -46);
     },
+    saucers() {
+      // The saucer field: Martians hop into their saucers, the saucers lift
+      // off, then (drawn by drawConvoy) fly off to Earth
+      const t = convoyT(), n = 5, gap = 46;
+      if (t >= LIFT_END && t < LIFT_END + CONVOY_FLIGHT) { marsLabel('SAUCER FIELD', -8); return; }
+      const lift = t >= BOARD_END && t < LIFT_END ? (t - BOARD_END) / (LIFT_END - BOARD_END) : 0;
+      for (let i = 0; i < n; i++) {
+        const x = (i - (n - 1) / 2) * gap;
+        const jumpAt = 0.6 + i * 0.8, boarding = t < BOARD_END;
+        const inside = lift > 0 || (boarding && t > jumpAt + 0.5);
+        const y = -LIFT_H * lift * lift * (3 - 2 * lift) - 6 - Math.sin(clock * 3 + i) * (lift ? 2 : 0);
+        if (lift > 0) {
+          ctx.globalAlpha = 0.5 * (1 - lift); ctx.fillStyle = '#b8ff9a';
+          ctx.beginPath(); ctx.moveTo(x - 8, y + 4); ctx.lineTo(x + 8, y + 4); ctx.lineTo(x + 14, 0); ctx.lineTo(x - 14, 0); ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        drawSaucer(x, y, 9, 0, i, !inside);
+        if (boarding && !inside) {
+          // Waiting by the saucer, then a hop up into the dome
+          const k = clamp((t - jumpAt) / 0.5, 0, 1);
+          ctx.save();
+          ctx.translate(lerp(x + 18, x, k), lerp(0, -14, k) - Math.sin(k * Math.PI) * 30);
+          drawMartian(1.4 - 0.6 * k, k === 0 && Math.sin(clock * 2 + i) > 0.6);
+          ctx.restore();
+        } else if (!boarding && lift === 0) {
+          // Back from the trip, standing about by their saucers
+          ctx.save(); ctx.translate(x + 18, 0); if (i % 2) ctx.scale(-1, 1); drawMartian(1.4, Math.sin(clock * 1.5 + i * 2) > 0.7); ctx.restore();
+        }
+      }
+      marsLabel('SAUCER FIELD', 14);
+    },
     face() {
       // A flat-topped hill. From the right angle, with the right shadows...
       ctx.fillStyle = '#8c3f28';
@@ -2932,7 +3043,6 @@
     ctx.fillStyle = 'rgba(8,8,24,0.3)';
     ctx.beginPath(); ctx.arc(r * 0.35, r * 1.35, r * 1.05, 0, TAU); ctx.arc(-r * 0.2, r * 0.8, r * 1.05, 0, TAU, true); ctx.fill('evenodd');
     ctx.restore();
-    px(-p.w / 2, -1, p.w, 3, hexOf(mix(B.body, '#ffffff', 0.35)));
     if (p.type === 'ceres') {
       for (const [x, s] of [[-40, 14], [-22, 10]]) { ctx.fillStyle = 'rgba(191,232,255,0.6)'; ctx.beginPath(); ctx.arc(x, 0, s, Math.PI, TAU); ctx.fill(); }
       if (Math.sin(clock * 3) > 0) px(-41, -18, 2, 3, '#ff5a4a');
@@ -3067,7 +3177,7 @@
     for (const p of world.plats) {
       if (!p.main || !(p.tier === FLIP || p.type === 'outpost')) continue;
       at(p.a + theta, p.R, () => {
-        ctx.translate(p.w / 2 + 46, -50 + Math.sin(clock * 1.7) * 8);
+        ctx.translate(-(p.side || -1) * (p.w / 2 + 46), -50 + Math.sin(clock * 1.7) * 8);
         upright();
         const sing = clamp(1 - (clock - (p.beingT || -9)) / 2.5, 0, 1);
         const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, 46 + sing * 30);
@@ -3997,8 +4107,7 @@
     }
     // Level 2 opens up once you've reached the Moon in either mode
     $('l2-start').hidden = !(bests.checkpoint.wins || bests.uber.wins);
-    // ...and level 3 once you've reached Mars
-    $('l3-start').hidden = !Object.keys(MODES).some((m) => bests[m].l2 && bests[m].l2.mars && bests[m].l2.mars.wins);
+    // Level 3, and a shortcut straight to its asteroid belt, are always open
     document.querySelectorAll('.mode').forEach((btn) => btn.classList.toggle('last', btn.dataset.mode === mode));
   }
   renderBests();
@@ -4010,6 +4119,20 @@
   $('l2-start').addEventListener('click', () => { jingle(); startGame(2); });
   $('to-l3').addEventListener('click', () => { jingle(); startGame(3, { score, mult, ...(lastWin || { time: 0, got: 0, total: 0, falls: 0 }) }); });
   $('l3-start').addEventListener('click', () => { jingle(); startGame(3); });
+  $('belt-start').addEventListener('click', () => { jingle(); startGame(3); toBelt(); });
+  // Straight to the asteroid belt: drop onto the safe rock at the turn, where
+  // the being of light is waiting with your force field
+  function toBelt() {
+    const rock = world.plats.find((q) => q.tier === FLIP && q.main);
+    if (!rock) return;
+    theta = -rock.a;
+    Object.assign(player, { r: rock.R + 140, vr: -60, vx: 0, onGround: false, suit: true, g: rock.g, speed: speedFor(FLIP - 1), apexR: rock.R + 140, lastPlat: null, lastH: 0 });
+    lastTier = FLIP - 1; bestTier = FLIP - 1;
+    cam.r = player.r; flipK = 1;
+    fx.flipShown = true;
+    banner('THE ASTEROID BELT', "STRAIGHT TO JUPITER'S PULL");
+    toast(touch ? 'Straight to the belt! Land on the safe rock, then bounce along the passage. Steer with ▲ ▼.' : 'Straight to the belt! Land on the safe rock, then bounce along the passage. Steer with ↑ ↓ (or W S).', 5);
+  }
   // Back to the title: the Earth turns behind it again
   function toTitle() {
     level = 1; route = null; flipK = 0; useTiers();
