@@ -74,7 +74,7 @@ def main():
         finish(False, "The run details are incomplete. Please post from the game's Moon screen.")
     if mode not in ("checkpoint", "uber") \
             or not 5000 <= entry["time_ms"] <= 3600000 \
-            or not 1 <= entry["total_stars"] <= 100 \
+            or not 1 <= entry["total_stars"] <= 200 \
             or not 0 <= entry["stars"] <= entry["total_stars"] \
             or not 0 <= entry["falls"] <= 1000 \
             or not 0 <= entry["score"] <= 50000000:

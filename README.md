@@ -128,6 +128,48 @@ start level 2 from the title screen once you've landed there once.
 - **Real things out there.** Kamo'oalewa, Cruithne, 'Oumuamua, 3I/ATLAS, Phobos,
   a Mars meteorite, Venera 7, and a city in Venus's clouds at the end.
 - Dedicated to David Bowie, who looked up and made the rest of us look too.
+- **Mars's moons.** On the Mars route, Phobos and Deimos circle Mars in the sky
+  as it grows, then fade as it glides in to become the ground.
+
+## Level 3: Mars to the asteroid belt
+
+Land on Mars in level 2 and you can carry straight on (score and all), or start
+level 3 from the title screen once you've reached Mars once.
+
+- **Mars.** Shown in cross-section with its thin crust, thick mantle and big
+  liquid iron core, under a butterscotch sky (Mars has a thin carbon dioxide
+  atmosphere). Behind the base stand the great shield volcanoes, labelled:
+  Olympus Mons, the three Tharsis Montes and Elysium Mons, plus the rift of
+  Valles Marineris. Phobos races across the sky the "wrong" way; Deimos drifts.
+- **Robots on Mars.** Perseverance and Curiosity drive about, Ingenuity hovers,
+  and InSight, Zhurong, Opportunity, Spirit (stuck in the sand), Sojourner and
+  Viking 1 are where they stopped. Walk past one to hear its story. There's
+  also the Face on Mars, and a greenhouse full of potatoes.
+- **The air.** Mars's first bouncy layers are thin water-ice clouds and a dust
+  storm. Fall back into its sky and you heat up, as on Earth (a bit less), and
+  hit the ground in a red KABOOM.
+- **Mars orbit.** Bounce off Phobos and Deimos, then past a Mars trojan and the
+  Dawn probe, with 3I/ATLAS flying by.
+- **The turn.** Halfway out, Jupiter's pull swings the view a quarter turn: from
+  there it's a sideways bouncer, heading right, with Mars behind you on the
+  left. Steer with ↑ ↓ (or W S); on a phone the touch arrows turn into ▲ ▼.
+- **The being of light.** Waiting at the turn, it hums five notes and gives you
+  a force field. With the field on, the drifting asteroids are pinball bumpers
+  you bounce off; each bounce uses one of five charges, and geoms charge it
+  back up. It appears again at the belter outpost to top you up. Without a
+  field, an asteroid knocks you back towards Mars. The turn is the last
+  checkpoint: get knocked back past it and you fall to Mars (in Uber Tramp,
+  any miss does).
+- **The belt.** Gravity is weak, so it's floaty, and it speeds up as you go.
+  Sci-fi nods along the way: mining rigs with claim flags, mining lasers fired
+  by drones (dodge them), an ice hauler to hitch a ride on (with an ice
+  shield), a belter outpost with a spinning ring, and a Kirkwood gap.
+- **Four worlds to finish.** Land on Ceres, Vesta, Pallas or Hygiea. Only Ceres
+  is officially a dwarf planet in the belt (Hygiea may join it); Vesta and
+  Pallas are the next biggest. Each has its own fact, and the title screen
+  counts how many of the four you've visited.
+
+A run straight from Earth to the belt goes on the scoreboard as one run.
 
 ## Online scoreboard
 
@@ -186,8 +228,8 @@ Scores can live in a free Supabase database instead of this repo:
      name text not null check (char_length(name) between 1 and 16),
      mode text not null check (mode in ('checkpoint', 'uber')),
      time_ms integer not null check (time_ms between 5000 and 3600000),
-     stars integer not null check (stars between 0 and 100),
-     total_stars integer not null check (total_stars between 1 and 100),
+     stars integer not null check (stars between 0 and 200),
+     total_stars integer not null check (total_stars between 1 and 200),
      falls integer not null default 0 check (falls between 0 and 1000),
      score integer not null default 0 check (score between 0 and 50000000),
      created_at timestamptz not null default now()
