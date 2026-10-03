@@ -91,7 +91,7 @@ says so if that happens.
   off the Moon, and above Mars's thin sky) nothing keeps the tramp upright, so
   it somersaults slowly on the way up and rights itself on the way down to land
   feet first.
-- Re-entry: miss and fall below the platform you bounced off, and the tramp
+- Re-entry (every level): miss and fall below the platform you bounced off, and the tramp
   heats up into a fireball (glow from 100px below it, full fire by 500px) with a
   flame trail and a rising roar. Hit the ground like that for a KABOOM: big screen
   shake, flash, shockwave, flying dirt and a smoking crater. Land on a platform
@@ -145,7 +145,9 @@ level 3 from the title screen once you've reached Mars once.
   atmosphere). Behind the base stand the great shield volcanoes, labelled:
   Olympus Mons, the three Tharsis Montes and Elysium Mons, plus the rift of
   Valles Marineris. Phobos races across the sky the "wrong" way; Deimos drifts.
-  Earth hangs in the sky as a blue evening star with the Moon beside it.
+  Earth hangs in the sky as a blue evening star with the Moon beside it, and
+  every so often a convoy of flying saucers (big-brained Martians under glass
+  domes) lifts off and flies across the sky towards it.
 - **Four trampolines.** The launch field has one for each world at the end of
   the belt, colour-coded with a signpost: Ceres, Vesta, Pallas and Hygiea. The
   one you bounce from is your target: the arrow leads you to it at the end,
@@ -155,8 +157,8 @@ level 3 from the title screen once you've reached Mars once.
   Viking 1 are where they stopped. Walk past one to hear its story. There's
   also the Face on Mars, and a greenhouse full of potatoes.
 - **The air.** Mars's first bouncy layers are thin water-ice clouds and a dust
-  storm. Fall back into its sky and you heat up, as on Earth (a bit less), and
-  hit the ground in a red KABOOM.
+  storm. Fall back towards it and you come in as a fireball and hit the
+  ground in a red KABOOM.
 - **Mars orbit.** Bounce off Phobos and Deimos, then past a Mars trojan and the
   Dawn probe, with 3I/ATLAS flying by.
 - **The turn.** Halfway out, Jupiter's pull swings the view a quarter turn: from
@@ -175,6 +177,13 @@ level 3 from the title screen once you've reached Mars once.
   (geoms charge it back up), and without it you're knocked back towards Mars.
   The turn is the last checkpoint: get knocked back past it and you fall to
   Mars (in Uber Tramp, any miss does).
+- **Gaps.** Most stretches of the passage have a gap in one wall, marked with
+  flashing lights. Slip out of one and you're lost in space, drifting back
+  towards Mars as a fireball. You can still steer: back into the passage, or
+  into the green tractor beam the being shines out from the safe rock (the
+  arrow points to it), which catches you at the start of the belt. Miss both
+  and you fall back to Mars. It's never game over: your score, force field and
+  target stay, only the multiplier resets.
 - **The belt.** Gravity is weak, so it's floaty, and it speeds up as you go,
   with more rogue asteroids. Sci-fi nods along the way: mining rigs and claim
   flags, mining lasers fired by drones (dodge them), an ice hauler to land on
