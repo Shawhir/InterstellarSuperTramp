@@ -372,7 +372,7 @@ switches it off. You get:
   city 85 m deep), St Kinga's Chapel (carved from salt), Coober Pedy's dugouts,
   and Beijing's Cold War tunnel city.
 
-  Behind each cavern are its own far-off walls in two parallax layers: jungle,
+  Behind each cavern are its own far-off walls in four parallax layers (far ones smaller, darker and hazier, each sliding past at its own speed): jungle,
   sea cliffs and waterfalls, golden towers, giant crystals, giant mushrooms,
   smoking factories, volcanoes, skyscrapers with neon cables, tunnel mouths.
   Each is drawn only inside its own cavern, so they blend as you climb from
