@@ -189,7 +189,7 @@
   let landedOn = null; // level 3: the belt world you landed on
   let aimFor = null;   // level 3: the belt world picked by the trampoline you bounced from
   function useTiers() {
-    TIERS = level === 5 ? L5_TIERS : level === 4 ? L4_TIERS : level === 3 ? L3_TIERS : level === 2 ? L2_ROUTES[route || 'mars'] : L1_TIERS;
+    TIERS = level === 6 ? HOLLOW_TIERS : level === 5 ? L5_TIERS : level === 4 ? L4_TIERS : level === 3 ? L3_TIERS : level === 2 ? L2_ROUTES[route || 'mars'] : L1_TIERS;
     TOP = TIERS.length - 1;
     CHECKPOINTS = checkpointsFor(TIERS);
   }
@@ -295,6 +295,7 @@
   let world;
 
   function buildWorld(seed) {
+    if (level === 6) return buildWorld6(seed);
     if (level === 5) return buildWorld5(seed);
     if (level === 4) return buildWorld4(seed);
     if (level === 3) return buildWorld3(seed);
@@ -984,7 +985,7 @@
     const f = (r - tierR(0)) / TIER_GAP;
     return clamp(f, 0, TOP);
   }
-  const destName = () => (level === 5 ? 'Europa' : level === 4 ? 'Mercury' : level === 3 ? (landedOn ? landedOn.name : 'the asteroid belt') : level === 2 ? (route === 'venus' ? 'Venus' : 'Mars') : 'the Moon');
+  const destName = () => (level === 6 ? 'the surface' : level === 5 ? 'Europa' : level === 4 ? 'Mercury' : level === 3 ? (landedOn ? landedOn.name : 'the asteroid belt') : level === 2 ? (route === 'venus' ? 'Venus' : 'Mars') : 'the Moon');
   function layerName() {
     if (fx.run) {
       const R = fx.run;
@@ -2056,28 +2057,99 @@
     }
   }
 
-  // ---- Conspiracy mode: the hollow Earth -------------------------------------------
-  // Crash into the Earth as a fireball and you smash right through the crust,
-  // into the caverns of the hollow Earth (a very old myth). Bounce your way
-  // back up the giant glowing mushrooms to the hole you made, and out.
-  const CAVE_ROWS = 9, CAVE_GAP = 165, CAVE_G = 1500;
-  function enterHollowEarth() {
-    const rows = [];
-    for (let i = 1; i <= CAVE_ROWS; i++) {
-      const n = i % 3 === 0 ? 1 : 2, row = [];
-      for (let j = 0; j < n; j++) row.push({ u: n === 1 ? Math.random() - 0.5 : (j ? 0.2 : -0.8) + Math.random() * 0.6, w: 100 + Math.random() * 30, squash: 0, crystal: Math.random() < 0.3 });
-      rows.push(row);
-    }
-    fx.cave = { y: 40, vy: 900, x: 0, vx: 0, cam: 0, t: 0, rows, best: 0, bits: [], told: false };
-    fx.flames = []; player.heat = 0;
-    fx.flash = 0.8; addShake(16); sfx.boom(1); buzz([60, 40, 120]);
-    banner('THE HOLLOW EARTH?!', 'BOUNCE YOUR WAY OUT');
-    toast('You smashed straight through the crust… into the HOLLOW EARTH! Bounce up the glowing mushrooms to the hole and climb back out.', 6);
+  // ---- Conspiracy mode, level 6: the hollow Earth ------------------------------------
+  // Crash into the Earth as a fireball (or pick it from the menu) and you
+  // smash right through the crust, down into the caverns of the hollow Earth
+  // (a very old myth). Climb back out, cavern by cavern, from the little
+  // inner sun at the bottom to the hole you made at the top. Drawn straight
+  // onto the screen, like the level 5 run.
+  const CAVE_GAP = 165, CAVE_G = 1500, CAVE_BOUNCE = Math.sqrt(2 * CAVE_G * (CAVE_GAP + 120));
+  const HOLLOW = [
+    { key: 'sun', name: 'The inner sun', rows: 6, plat: 'mush', bg: ['#2a1410', '#4a2414'], wall: '#3a2620',
+      file: ['The Earth is hollow, with a little sun inside.', "Earthquake waves show it's solid rock and metal all the way down, with an iron core about as hot as the surface of the Sun."] },
+    { key: 'sea', name: 'The underground sea', rows: 7, plat: 'raft', bg: ['#0e2a30', '#12343a'], wall: '#1e3a3a',
+      note: "Jules Verne put a whole sea down here, monsters and all, in Journey to the Centre of the Earth (1864). For real: deep down, a mineral called ringwoodite may hold as much water as all the oceans, locked inside its crystals." },
+    { key: 'crystal', name: 'The crystal caves', rows: 7, plat: 'crystal', bg: ['#1a1430', '#24183e'], wall: '#2e2448',
+      note: "For real: Mexico's Cave of the Crystals, 300 m down, is full of gypsum crystals up to 12 m long, in heat of over 50°C. These ones shatter: bounce on, and move on!" },
+    { key: 'forest', name: 'The mushroom forest', rows: 7, plat: 'sway', bg: ['#10261a', '#183020'], wall: '#22382a',
+      note: 'For real: the biggest living thing known is a fungus. A honey fungus in Oregon spreads underground across nearly 10 square km.' },
+    { key: 'lava', name: 'The lava tubes', rows: 7, plat: 'rock', bg: ['#3a120a', '#24100c'], wall: '#4a1e14',
+      note: 'For real: lava tubes are tunnels left behind when the outside of a lava flow cools and the inside drains away. Some run for tens of km. Watch the lava jets!' },
+    { key: 'city', name: 'Lizard city', rows: 7, plat: 'neon', bg: ['#0c1014', '#141a20'], wall: '#1e242c',
+      file: ['Lizard people secretly run the world from underground.', 'The deepest hole ever drilled, the Kola Superdeep Borehole, goes down 12.3 km. It found hot rock and water. No lizards.'] },
+    { key: 'shaft', name: 'The way out', rows: 5, plat: 'ledge', bg: ['#241a12', '#3a2a1a'], wall: '#3a2a1e',
+      note: 'For real: the deepest known cave, Veryovkina in Georgia, goes down about 2.2 km. Daylight ahead!' },
+  ];
+  const HOLLOW_TIERS = [{ km: 30, type: 'mush', layer: 'The hollow Earth' }, { km: 0, type: 'mush', layer: 'The surface' }];
+  function buildHollow(rnd) {
+    const rows = [], geoms = [], hazards = [], zoneY = [];
+    let i = 0, path = 0;
+    HOLLOW.forEach((Z, z) => {
+      zoneY.push(i * CAVE_GAP);
+      for (let r = 0; r < Z.rows; r++, i++) {
+        const y = (i + 1) * CAVE_GAP, plats = [];
+        // A floor of rock across the cavern at the start of each one: in
+        // Checkpoint mode it catches you if you fall
+        path = clamp(path + (rnd() - 0.5) * 1.1, -0.8, 0.8);
+        // (and a plain platform too, for Uber Tramp, where there are no floors)
+        if (r === 0 && z > 0) { rows.push({ y, zone: z, plats: [{ u: 0, w: 9999, type: 'floor', squash: 0 }, { u: path, w: 110, type: 'ledge', squash: 0 }], floor: true }); continue; }
+        const w = Z.plat === 'ledge' ? 90 + rnd() * 30 : 100 + rnd() * 30;
+        plats.push({ u: path, w, type: Z.plat, squash: 0, ph: rnd() * TAU, amp: Z.plat === 'raft' ? 0.1 + rnd() * 0.08 : Z.plat === 'sway' ? 0.08 + rnd() * 0.08 : 0, sp: 0.4 + rnd() * 0.3 });
+        const extra = Z.plat === 'ledge' ? 0 : Z.plat === 'raft' || rnd() < 0.6 ? 1 : 0;
+        for (let e = 0; e < extra; e++) {
+          const u = path > 0 ? path - 0.7 - rnd() * 0.4 : path + 0.7 + rnd() * 0.4;
+          if (Math.abs(u) < 0.95) plats.push({ u, w: 90 + rnd() * 30, type: Z.plat === 'crystal' ? 'mush' : Z.plat, squash: 0, ph: rnd() * TAU, amp: Z.plat === 'raft' ? 0.1 : 0, sp: 0.5 });
+        }
+        rows.push({ y, zone: z, plats });
+        if (r % 2 === 1) geoms.push({ cave: true, y: y + 90, u: clamp(path + (rnd() - 0.5) * 0.5, -0.9, 0.9), taken: false });
+        // Each cavern's own danger
+        if (Z.key === 'lava' && r % 2 === 0 && r > 0) hazards.push({ kind: 'jet', u: path > 0 ? path - 0.55 : path + 0.55, y0: y - CAVE_GAP, y1: y + CAVE_GAP * 1.2, period: 4 + rnd() * 1.5, ph: rnd() * 4 });
+        if (Z.key === 'city' && r % 2 === 1) hazards.push({ kind: 'drill', y: y + 80, sp: 0.5 + rnd() * 0.3, ph: rnd() * TAU });
+        if ((Z.key === 'crystal' || Z.key === 'shaft') && r % 3 === 1 && r < Z.rows - 2) hazards.push({ kind: 'bats', y: y + 85, sp: 120 + rnd() * 60, ph: rnd() * 2000, dir: rnd() < 0.5 ? -1 : 1 });
+      }
+    });
+    zoneY.push(i * CAVE_GAP);
+    return { rows, geoms, hazards, zoneY, exitY: (i + 1) * CAVE_GAP };
   }
-  const caveLane = () => Math.min(W / 2 - 40, 300);
+  function buildWorld6(seed) {
+    const rnd = mulberry32(seed);
+    const hollow = buildHollow(rnd);
+    const sky = [];
+    for (let k = 0; k < 160; k++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.15 ? 2 : 1, tw: rnd() * TAU });
+    hollow.geoms.forEach((g, k) => { g.id = k; });
+    return { seed, plats: [], stars: hollow.geoms, decor: [], crust: [], swirls: [], sky, ranges: [], issPlat: null, beams: [], dust: [], hollow };
+  }
+  // In from a crash on level 1: the score comes too
+  function enterHollowEarth() {
+    const got = routeStars().filter((s) => s.taken).length;
+    startGame(6, { score, mult, time: playTime, got, total: routeStars().length, falls, trail: ['Earth'] });
+    fx.cave.vy = CAVE_BOUNCE * 0.6; fx.cave.y = 60;
+    fx.flash = 0.8; addShake(16); sfx.boom(1); buzz([60, 40, 120]);
+    toast('You smashed straight through the crust… into the HOLLOW EARTH! Climb back out, cavern by cavern, up to the hole you made.', 6);
+  }
+  function beginHollow() {
+    fx.cave = { y: 0, vy: CAVE_BOUNCE, x: 0, vx: 0, cam: 0, t: 0, best: -1, zone: -1, apex: 0, bits: [], out: 0 };
+    player.suit = false; player.onGround = false;
+  }
+  const caveLane = () => Math.min(W / 2 - 40, 320);
+  const caveU = (p, C) => p.u + (p.amp ? p.amp * Math.sin(C.t * p.sp + p.ph) : 0);
+  const caveZoneAt = (y) => { const Z = world.hollow.zoneY; let z = 0; while (z < HOLLOW.length - 1 && y >= Z[z + 1]) z++; return z; };
+  function caveHit(text) {
+    const C = fx.cave;
+    if (C.hurt > 0) return;
+    C.hurt = 1; C.vy = Math.min(C.vy, -520);
+    loseMult(); fx.flash = 0.3; addShake(10); sfx.thud(); buzz([40, 30, 60]);
+    pop(text, '#ff5a4a', player.r + 90);
+  }
   function updateCave(dt) {
-    const C = fx.cave, lane = caveLane();
-    C.t += dt;
+    const C = fx.cave, Hl = world.hollow, lane = caveLane();
+    C.t += dt; C.hurt = Math.max(0, (C.hurt || 0) - dt);
+    if (C.out) {
+      // Out through the hole, flying up into daylight
+      C.out += dt; C.y += 600 * dt; C.cam += (C.y - C.cam) * Math.min(1, dt * 5);
+      if (C.out > 1.4 && state === 'play') { lastTier = TOP; bestTier = TOP; win(); }
+      return;
+    }
     const kdir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
     const dir = kdir !== 0 ? kdir : tilt.on ? tilt.axis : 0;
     if (Math.abs(dir) > 0.1) player.facing = Math.sign(dir);
@@ -2086,42 +2158,73 @@
     const prev = C.y;
     C.vy -= CAVE_G * dt;
     C.y += C.vy * dt;
-    const bounceV = Math.sqrt(2 * CAVE_G * (CAVE_GAP + 120));
+    C.apex = Math.max(C.apex, C.y);
+    const bounce = (y, i) => {
+      // A long fall costs the multiplier
+      if (C.apex - y > CAVE_GAP * 2.5) { loseMult(); falls++; pop('OOF!', '#ffab3d', player.r + 80); }
+      C.y = y; C.vy = CAVE_BOUNCE; C.apex = y;
+      sfx.boing(Math.min(12, i + 1), 1.2); addScore(10 + i);
+      if (i > C.best) { C.best = i; addScore(100); }
+    };
     if (C.vy < 0) {
-      if (C.y <= 0) { C.y = 0; C.vy = bounceV; sfx.boing(0, 1); } // the mossy cave floor is springy too
-      C.rows.forEach((row, i) => {
-        const ry = (i + 1) * CAVE_GAP;
-        for (const m of row) {
-          if (prev >= ry && C.y <= ry && Math.abs(C.x - m.u * lane) < m.w / 2 + 8) {
-            C.y = ry; C.vy = bounceV; m.squash = 1;
-            sfx.boing(i + 1, 1.2); addScore(10 * (i + 1));
-            if (i + 1 > C.best) { C.best = i + 1; addScore(100); }
-            for (let k = 0; k < 8; k++) C.bits.push({ x: m.u * lane, y: ry, vx: (Math.random() - 0.5) * 200, vy: Math.random() * 160, t: 0, life: 0.6, c: m.crystal ? '#6dd3ff' : '#b8ff6a' });
+      if (C.y <= 0) bounce(0, -1); // the mossy floor by the inner sun is springy too
+      else Hl.rows.forEach((row, i) => {
+        if (!(prev >= row.y && C.y <= row.y)) return;
+        for (const p of row.plats) {
+          if (p.type === 'floor' && mode !== 'checkpoint') continue;
+          if (p.broken > 0) continue;
+          if (Math.abs(C.x - caveU(p, C) * lane) < p.w / 2 + (p.amp ? 16 : 10)) {
+            bounce(row.y, i); p.squash = 1;
+            if (p.type === 'crystal') { p.broken = 4; sfx.thud(); }
+            for (let k = 0; k < 8; k++) C.bits.push({ x: caveU(p, C) * lane + (p.type === 'floor' ? C.x : 0), y: row.y, vx: (Math.random() - 0.5) * 220, vy: Math.random() * 160, t: 0, life: 0.6, c: p.type === 'crystal' ? '#6dd3ff' : p.type === 'neon' ? '#ff6ad5' : p.type === 'rock' ? '#ff8a3a' : '#b8ff6a' });
+            break;
           }
         }
       });
     }
-    for (const row of C.rows) for (const m of row) m.squash = Math.max(0, m.squash - dt * 4);
+    for (const row of Hl.rows) for (const p of row.plats) { p.squash = Math.max(0, p.squash - dt * 4); if (p.broken > 0) p.broken -= dt; }
+    // Hazards
+    const by = C.y + 24;
+    for (const h of Hl.hazards) {
+      if (h.kind === 'jet') {
+        const ph = (C.t + h.ph) % h.period; h.state = ph < h.period - 2.2 ? 'off' : ph < h.period - 1.2 ? 'warn' : 'on';
+        if (h.state === 'on' && Math.abs(C.x - h.u * lane) < 26 && by > h.y0 && C.y < h.y1) caveHit('SCORCHED!');
+      } else if (h.kind === 'drill') {
+        h.x = Math.sin(C.t * h.sp + h.ph) * lane * 1.05;
+        if (Math.hypot(C.x - h.x, by - h.y) < 40) caveHit('DRILLED!');
+      } else if (h.kind === 'bats') {
+        const span = lane * 2 + 500; h.x = h.dir * ((((C.t * h.sp + h.ph) % span) + span) % span - span / 2);
+        if (Math.hypot(C.x - h.x, by - h.y) < 44) caveHit('BATS!');
+      }
+    }
+    for (const g of world.stars) {
+      if (g.taken) continue;
+      const gx = g.u * lane, d = Math.hypot(gx - C.x, g.y - by);
+      if (d < 90) g.u += (C.x / lane - g.u) * Math.min(1, dt * 6);
+      if (d < 30) {
+        g.taken = true; addMult(); addScore(25); sfx.star(mult); updateStarsHud(true);
+        for (let k = 0; k < 8; k++) C.bits.push({ x: gx, y: g.y, vx: (Math.random() - 0.5) * 220, vy: (Math.random() - 0.5) * 220, t: 0, life: 0.45, c: '#6dff7a' });
+      }
+    }
     for (const q of C.bits) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy -= 400 * dt; }
     C.bits = C.bits.filter((q) => q.t < q.life);
-    C.cam += (C.y - C.cam) * Math.min(1, dt * 5);
-    if (!C.told && C.t > 7) {
-      C.told = true;
-      toast('📁 CLASSIFIED FILE: "The Earth is hollow, with a little sun inside."  THE TRUTH: earthquake waves show it\'s solid rock and metal all the way down, with an iron core about as hot as the surface of the Sun.', 8);
+    C.cam += (C.y - C.cam) * Math.min(1, dt * (C.vy < -600 ? 9 : 5));
+    // A new cavern: its name, and a fact (or a classified file)
+    const z = caveZoneAt(C.y);
+    if (z > C.zone) {
+      C.zone = z;
+      const Z = HOLLOW[z];
+      banner(Z.name.toUpperCase(), `${Math.round(30 - (Hl.zoneY[z] / Hl.exitY) * 30)} KM DOWN`);
+      if (z > 0) { addScore(500); sfx.tier(); }
+      if (Z.file) toast(`📁 CLASSIFIED FILE: "${Z.file[0]}"  THE TRUTH: ${Z.file[1]}`, 8);
+      else if (Z.note) toast(Z.note, 7);
     }
-    // Out through the hole you made
-    if (C.y > (CAVE_ROWS + 1) * CAVE_GAP - 20) {
-      fx.cave = null;
-      Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, squash: 1, heat: 0 });
-      fx.flash = 0.6; addShake(8); sfx.perfect();
-      for (let i = 0; i < 14; i++) fx.puffs.push({ a: -theta, R: R0 + 4, vt: (Math.random() - 0.5) * 300, vr: 40 + Math.random() * 160, r: 6 + Math.random() * 8, t: 0, life: 1, nlc: false, dust: true });
-      addScore(1000); pop('YOU GOT OUT!', '#8fff6a', R0 + 130);
-      toast('Out of the hollow Earth! Nobody will ever believe you. Find a trampoline and bounce back up.', 5);
-    }
+    if (C.y > Hl.exitY - 10) { C.out = 0.001; C.vy = 0; sfx.perfect(); addShake(6); fx.flash = 0.5; banner('DAYLIGHT!', 'YOU GOT OUT'); }
   }
   function updateCaveFrame(dt) {
     if (state === 'play') playTime += dt;
     updateCave(dt);
+    if (snd) snd.music.set({ tierF: 1 + (fx.cave.y / world.hollow.exitY) * 6, speed: 1, won: state === 'won', belt: false });
     for (const q of fx.pops) q.t += dt;
     fx.pops = fx.pops.filter((q) => q.t < 1.1);
     if (fx.banner) { fx.banner.t += dt; if (fx.banner.t > 2.6) fx.banner = null; }
@@ -2132,87 +2235,215 @@
       if (toastTimer <= 0.4) hud.toast.style.opacity = '0';
       if (toastTimer <= 0) hud.toast.hidden = true;
     }
-    hud.alt.textContent = fx.cave ? `-${fmtKm(30 - (fx.cave.y / ((CAVE_ROWS + 1) * CAVE_GAP)) * 30)}` : '0 m';
-    hud.layer.textContent = 'The hollow Earth?';
+    const k = clamp(fx.cave.y / world.hollow.exitY, 0, 1);
+    hud.alt.textContent = k >= 1 ? '0 m' : `${fmtKm(30 * (1 - k))} down`;
+    hud.layer.textContent = HOLLOW[Math.max(0, fx.cave.zone)].name;
   }
   function drawCave() {
-    const C = fx.cave, lane = caveLane();
+    const C = fx.cave, Hl = world.hollow, lane = caveLane();
     const base = H * 0.6, sy = (y) => base - (y - C.cam);
-    // Deep in the rock: a warm dark glow, and far below, the "inner sun"
+    // The cavern you're in sets the colours, blending into the next
+    const zf = (() => { const Z = Hl.zoneY, z = caveZoneAt(C.cam); const k = clamp((C.cam - Z[z]) / (Z[z + 1] - Z[z]), 0, 1); return { z, k }; })();
+    const Za = HOLLOW[zf.z], Zb = HOLLOW[Math.min(HOLLOW.length - 1, zf.z + 1)], mk = Math.max(0, (zf.k - 0.7) / 0.3);
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#1a0f1e'); g.addColorStop(1, '#2a1410');
+    g.addColorStop(0, mix(Za.bg[0], Zb.bg[0], mk)); g.addColorStop(1, mix(Za.bg[1], Zb.bg[1], mk));
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
     ctx.save();
     if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    // The inner sun, far below
     const sunY = sy(-420);
-    const sg = ctx.createRadialGradient(W / 2, sunY, 10, W / 2, sunY, 260);
-    sg.addColorStop(0, 'rgba(255,220,140,0.9)'); sg.addColorStop(0.2, 'rgba(255,170,80,0.4)'); sg.addColorStop(1, 'rgba(255,120,40,0)');
-    ctx.fillStyle = sg; ctx.fillRect(0, sunY - 260, W, 520);
-    // Cave walls: jagged rock either side, scrolling with you
+    if (sunY < H + 300) {
+      const sg = ctx.createRadialGradient(W / 2, sunY, 10, W / 2, sunY, 300);
+      sg.addColorStop(0, 'rgba(255,230,150,0.95)'); sg.addColorStop(0.2, 'rgba(255,170,80,0.45)'); sg.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.fillStyle = sg; ctx.fillRect(0, sunY - 300, W, 600);
+      ctx.fillStyle = '#fff3c4'; ctx.beginPath(); ctx.arc(W / 2, sunY, 40, 0, TAU); ctx.fill();
+      ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,240,200,0.8)'; ctx.fillText('THE "INNER SUN"', W / 2, sunY - 52); ctx.textAlign = 'start';
+    }
+    // Scenery for each cavern on screen
+    HOLLOW.forEach((Z, z) => {
+      const y0 = sy(Hl.zoneY[z]), y1 = sy(Hl.zoneY[z + 1]);
+      if (y1 > H + 40 || y0 < -40) return;
+      const top = Math.max(-40, y1), bot = Math.min(H + 40, y0);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, top, W, bot - top); ctx.clip();
+      if (Z.key === 'sea') {
+        // The sea fills the bottom of its cavern, with something long-necked in it
+        const seaY = y0 - 40;
+        px(0, seaY, W, y0 - seaY + 2, '#17485a'); px(0, seaY, W, 3, '#5ab4c8');
+        ctx.fillStyle = '#2f5a3a';
+        const nx = W / 2 + Math.sin(clock * 0.4) * lane * 0.8;
+        ctx.beginPath(); ctx.ellipse(nx, seaY + 6, 30, 9, 0, Math.PI, TAU); ctx.fill();
+        ctx.fillRect(nx + 16, seaY - 40, 8, 42); ctx.beginPath(); ctx.ellipse(nx + 26, seaY - 42, 11, 7, 0, 0, TAU); ctx.fill();
+        px(nx + 29, seaY - 45, 2, 2, '#ffd23f');
+      } else if (Z.key === 'crystal') {
+        for (let i = 0; i < 8; i++) {
+          const x = (i % 2 ? W / 2 + lane + 40 : W / 2 - lane - 40) + Math.sin(i * 3.1) * 20, yy = y0 - (i * (y0 - y1)) / 8;
+          ctx.fillStyle = `rgba(160,140,255,${0.35 + 0.15 * Math.sin(clock + i)})`;
+          ctx.beginPath(); ctx.moveTo(x, yy); ctx.lineTo(x + (i % 2 ? -70 : 70), yy - 120); ctx.lineTo(x + (i % 2 ? -50 : 50), yy - 128); ctx.lineTo(x, yy - 20); ctx.fill();
+        }
+      } else if (Z.key === 'forest') {
+        for (let i = 0; i < 6; i++) {
+          const x = W / 2 + (i % 2 ? 1 : -1) * (lane + 30 + (i % 3) * 20), yy = y0 - (i * (y0 - y1)) / 6;
+          px(x - 8, yy - 90, 16, 90, '#3a5a3a');
+          ctx.fillStyle = 'rgba(184,255,106,0.25)'; ctx.beginPath(); ctx.ellipse(x, yy - 90, 60, 24, 0, Math.PI, TAU); ctx.fill();
+        }
+        // Drifting spores
+        for (let i = 0; i < 24; i++) px((i * 97 + clock * 20 * (i % 3 + 1)) % W, top + ((i * 61 + clock * 15) % Math.max(1, bot - top)), 2, 2, 'rgba(200,255,140,0.6)');
+      } else if (Z.key === 'lava') {
+        const lg = ctx.createLinearGradient(0, y0 - 120, 0, y0);
+        lg.addColorStop(0, 'rgba(255,90,30,0)'); lg.addColorStop(1, 'rgba(255,90,30,0.5)');
+        ctx.fillStyle = lg; ctx.fillRect(0, y0 - 120, W, 120);
+        px(0, y0 - 14, W, 14, '#ff6a1a');
+        for (let i = 0; i < 10; i++) px((i * 113 + Math.sin(clock * 2 + i) * 10) % W, y0 - 16 - Math.abs(Math.sin(clock * 3 + i)) * 8, 8, 6, '#ffd23f');
+      } else if (Z.key === 'city') {
+        // Lizard city: towers with lit windows and neon signs
+        for (let i = 0; i < 6; i++) {
+          const left = i % 2 === 0, x = left ? W / 2 - lane - 120 : W / 2 + lane + 30, yy = y0 - (i * (y0 - y1)) / 6, h = 140 + (i % 3) * 30;
+          px(x, yy - h, 90, h, '#232b33');
+          for (let wy = 10; wy < h - 10; wy += 18) for (let wx = 10; wx < 80; wx += 18) if ((wx + wy + i) % 3) px(x + wx, yy - h + wy, 8, 8, (wx * wy + i) % 5 ? 'rgba(140,255,120,0.6)' : 'rgba(255,106,213,0.6)');
+        }
+        const signs = ['LIZARD HQ', 'NOTHING TO SEE HERE', 'AREA 52', 'HUMANS: KEEP OUT'];
+        ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+        signs.forEach((t, i) => {
+          const x = i % 2 ? W / 2 + lane - 40 : W / 2 - lane + 40, yy = y0 - ((i + 0.5) * (y0 - y1)) / 4;
+          ctx.fillStyle = 'rgba(10,12,16,0.8)'; ctx.fillRect(x - 70, yy - 12, 140, 18);
+          ctx.fillStyle = Math.sin(clock * 5 + i) > -0.8 ? (i % 2 ? '#ff6ad5' : '#8fff6a') : '#334';
+          ctx.fillText(t, x, yy + 2);
+        });
+        ctx.textAlign = 'start';
+      } else if (Z.key === 'shaft') {
+        // Roots hanging down, and daylight from the top
+        for (let i = 0; i < 14; i++) { const x = W / 2 + (i - 7) * (lane / 6); px(x, top, 2, 30 + (i * 37) % 60, '#6b4a2a'); }
+      } else if (Z.key === 'sun') {
+        for (let i = 0; i < 8; i++) {
+          const x = W / 2 + (i % 2 ? 1 : -1) * (lane + 40), yy = y0 - (i * (y0 - y1)) / 8;
+          ctx.fillStyle = 'rgba(122,63,191,0.5)'; ctx.beginPath(); ctx.ellipse(x, yy - 30, 40, 14, 0, Math.PI, TAU); ctx.fill();
+        }
+      }
+      ctx.restore();
+    });
+    // Cave walls: jagged rock either side
     for (const side of [-1, 1]) {
-      ctx.fillStyle = '#3a2620';
-      ctx.beginPath(); ctx.moveTo(side < 0 ? 0 : W, 0);
+      ctx.fillStyle = mix(Za.wall, Zb.wall, mk);
+      ctx.beginPath(); ctx.moveTo(side < 0 ? 0 : W, -60);
       for (let i = -2; i <= 14; i++) {
-        const wy = i * 60 - (C.cam % 60);
+        const wy = i * 60 - (((C.cam % 60) + 60) % 60);
         const jag = 18 + 14 * Math.sin((i + Math.floor(C.cam / 60)) * 2.3);
         ctx.lineTo(W / 2 + side * (lane + 60 + jag), wy);
       }
       ctx.lineTo(side < 0 ? 0 : W, H + 60); ctx.closePath(); ctx.fill();
     }
-    // An underground sea far below, with something long-necked in it (a nod
-    // to Journey to the Centre of the Earth)
-    const seaY = sy(-60);
-    if (seaY < H + 40) {
-      px(0, seaY, W, H - seaY + 60, '#173a4a');
-      ctx.fillStyle = '#2f5a3a';
-      const nx = W / 2 + Math.sin(clock * 0.4) * lane * 0.8;
-      ctx.beginPath(); ctx.ellipse(nx, seaY + 6, 26, 8, 0, Math.PI, TAU); ctx.fill();
-      ctx.fillRect(nx + 14, seaY - 34, 7, 36); ctx.beginPath(); ctx.ellipse(nx + 22, seaY - 36, 9, 6, 0, 0, TAU); ctx.fill();
-      px(nx + 25, seaY - 38, 2, 2, '#ffd23f');
-    }
     // The hole you fell through, with daylight pouring in
-    const holeY = sy((CAVE_ROWS + 1) * CAVE_GAP);
+    const holeY = sy(Hl.exitY);
     if (holeY > -80) {
-      const lg = ctx.createLinearGradient(0, holeY - 40, 0, holeY + 200);
-      lg.addColorStop(0, 'rgba(200,235,255,0.6)'); lg.addColorStop(1, 'rgba(200,235,255,0)');
-      ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(W / 2 - 50, holeY); ctx.lineTo(W / 2 + 50, holeY); ctx.lineTo(W / 2 + lane, holeY + 220); ctx.lineTo(W / 2 - lane, holeY + 220); ctx.fill();
-      px(0, holeY - 60, W / 2 - 50, 60, '#3a2620'); px(W / 2 + 50, holeY - 60, W / 2, 60, '#3a2620');
-      px(W / 2 - 50, holeY - 64, 100, 6, '#8fd0ff');
-      ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#eef1ff'; ctx.fillText('WAY OUT ↑', W / 2, holeY + 20); ctx.textAlign = 'start';
+      const lg = ctx.createLinearGradient(0, holeY - 40, 0, holeY + 260);
+      lg.addColorStop(0, 'rgba(200,235,255,0.7)'); lg.addColorStop(1, 'rgba(200,235,255,0)');
+      ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(W / 2 - 60, holeY); ctx.lineTo(W / 2 + 60, holeY); ctx.lineTo(W / 2 + lane, holeY + 260); ctx.lineTo(W / 2 - lane, holeY + 260); ctx.fill();
+      px(0, holeY - 200, W / 2 - 60, 200, '#3a2a1e'); px(W / 2 + 60, holeY - 200, W / 2, 200, '#3a2a1e');
+      px(0, holeY - 214, W, 14, '#4fb34a');
+      ctx.fillStyle = '#9fd8ff'; ctx.fillRect(W / 2 - 60, holeY - 214, 120, 214);
+      ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#eef1ff'; ctx.fillText('WAY OUT ↑', W / 2, holeY + 24); ctx.textAlign = 'start';
     }
-    // The mushrooms (and the odd crystal) you bounce on
-    C.rows.forEach((row, i) => {
-      const y = sy((i + 1) * CAVE_GAP);
-      if (y < -60 || y > H + 80) return;
-      for (const m of row) {
-        const x = W / 2 + m.u * lane, sq = m.squash * 6;
-        if (m.crystal) {
-          ctx.fillStyle = 'rgba(109,211,255,0.25)'; ctx.beginPath(); ctx.arc(x, y + 6, m.w * 0.6, 0, TAU); ctx.fill();
-          ctx.fillStyle = '#6dd3ff'; ctx.beginPath(); ctx.moveTo(x - m.w / 2, y + sq); ctx.lineTo(x - m.w / 4, y + 18); ctx.lineTo(x + m.w / 4, y + 18); ctx.lineTo(x + m.w / 2, y + sq); ctx.lineTo(x, y - 8 + sq); ctx.fill();
+    // Platforms
+    for (const row of Hl.rows) {
+      const y = sy(row.y);
+      if (y < -60 || y > H + 80) continue;
+      for (const p of row.plats) {
+        if (p.type === 'floor') {
+          if (mode !== 'checkpoint') continue;
+          px(W / 2 - lane - 70, y, lane * 2 + 140, 14, '#5a4636'); px(W / 2 - lane - 70, y, lane * 2 + 140, 3, '#8a7056');
+          px(W / 2 - lane + 6, y - 30, 2, 30, '#e8e8f0'); ctx.fillStyle = '#52e07a'; ctx.beginPath(); ctx.moveTo(W / 2 - lane + 8, y - 30); ctx.lineTo(W / 2 - lane + 22, y - 25 + Math.sin(clock * 5) * 2); ctx.lineTo(W / 2 - lane + 8, y - 20); ctx.fill();
+          continue;
+        }
+        const x = W / 2 + caveU(p, C) * lane, sq = p.squash * 6, w = p.w;
+        if (p.type === 'crystal') {
+          if (p.broken > 0) { ctx.globalAlpha = 0.25 + 0.15 * Math.sin(clock * 10); }
+          ctx.fillStyle = 'rgba(109,211,255,0.25)'; ctx.beginPath(); ctx.arc(x, y + 6, w * 0.6, 0, TAU); ctx.fill();
+          ctx.fillStyle = '#6dd3ff'; ctx.beginPath(); ctx.moveTo(x - w / 2, y + sq); ctx.lineTo(x - w / 4, y + 18); ctx.lineTo(x + w / 4, y + 18); ctx.lineTo(x + w / 2, y + sq); ctx.lineTo(x, y - 8 + sq); ctx.fill();
           px(x - 4, y - 2 + sq, 8, 10, '#e6fbff');
+          ctx.globalAlpha = 1;
+        } else if (p.type === 'raft') {
+          for (let i = 0; i < 5; i++) px(x - w / 2 + (i * w) / 5, y + sq, w / 5 - 2, 12, i % 2 ? '#8a5a3b' : '#a5713f');
+          px(x - w / 2, y + 4 + sq, w, 2, '#5a3a28');
+        } else if (p.type === 'rock') {
+          ctx.fillStyle = '#4a2a20'; ctx.beginPath(); ctx.moveTo(x - w / 2, y + sq); ctx.lineTo(x + w / 2, y + sq); ctx.lineTo(x + w / 3, y + 26); ctx.lineTo(x - w / 3, y + 26); ctx.fill();
+          px(x - w / 2, y + sq, w, 3, '#ff8a3a');
+        } else if (p.type === 'neon') {
+          px(x - w / 2, y + sq, w, 10, '#2a2f38'); px(x - w / 2, y + sq, w, 3, Math.sin(clock * 4 + p.ph) > 0 ? '#ff6ad5' : '#8fff6a');
+        } else if (p.type === 'ledge') {
+          px(x - w / 2, y + sq, w, 12, '#6b4a2a'); px(x - w / 2, y + sq, w, 3, '#4fb34a');
         } else {
+          // Glowing mushrooms (they sway in the forest)
           px(x - 6, y + 4, 12, 40, '#d9cbb0');
-          const glow = ctx.createRadialGradient(x, y, 4, x, y, m.w * 0.8);
+          const glow = ctx.createRadialGradient(x, y, 4, x, y, w * 0.8);
           glow.addColorStop(0, 'rgba(184,255,106,0.35)'); glow.addColorStop(1, 'rgba(184,255,106,0)');
-          ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, m.w * 0.8, 0, TAU); ctx.fill();
-          ctx.fillStyle = '#7a3fbf'; ctx.beginPath(); ctx.ellipse(x, y + 4 + sq, m.w / 2, 16 - sq, 0, Math.PI, TAU); ctx.fill();
-          ctx.fillStyle = '#b8ff6a';
-          for (const k of [-0.3, 0, 0.28]) { ctx.beginPath(); ctx.arc(x + k * m.w, y - 4 + sq + Math.abs(k) * 8, 4, 0, TAU); ctx.fill(); }
+          ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, w * 0.8, 0, TAU); ctx.fill();
+          ctx.fillStyle = p.type === 'sway' ? '#c0452a' : '#7a3fbf'; ctx.beginPath(); ctx.ellipse(x, y + 4 + sq, w / 2, 16 - sq, 0, Math.PI, TAU); ctx.fill();
+          ctx.fillStyle = p.type === 'sway' ? '#ffe6c0' : '#b8ff6a';
+          for (const k of [-0.3, 0, 0.28]) { ctx.beginPath(); ctx.arc(x + k * w, y - 4 + sq + Math.abs(k) * 8, 4, 0, TAU); ctx.fill(); }
         }
       }
-    });
+    }
+    // Hazards
+    for (const h of Hl.hazards) {
+      if (h.kind === 'jet') {
+        const x = W / 2 + h.u * lane, ya = sy(h.y1), yb = sy(h.y0);
+        if (yb < -20 || ya > H + 20) continue;
+        if (h.state === 'warn') { for (let i = 0; i < 5; i++) px(x - 6 + Math.random() * 12, yb - 10 - Math.random() * 20, 5, 5, '#ffab3d'); }
+        else if (h.state === 'on') {
+          const lg = ctx.createLinearGradient(x - 24, 0, x + 24, 0);
+          lg.addColorStop(0, 'rgba(255,90,30,0)'); lg.addColorStop(0.5, 'rgba(255,200,80,0.95)'); lg.addColorStop(1, 'rgba(255,90,30,0)');
+          ctx.fillStyle = lg; ctx.fillRect(x - 24, ya, 48, yb - ya);
+        }
+        px(x - 14, yb - 6, 28, 8, '#2a1410');
+      } else if (h.kind === 'drill') {
+        const x = W / 2 + h.x, y = sy(h.y);
+        if (y < -40 || y > H + 40) continue;
+        // The Mole: a burrowing machine with a spinning cone
+        const d = Math.cos(C.t * h.sp + h.ph) > 0 ? 1 : -1;
+        ctx.save(); ctx.translate(x, y); ctx.scale(d, 1);
+        px(-30, -14, 40, 28, '#8a93a4'); px(-30, -14, 40, 4, '#c9ced9'); px(-22, -6, 8, 8, '#ffd23f');
+        ctx.fillStyle = '#c9ced9'; ctx.beginPath(); ctx.moveTo(10, -14); ctx.lineTo(36, 0); ctx.lineTo(10, 14); ctx.fill();
+        ctx.strokeStyle = '#5d6472'; ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) { const o = ((C.t * 40 + i * 9) % 26); ctx.beginPath(); ctx.moveTo(10 + o, -14 + o * 0.54); ctx.lineTo(10 + o, 14 - o * 0.54); ctx.stroke(); }
+        ctx.restore();
+      } else if (h.kind === 'bats') {
+        const x = W / 2 + h.x, y = sy(h.y);
+        if (y < -40 || y > H + 40) continue;
+        for (let i = 0; i < 6; i++) {
+          const bx = x + Math.cos(i * 1.7 + clock * 3) * 22, byy = y + Math.sin(i * 2.3 + clock * 4) * 14, f = Math.sin(clock * 20 + i) > 0 ? 6 : 2;
+          ctx.fillStyle = '#1b1530'; ctx.beginPath(); ctx.moveTo(bx - 9, byy - f); ctx.lineTo(bx, byy + 2); ctx.lineTo(bx + 9, byy - f); ctx.lineTo(bx, byy - 2); ctx.fill();
+          px(bx - 1, byy - 2, 1, 1, '#ff5a4a');
+        }
+      }
+    }
+    for (const gm of world.stars) {
+      if (gm.taken) continue;
+      const y = sy(gm.y);
+      if (y > -30 && y < H + 30) drawGeomAt(W / 2 + gm.u * lane, y);
+    }
     for (const q of C.bits) { ctx.globalAlpha = 1 - q.t / q.life; px(W / 2 + q.x - 2, sy(q.y) - 2, 4, 4, q.c); }
     ctx.globalAlpha = 1;
     const fy = sy(C.y), fxp = W / 2 + C.x;
-    drawSprite(C.vy > 0 ? 'jump' : 'jump', fxp, fy, player.facing < 0, 1, 1, 1, PAL);
-    drawFoilHat(fxp, fy, 0, player.facing < 0);
+    if (!C.hurt || Math.sin(clock * 30) > 0) {
+      drawSprite('jump', fxp, fy, player.facing < 0, 1, 1, 1, PAL);
+      drawFoilHat(fxp, fy, 0, player.facing < 0);
+    }
     ctx.font = '10px "Press Start 2P", monospace'; ctx.textAlign = 'center';
     for (const q of fx.pops) {
       const k = q.t / 1.1;
-      ctx.globalAlpha = 1 - k; ctx.fillStyle = q.color; ctx.fillText(q.text, fxp, fy - 70 - k * 40);
+      ctx.globalAlpha = 1 - k; ctx.fillStyle = '#1b1530'; ctx.fillText(q.text, fxp + 1, fy - 69 - k * 40);
+      ctx.fillStyle = q.color; ctx.fillText(q.text, fxp, fy - 70 - k * 40);
     }
     ctx.globalAlpha = 1; ctx.textAlign = 'start';
     ctx.restore();
+    // The rail: each cavern, bottom to top, and you
+    const rx = W - 22, top = H * 0.2, bottom = H * 0.78;
+    ctx.fillStyle = 'rgba(11,15,38,0.5)'; ctx.fillRect(rx - 2, top, 4, bottom - top);
+    HOLLOW.forEach((Z, z) => { const yy = bottom - (Hl.zoneY[z] / Hl.exitY) * (bottom - top); px(rx - 5, yy, 10, 2, z <= C.zone ? '#ffd23f' : 'rgba(238,241,255,0.45)'); });
+    ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(rx, bottom + 10, 6, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#4fb34a'; ctx.beginPath(); ctx.arc(rx, top - 10, 6, 0, TAU); ctx.fill();
+    const my = bottom - clamp(C.y / Hl.exitY, 0, 1) * (bottom - top);
+    px(rx - 5, my - 5, 10, 10, '#1b1530'); px(rx - 4, my - 4, 8, 8, '#e0433b');
   }
 
   function update(dt) {
@@ -5969,7 +6200,11 @@
     $('title').hidden = true;
     $('won').hidden = true;
     document.body.classList.add('playing');
-    if (level === 5) {
+    if (level === 6) {
+      beginHollow();
+      banner('THE HOLLOW EARTH?!', 'CLIMB BACK OUT');
+      toast('Seven caverns between you and daylight. Bounce up and steer with ← → (or the buttons, or tilt). Grab the geoms, and mind the lava, the bats and the drills.', 7);
+    } else if (level === 5) {
       banner(l5Start.name.toUpperCase(), 'NEXT STOP: JUPITER');
       toast(`${l5Start.name}, in the middle of the asteroid belt. Bounce up through the outer belt to the mass drivers: they'll fling you the rest of the way to Jupiter.`, 7);
     } else if (level === 4) {
@@ -5991,27 +6226,34 @@
   const L3_TIME_MEDALS = [[90, 'gold'], [130, 'silver'], [190, 'bronze']];
   const L4_TIME_MEDALS = [[80, 'gold'], [120, 'silver'], [180, 'bronze']];
   const L5_TIME_MEDALS = [[90, 'gold'], [130, 'silver'], [190, 'bronze']];
-  const START_BODY = { 1: 'Earth', 2: 'the Moon', 3: 'Mars', 4: 'Venus' };
+  const L6_TIME_MEDALS = [[120, 'gold'], [180, 'silver'], [260, 'bronze']];
+  const START_BODY = { 1: 'Earth', 2: 'the Moon', 3: 'Mars', 4: 'Venus', 6: 'the hollow Earth' };
   function win() {
     buzz([30, 60, 30, 60, 90]);
     state = 'won';
     document.body.classList.remove('playing');
     const dest = destName();
-    banner(dest.replace('the ', '').toUpperCase(), level === 5 ? "JUPITER'S ICY MOON" : level >= 2 ? `${fmtKm(TIERS[TOP].km)}` : '384,400 km');
+    banner(level === 6 ? 'ESCAPED!' : dest.replace('the ', '').toUpperCase(), level === 6 ? 'OUT OF THE HOLLOW EARTH' : level === 5 ? "JUPITER'S ICY MOON" : level >= 2 ? `${fmtKm(TIERS[TOP].km)}` : '384,400 km');
     fx.flash = 0.6;
     addShake(10);
     for (let i = 0; i < 5; i++) burst(-theta + (i - 2) * 0.004, player.r, ['#ffd23f', '#52e07a', '#e0433b', '#3f6fd8', '#ffffff'][i], 14, 300);
     sfx.win();
-    const timeBonus = Math.max(0, Math.round(([0, 180, 240, 300, 300, 330][level] - playTime) * 100));
-    const bonus = [0, 10000, 15000, 20000, 25000, 30000][level] + timeBonus;
+    const timeBonus = Math.max(0, Math.round(([0, 180, 240, 300, 300, 330, 400][level] - playTime) * 100));
+    const bonus = [0, 10000, 15000, 20000, 25000, 30000, 20000][level] + timeBonus;
     addScore(bonus);
     const list = routeStars();
     const got = list.filter((s) => s.taken).length, total = list.length;
-    const medals = level === 5 ? L5_TIME_MEDALS : level === 4 ? L4_TIME_MEDALS : level === 3 ? L3_TIME_MEDALS : level === 2 ? L2_TIME_MEDALS : TIME_MEDALS;
+    const medals = level === 6 ? L6_TIME_MEDALS : level === 5 ? L5_TIME_MEDALS : level === 4 ? L4_TIME_MEDALS : level === 3 ? L3_TIME_MEDALS : level === 2 ? L2_TIME_MEDALS : TIME_MEDALS;
     const tMedal = (medals.find(([limit]) => playTime <= limit) || [0, 'none'])[1], sMedal = starMedal(got, total);
     const R = rec();
     let newTime, best;
-    if (level === 5) {
+    if (level === 6) {
+      const L = R.l6 = R.l6 || { wins: 0, bestTime: null };
+      newTime = L.bestTime === null || playTime < L.bestTime;
+      L.wins++;
+      if (newTime) L.bestTime = playTime;
+      best = L;
+    } else if (level === 5) {
       const L = R.l5 = R.l5 || { wins: 0, bestTime: null };
       newTime = L.bestTime === null || playTime < L.bestTime;
       L.wins++;
@@ -6076,8 +6318,9 @@
       Venus: 'Venus is the hottest planet: 465°C under clouds of sulfuric acid. Good thing you stopped in the clouds.',
     };
     const seen = level === 3 ? Object.keys(best.worlds).length : 0;
-    $('won-stats').textContent = `Includes a ${level >= 2 ? dest : 'Moon'} bonus of ${fmtScore(bonus)} x${mult}. `
-      + (level === 5 ? `${facts.Europa} You flew the whole way from the middle of the belt.${conspiracy ? ' ALL THESE WORLDS ARE YOURS EXCEPT EUROPA. ATTEMPT NO LANDING THERE. (Oops.)' : ''}`
+    $('won-stats').textContent = `Includes ${level === 6 ? 'an escape' : `a ${level >= 2 ? dest : 'Moon'}`} bonus of ${fmtScore(bonus)} x${mult}. `
+      + (level === 6 ? "You climbed out of the hollow Earth! Nobody will ever believe you. (Real Earth isn't hollow: earthquake waves show solid rock and metal all the way to its iron core.)"
+        : level === 5 ? `${facts.Europa} You flew the whole way from the middle of the belt.${conspiracy ? ' ALL THESE WORLDS ARE YOURS EXCEPT EUROPA. ATTEMPT NO LANDING THERE. (Oops.)' : ''}`
         : level === 3 ? `${landedOn.note} That's the middle of the asteroid belt: you've landed on ${seen} of its 4 big worlds. Jupiter's next.`
         : level === 4 ? `${facts.Mercury} You outran the solar storms.`
         : level === 2 ? `${facts[dest]} For David Bowie, who looked up and made the rest of us look too.`
@@ -6086,7 +6329,8 @@
     $('to-l3').hidden = !(level === 2 && route === 'mars');
     $('to-l4').hidden = !(level === 2 && route === 'venus');
     $('to-l5').hidden = level !== 3;
-    $('again').textContent = level === 5 ? 'Start in the belt again' : level === 4 ? 'Start on Venus again' : level === 3 ? 'Start on Mars again' : level === 2 ? 'Start at the Moon again' : 'Bounce again';
+    $('to-surface').hidden = level !== 6;
+    $('again').textContent = level === 6 ? 'Fall in again' : level === 5 ? 'Start in the belt again' : level === 4 ? 'Start on Venus again' : level === 3 ? 'Start on Mars again' : level === 2 ? 'Start at the Moon again' : 'Bounce again';
     renderBests();
     setTimeout(() => { $('won').hidden = false; }, 900);
   }
@@ -6252,6 +6496,7 @@
       if (R.l3 && R.l3.wins) parts.push(`Belt ${Object.keys(R.l3.worlds).length}/4`);
       if (R.l4 && R.l4.wins) parts.push(`Mercury ${fmtTime(R.l4.bestTime)}`);
       if (R.l5 && R.l5.wins) parts.push(`Europa ${fmtTime(R.l5.bestTime)}`);
+      if (R.l6 && R.l6.wins) parts.push(`Hollow Earth ${fmtTime(R.l6.bestTime)}`);
       el.innerHTML = parts.join(' · ');
     }
     // Level 2 opens up once you've reached the Moon in either mode
@@ -6272,6 +6517,9 @@
   $('l4-start').addEventListener('click', () => { jingle(); startGame(4); });
   $('to-l5').addEventListener('click', () => { jingle(); startGame(5, { score, mult, ...(lastWin || { time: 0, got: 0, total: 0, falls: 0 }) }); });
   $('l5-start').addEventListener('click', () => { jingle(); startGame(5); });
+  $('l6-start').addEventListener('click', () => { jingle(); startGame(6); });
+  // Out of the hollow Earth: back on the surface, carry on up to the Moon
+  $('to-surface').addEventListener('click', () => { jingle(); startGame(1, { score, mult, ...(lastWin || { time: 0, got: 0, total: 0, falls: 0 }) }); });
   $('belt-start').addEventListener('click', () => { jingle(); startGame(3); toBelt(); });
   // Straight to the asteroid belt: drop onto the safe rock at the turn, where
   // the being of light is waiting with your force field
@@ -6315,6 +6563,7 @@
     conspiracy = on;
     document.body.classList.toggle('conspiracy', on);
     $('conspiracy-tag').hidden = !on;
+    $('l6-start').hidden = !on;
   }
   secretStar.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -6468,6 +6717,7 @@
     resize();
     if (data && data.level >= 2) { level = data.level; route = data.route || null; aimFor = data.aimFor || route; useTiers(); }
     reset(data && data.seed ? data.seed : 20260930);
+    if (level === 6) beginHollow();
     if (!data || !data.state) {
       state = 'splash';
       $('title').hidden = true;
