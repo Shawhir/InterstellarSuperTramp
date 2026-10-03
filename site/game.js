@@ -1141,8 +1141,6 @@
   //    (like Dimorphos round Didymos), solid, so time your way past
   //  - rubble piles: loose heaps of boulders, spinning fast, that throw off
   //    pebbles (NASA's OSIRIS-REx saw Bennu doing it)
-  //  - solar flares: no magnetic field out here to shield you. When one is
-  //    coming, get under an asteroid
   function updateBeltHazards(dt) {
     const near = (a, R, d) => Math.abs(wrap(a + theta)) * player.r < d && Math.abs(R - player.r) < d;
     for (const q of world.rocks || []) {
@@ -1174,32 +1172,34 @@
       }
     }
     fx.pebbles = fx.pebbles.filter((q) => q.t < 3 && !q.hit);
-    // Solar flares: a warning, then the blast. Safe if there's an asteroid
-    // right above you to hide under.
-    fx.flareT = (fx.flareT ?? 45) - dt;
-    if (!fx.flare && fx.flareT <= 0 && beltK() > 0.9 && state === 'play' && !player.adrift) {
-      fx.flareT = 60 + Math.random() * 30;
+  }
+  const FLARE_WARN = 4;
+  // Solar flares, on the sunward route to Venus where they're fiercest (out
+  // in the asteroid belt they're about seven times weaker than at Earth).
+  // A warning and countdown, then the blast: be under something when it hits.
+  function updateFlare(dt) {
+    fx.flareT = (fx.flareT ?? 12) - dt;
+    if (!fx.flare && fx.flareT <= 0 && level === 2 && route === 'venus' && lastTier >= 4 && lastTier < TOP && state === 'play') {
+      fx.flareT = 35 + Math.random() * 15;
       fx.flare = { t: 0, hit: false };
-      banner('SOLAR FLARE!', 'GET UNDER AN ASTEROID');
-      toast('A solar flare is coming! There\'s no magnetic field out here to shield you: get under an asteroid before it hits.', 4);
+      banner('SOLAR FLARE!', 'GET UNDER SOMETHING');
+      toast('A solar flare is coming! This close to the Sun they\'re fierce, and there\'s no magnetic field to shield you: get under a rocket or an asteroid before it hits.', 4.5);
       sfx.tier();
     }
     const f = fx.flare;
-    if (f) {
-      f.t += dt;
-      if (!f.hit && f.t >= FLARE_WARN) {
-        f.hit = true;
-        const covered = world.plats.some((p) => !p.dest && Math.abs(wrap(p.a + theta)) * p.R < p.w / 2 + 10 && p.R > player.r + 40 && p.R < player.r + 330)
-          || (world.rocks || []).some((q) => Math.abs(wrap(q.a + theta)) * q.R < q.r + 10 && q.R > player.r + 40 && q.R < player.r + 330);
-        fx.flash = 0.7;
-        if (covered) { pop('SHELTERED!', '#52e07a', player.r + 120); addScore(500); sfx.perfect(); }
-        else if (player.field > 0) { player.field--; pop(`FLARE! FIELD ${player.field}`, '#ff6ad5', player.r + 120); sfx.thud(); }
-        else { pop('FRIED!', '#ff5a4a', player.r + 120); loseMult(); sfx.thud(); }
-      }
-      if (f.t > FLARE_WARN + 1.6) fx.flare = null;
+    if (!f) return;
+    f.t += dt;
+    if (!f.hit && f.t >= FLARE_WARN) {
+      f.hit = true;
+      const above = (a, R, half) => Math.abs(wrap(a + theta)) * R < half && R > player.r + 40 && R < player.r + 330;
+      const covered = player.onGround || world.plats.some((p) => !p.dest && !ghost(p) && above(p.a, p.R, p.w / 2 + 10)) || (world.rocks || []).some((q) => above(q.a, q.R, q.r + 10));
+      fx.flash = 0.7;
+      if (covered) { pop('SHELTERED!', '#52e07a', player.r + 120); addScore(500); sfx.perfect(); }
+      else if (player.shield > 0) { pop('SHIELDED!', '#8fd0ff', player.r + 120); sfx.perfect(); }
+      else { pop('FRIED!', '#ff5a4a', player.r + 120); loseMult(); sfx.thud(); }
     }
+    if (f.t > FLARE_WARN + 1.6) fx.flare = null;
   }
-  const FLARE_WARN = 4;
   function updateCrash(dt) {
     fx.crashT = (fx.crashT ?? 22) - dt;
     if (!fx.crash && fx.crashT <= 0 && beltK() > 0.9 && state === 'play' && !player.adrift) {
@@ -1408,6 +1408,7 @@
 
   function updateSpace(dt) {
     if (fx.dedication > 0) fx.dedication -= dt;
+    updateFlare(dt);
     // Walk past something on the ground to hear about it
     if (player.onGround && player.r <= R0 + 1) {
       for (const d of world.decor) {
@@ -4065,7 +4066,8 @@
       ctx.restore();
     } else drawSpeedLines();
     if (level >= 2) { drawWind(); if (fk < 0.05) drawMeteorWarnings(); }
-    if (level === 3) { drawForeground(); drawImprobable(); drawWorldPointer(); drawFlare(); }
+    if (level === 3) { drawForeground(); drawImprobable(); drawWorldPointer(); }
+    if (level === 2) drawFlare();
     // The saucers fly in front of the scenery, across the top of the sky
     if (level === 3) drawConvoy(...EARTH_FROM_MARS(), clamp(1 - tierFloat(player.r) / 3.5, 0, 1), 'near');
     drawBanner();

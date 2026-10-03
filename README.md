@@ -123,6 +123,10 @@ start level 2 from the title screen once you've landed there once.
   left for Venus. Once you pick, the other route turns into see-through ghosts.
 - **Gravity.** Lower than Earth's, so you float (softened from the real values
   to keep it playable). Venus pulls harder as you get close.
+- **Solar flares on the way to Venus.** Heading sunward, where flares are
+  fiercest, a flare comes every half minute or so: a warning and countdown,
+  then the blast. Be under a rocket or an asteroid when it hits, or lose your
+  multiplier.
 - **Hazards.** Flaming meteors (with a warning at the screen edge), the solar
   wind pushing you sideways, dust clouds that sandblast you if you linger, and
   radiation bursts that flicker before they fire. Each costs your multiplier.
@@ -192,10 +196,7 @@ button that drops you onto the safe rock at the start of the belt.
 - **Real belt dangers, kept rare.** Some asteroids have little moons going
   round them (like Dimorphos round Didymos, which NASA's DART hit in 2022):
   solid, so time your way past. Loose, fast-spinning rubble piles throw off
-  pebbles (OSIRIS-REx saw Bennu doing it). And every minute or so a solar
-  flare: there's no magnetic field out here to shield you, so when the
-  countdown starts, get under an asteroid. Caught in the open, it costs a
-  force-field charge, or your multiplier.
+  pebbles (OSIRIS-REx saw Bennu doing it).
 - **A light freighter and a space slug.** Partway up each route is a huge
   asteroid with a cave in it. Every so often a battered light freighter bolts
   out of the cave, with a giant space slug lunging out after it.
