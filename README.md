@@ -169,8 +169,8 @@ button that drops you onto the safe rock at the start of the belt.
 - **The air.** Mars's first bouncy layers are thin water-ice clouds and a dust
   storm. Fall back towards it and you come in as a fireball and hit the
   ground in a red KABOOM.
-- **Mars orbit.** Bounce off Phobos and Deimos, then past a Mars trojan and the
-  Dawn probe, with 3I/ATLAS flying by.
+- **Mars orbit.** Bounce off Phobos, Deimos and the Martians' flying saucers,
+  then past a Mars trojan and the Dawn probe, with 3I/ATLAS flying by.
 - **The safe rock.** Halfway out, each route reaches a broad, steady safe rock
   where a being of light hums five notes and gives you a force field (it takes
   five hits from rogue asteroids; geoms charge it back up). It appears again
@@ -182,6 +182,18 @@ button that drops you onto the safe rock at the start of the belt.
   up), and the four worlds sit among them, a little way round from the top of
   each route's climb. An arrow at the edge of the screen points round to your
   world; touch any of the four to land.
+- **The journey through the belt.** It's thick with asteroids, and each
+  region looks different as you climb: pale stony rock and the mining zone in
+  the inner belt, the sparse Kirkwood gap, a mix with shiny metal asteroids in
+  the main belt, and dark carbon-rich rock and ice in the outer belt. Higher
+  up, more asteroids drift from side to side and more are cracked: those
+  crumble just after you bounce off them (they re-form later).
+- **Mining.** Each route passes a refinery of the Belt Mining Co. (silos, a
+  conveyor of ore, a crane, steam), and there are mining rigs on asteroids,
+  drones ferrying ore between them, and drill drones cutting into rock.
+- **Snakes and ladders.** Grabber robots up in the belt grab you and drag you
+  all the way back down to the refinery; ore lifts lower down carry you up
+  four layers.
 - **Pinball.** Some asteroids are neon bumpers (glowing rims, chasing lights)
   that fling you off faster than you came in, and there are red and yellow
   pop bumpers too.
@@ -198,8 +210,11 @@ button that drops you onto the safe rock at the start of the belt.
   solid, so time your way past. Loose, fast-spinning rubble piles throw off
   pebbles (OSIRIS-REx saw Bennu doing it).
 - **A light freighter and a space slug.** Partway up each route is a huge
-  asteroid with a cave in it. Every so often a battered light freighter bolts
-  out of the cave, with a giant space slug lunging out after it.
+  asteroid with a cave in it. The first time you come by, a battered light
+  freighter bolts out with a giant space slug lunging after it, and gets clean
+  away with a jump to lightspeed. After that the slug lurks, eyes glowing in
+  the dark, and lunges if you come close: get bitten and it takes a fifth of
+  your score.
 - **Sci-fi nods along the way:** mining rigs and claim flags, mining lasers
   fired by drones, an ice hauler to land on for an ice shield, a belter
   outpost with a spinning ring, and a Kirkwood gap.
