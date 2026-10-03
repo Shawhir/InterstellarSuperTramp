@@ -67,11 +67,10 @@ says so if that happens.
 - Arriving at a new world (the Moon, Mars, Venus, Mercury, the belt worlds,
   and daylight at the end of the hollow Earth): after you've watched it grow
   in the sky, its gravity grabs you as you get close, swinging you over and
-  pulling you down onto it faster and faster. There's no change of scene: the
-  little world you touch down on is the next level's world seen from far off,
-  and it swells under your feet into the landscape you play on, while the old
-  view (home, now overhead) turns upside down and fades away. You carry
-  straight on with that world's own gravity, the score carried on and the
+  pulling you down onto it faster and faster, while it swells to fill the
+  view. By the time you touch down it's the same world, the same size, as the
+  next level, so there's no change of scene: you just carry on playing there,
+  with that world's own gravity, the score carried on and the
   whole trip counted as one run. Mercury and Europa are the ends of the line,
   with a results screen: at Mercury the view turns over behind the Sun's
   glare and you land on its real landscape and plant a flag.

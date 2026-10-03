@@ -2066,17 +2066,16 @@
     const key = level === 6 ? 'earth' : level === 3 && p.world ? p.world.name.toLowerCase() : p.type;
     if (!ARRIVE[key]) { win(); return; }
     // The clock starts below zero: first the world's pull takes you, then the turn
-    const pull = player.onGround ? 0 : ARR_PULL;
-    fx.arrive = { key, t: -pull, landed: false, bits: [], time: playTime, next: nextLevel(), aim: -p.a, th0: theta, r0: player.r, R: p.R, globe: level === 3 && p.world ? p.world.r : level === 6 ? R0 * 0.35 : MOON_R };
+    const pull = ARR_PULL;
+    fx.arrive = { key, t: -pull, target: p, gr: 0, landed: false, bits: [], time: playTime, next: nextLevel(), aim: -p.a, th0: theta, r0: player.r, R: p.R, globe: level === 3 && p.world ? p.world.r : MOON_R };
+    fx.arrive.gr = fx.arrive.globe;
     player.vx = 0; player.spin = 0; player.heat = 0; fx.flames = [];
     sfx.whoosh();
-    if (pull) { addShake(4); banner(level === 6 ? 'DAYLIGHT!' : `${destName().replace('the ', '').toUpperCase()}'S PULL`, level === 6 ? 'UP AND OUT' : 'HERE WE GO'); }
+    if (!player.onGround) { addShake(4); banner(level === 6 ? 'DAYLIGHT!' : `${destName().replace('the ', '').toUpperCase()}'S PULL`, level === 6 ? 'UP AND OUT' : 'HERE WE GO'); }
   }
-  // Straight on into the next level, with no change of scene: the little
-  // world you've just touched down on IS the next level's world, seen from
-  // far off. It swells under your feet into the landscape you play on, while
-  // the old view (home, now overhead) turns over and fades away.
-  const LAND_T = 2.4;
+  // Straight on into the next level, with no change of scene: you touch down
+  // on a world exactly the size and place of the next level's, and play on.
+  const LAND_T = 0.3;
   let landSnap = null, snapping = false;
   function goOn() {
     const A = fx.arrive, from = level;
@@ -2084,34 +2083,23 @@
     landSnap = landSnap || document.createElement('canvas');
     landSnap.width = canvas.width; landSnap.height = canvas.height;
     fx.banner = null; snapping = true; renderWorld(); snapping = false; // just the world: no banner or rail
-    const sc = landSnap.getContext('2d'), k = canvas.width / W, fy0 = H * (cam.anchor || 0.46);
-    sc.globalCompositeOperation = 'copy'; sc.drawImage(canvas, 0, 0);
-    // Soft edges, so no corners show as it turns
-    const m = sc.createRadialGradient(W / 2 * k, fy0 * k, Math.min(W, H) * 0.22 * k, W / 2 * k, fy0 * k, Math.min(W, H) * 0.55 * k);
-    m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(1, 'rgba(0,0,0,0)');
-    sc.globalCompositeOperation = 'destination-in'; sc.fillStyle = m; sc.fillRect(0, 0, landSnap.width, landSnap.height);
-    sc.globalCompositeOperation = 'source-over';
+    const sc = landSnap.getContext('2d');
+    sc.globalCompositeOperation = 'copy'; sc.drawImage(canvas, 0, 0); sc.globalCompositeOperation = 'source-over';
     const feetY = H * (cam.anchor || 0.46);
     playTime = A.time;
     const bonus = win(true);
     startGame(A.next, { score, mult, ...lastWin });
-    const z0 = clamp(A.globe / R0, 0.1, 1);
-    cam.r = R0; cam.anchor = feetY / H; cam.zoom = z0;
-    fx.land = { t: 0, z0, fx: W / 2, fy: feetY };
+    cam.r = R0; cam.anchor = feetY / H; cam.zoom = 1;
+    fx.land = { t: 0 };
     pop(`LEVEL ${from} DONE! +${fmtScore(bonus)}`, '#ffd23f', player.r + 110);
     sfx.tier();
   }
-  // The old view, turning over and fading as the new world grows
+  // The ground is the same size and in the same place either side of the
+  // change; this just blends the two skies for a moment
   function drawLandSnap() {
-    const L = fx.land, u = clamp(L.t / 1.4, 0, 1), a = 1 - smooth(clamp((L.t - 0.1) / 0.9, 0, 1));
+    const a = 1 - fx.land.t / LAND_T;
     if (!landSnap || a <= 0) return;
-    const s = cam.zoom / L.z0;
-    ctx.save();
-    ctx.globalAlpha = a;
-    // Turned over about you: where home was below, it's now overhead
-    ctx.translate(L.fx, L.fy); ctx.rotate(Math.PI * smooth(u)); ctx.scale(s, s); ctx.translate(-L.fx, -L.fy);
-    ctx.drawImage(landSnap, 0, 0, W, H);
-    ctx.restore();
+    ctx.save(); ctx.globalAlpha = a; ctx.drawImage(landSnap, 0, 0, W, H); ctx.restore();
   }
   function updateArrive(dt) {
     const A = fx.arrive, D = ARRIVE[A.key];
@@ -2121,7 +2109,10 @@
       // and pulled down onto it, faster and faster
       const u = clamp(1 + A.t / ARR_PULL, 0, 1);
       theta = A.th0 + wrap(A.aim - A.th0) * smooth(u);
-      player.r = lerp(A.r0, A.R, u * u * u) + 150 * Math.sin(Math.PI * Math.min(1, u * 1.2));
+      // Close up, it fills the view: by touchdown it's as big as the world
+      // you'll play on next, so there's nothing to change but the level
+      if (A.next) A.gr = lerp(A.globe, R0, smooth(u));
+      player.r = lerp(A.r0, A.R, u * u * u) + (A.r0 === A.R ? 0 : 150) * Math.sin(Math.PI * Math.min(1, u * 1.2));
       player.onGround = false; player.facing = wrap(A.aim - A.th0) > 0 ? 1 : -1;
       cam.r += (player.r - cam.r) * Math.min(1, dt * 10);
       shake = Math.max(shake, 1 + 4 * u * u);
@@ -3497,9 +3488,8 @@
     cam.zoom = lerp(cam.zoom, zWant, Math.min(1, dt * (onRide ? 1.6 : 1.2)));
     if (fx.land) {
       // Coming in to land on the new world: it grows steadily under your feet
-      const L = fx.land; L.t += dt;
-      cam.zoom = L.z0 * Math.pow(1 / L.z0, smooth(clamp(L.t / LAND_T, 0, 1)));
-      if (L.t > LAND_T) { cam.zoom = 1; fx.land = null; }
+      fx.land.t += dt;
+      if (fx.land.t > LAND_T) fx.land = null;
     }
 
     if (toastTimer > 0) {
@@ -3602,11 +3592,12 @@
     const xS = W / 2 + clamp(phi / (Math.PI / 2), -1, 1) * W * 0.3;
     const yS = H * 0.14 + rS * 0.3;
     // World position: centre sits MOON_R below the landing surface.
-    const rc = p.R - MOON_R;
+    const mr = fx.arrive && fx.arrive.target === p ? fx.arrive.gr : MOON_R;
+    const rc = p.R - mr;
     const xW = cx + rc * Math.sin(phi), yW = cy - rc * Math.cos(phi);
     const k = clamp((tf - (TOP - 5)) / (5 - 0.6), 0, 1);
     const t = k * k * (3 - 2 * k); // smoothstep
-    const r = lerp(rS, MOON_R, t);
+    const r = lerp(rS, mr, t);
     // If its real spot is off screen, keep it peeking in from that edge so it
     // never disappears; walk that way and it slides into its true position.
     const peek = r * 0.55;
@@ -5244,7 +5235,7 @@
   };
   // One of the four big worlds at the end of level 3. Its top is the landing spot.
   function beltWorld(p) {
-    const B = p.world, r = B.r;
+    const B = p.world, r = fx.arrive && fx.arrive.target === p ? fx.arrive.gr : B.r;
     ctx.save();
     ctx.fillStyle = B.body; ctx.beginPath(); ctx.arc(0, r, r, 0, TAU); ctx.fill();
     ctx.clip();
@@ -6745,9 +6736,7 @@
     if (!hidden) {
       drawGuide(feetX, feetY);
       drawFire(feetX, feetY);
-      // (kept full size while the new world grows in under you)
-      const iz = fx.land ? 1 / cam.zoom : 1;
-      drawSprite(frame, feetX, feetY, player.facing < 0, sy * iz, sx * iz, 1, player.heat > 0.55 ? HOT : player.suit ? SUIT : PAL, player.spin || 0);
+      drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx, 1, player.heat > 0.55 ? HOT : player.suit ? SUIT : PAL, player.spin || 0);
       if (conspiracy) drawFoilHat(feetX, feetY, player.spin || 0, player.facing < 0);
       if (level >= 2 && player.shield > 0 && (player.shield > 3 || Math.sin(clock * 20) > 0)) {
         ctx.fillStyle = 'rgba(143,208,255,0.14)'; ctx.strokeStyle = 'rgba(143,208,255,0.8)'; ctx.lineWidth = 2;
