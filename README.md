@@ -56,12 +56,12 @@ says so if that happens.
   from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow
   minor drift with echo in space, and speeds up with the bounce multiplier.
   Music and sound effects have separate on/off buttons.
-- Intro: a comet writes the title off its tail above a turning pixel globe of
-  Earth, with real continents, clouds, the Moon beside it and the Sun rising
-  behind. Tap and the camera swoops in past Earth and the Moon, on past Venus and
-  Mercury towards the Sun, turns round, and zooms back in on Earth: the globe
-  becomes the game world as space fades to blue sky and you arrive on the ground
-  (no geoms in the way). Tap during the flight to skip to the landing. Then the
+- Intro: dawn on Earth's horizon. A comet writes the title off its tail while
+  the Sun rises over the Atlantic. Tap and the view lifts gently off the
+  horizon until Earth is a globe, with Mercury and Venus beside the Sun, and
+  the Moon and Mars, all labelled. Then it zooms straight down: the globe
+  becomes the game world as space fades to blue sky (no geoms in the way).
+  Tap during the rise to skip to the zoom. Then the
   menu fades in with the top scores. On the menu the tramp hops along the logo (with the odd backflip off the
   end letter), and each mode plays its own jingle when picked.
 - Juice: screen shake on landings, squash and stretch, afterimage trail, landing
@@ -276,20 +276,25 @@ or start from the title screen (you start on Ceres).
   rest of the belt, there's no fireball and sinking back down is slow.
 - **Mass drivers.** About a third of the way through the rest of the belt,
   the miners' magnet rails fling you on. From there it's a run: you fly
-  forward, faster and faster, steering left and right round what's coming.
-  First the outer belt, then open space, a corner of the Hilda asteroids'
-  great triangle, pieces of a comet torn apart by Jupiter (like
-  Shoemaker-Levy 9), and the sparks of Jupiter's radiation belts. A hit slows
-  you and costs the multiplier, never the game. Near misses score CLOSE!, and
-  geoms line the way.
-- **Jupiter** grows ahead the whole way, with its bands, the Great Red Spot and
-  the four Galilean moons. At the end you swing out round it and behind it, a
-  slingshot like Voyager's, and come out the other side.
-- **Europa.** You fly at it until it fills the view, then drift down onto its
-  cracked, salt-stained ice, with Jupiter a dark crescent in the sky. Facts on
-  the way cover Lucy and the asteroid Dinkinesh's moon, the Hildas,
-  Shoemaker-Levy 9, Jupiter's size and radiation, Europa's hidden ocean, and
-  Europa Clipper (launched 2024, arriving 2030).
+  forward, faster and faster, and the speed never lets up. Bands of asteroids
+  stretch right across the way, each with a gap: through cleanly and your
+  multiplier goes up; clip one and it costs you points. On the way: the outer
+  belt, the Hilda asteroids, drifting bands of comet pieces (like
+  Shoemaker-Levy 9) and Jupiter's radiation belts. During the run, messages
+  sit in a slim strip at the bottom and banners are see-through, so nothing
+  hides what's coming.
+- **Through Jupiter.** Jupiter grows ahead the whole way. When you reach it,
+  a force field comes on and you go straight in: through the cloud tops,
+  lightning, liquid hydrogen (where it may rain diamonds) and the metallic
+  hydrogen at the middle, then out the other side. Storms and lightning
+  weaken the field, and what's left is bonus points.
+- **Europa.** You land on its ice: double ridges, chaos terrain, a water
+  plume on the horizon and Jupiter huge in the sky. Then you go down a crack,
+  through the ice shell (probably 15 to 25 km thick) and into the ocean
+  beneath, steering for glowing geoms, to the hot vents on the seafloor and
+  some imagined life. Facts on the way cover Lucy and the asteroid
+  Dinkinesh's moon, the Hildas, Jupiter's insides, Europa's ocean and Europa
+  Clipper (launched 2024, arriving 2030).
 
 ## Secret: conspiracy mode
 
@@ -306,22 +311,26 @@ switches it off. You get:
   retrograde, and more);
 - **level 6, the hollow Earth.** On level 1, crash into Earth as a fireball and
   you smash straight through the crust, score and all. (Or pick "Secret: the
-  hollow Earth" on the menu.) Climb back out through seven caverns, from the
-  little "inner sun" at the bottom to the hole you made:
-  - the inner sun, with glowing mushrooms;
-  - the underground sea (a nod to Jules Verne), with drifting rafts and
-    something long-necked in the water;
-  - the crystal caves, whose crystals shatter after one bounce;
-  - the mushroom forest, its mushrooms swaying, spores drifting;
-  - the lava tubes, with lava jets that bubble, then blast;
-  - Lizard city, with neon signs ("NOTHING TO SEE HERE") and burrowing drill
-    machines crossing;
-  - the way out, with roots, bats and daylight above.
+  hollow Earth" on the menu.) It's a round world inside the world: a little
+  "inner sun" at the centre, and nine caverns in rings round it, each walled
+  off from the next by a shell of rock with a way through. Climb out, from the
+  inside, through:
+  - **Pellucidar** (Edgar Rice Burroughs), with dinosaurs and flying Mahars;
+  - **the Lidenbrock Sea** (Jules Verne), with sea monsters and underground
+    waterfalls;
+  - **Agartha**, the golden city of the conspiracy theories;
+  - **the crystal caves**, with shattering crystals and glow-worms;
+  - **the fungus forest**, with giant mushrooms and an olm in a pool;
+  - **the Morlock works** (H.G. Wells), with factory chimneys, wells, glowing
+    eyes and steam vents;
+  - **the lava tubes**, with lava jets and lava falls;
+  - **Lizard city**, with neon towers, lizard people in suits, and drill
+    machines (a nod to Burroughs' Iron Mole);
+  - **the way out**, with roots, bats and daylight.
 
-  Each cavern has a real fact or a classified file (Naica's giant crystals, the
-  honey fungus, lava tubes, the Kola Superdeep Borehole, Veryovkina). In
-  Checkpoint mode a rock floor with a flag at the start of each cavern catches
-  you; in Uber Tramp there's none. Geoms, falls, medals and records work as on
+  Floating islands carry buildings, creatures and waterfalls next to the way
+  up, and each cavern has its own skyline behind. Real facts and classified
+  files come on the way. Checkpoints, geoms, medals and records work as on
   the other levels, and from the finish you can carry your score back up to
   the Moon.
 - On Europa, a black monolith (a nod to Arthur C. Clarke's *2010*).
