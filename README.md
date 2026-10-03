@@ -87,6 +87,10 @@ says so if that happens.
   you fall off, the ride goes back to fetch you. Hitting the Space Station docks
   you inside: it carries you round the world while you suit up, then the airlock
   launches you out in a spacesuit, worn for the rest of the space section.
+- Zero gravity tumble: out in space (past the Kármán line on Earth, anywhere
+  off the Moon, and above Mars's thin sky) nothing keeps the tramp upright, so
+  it somersaults slowly on the way up and rights itself on the way down to land
+  feet first.
 - Re-entry: miss and fall below the platform you bounced off, and the tramp
   heats up into a fireball (glow from 100px below it, full fire by 500px) with a
   flame trail and a rising roar. Hit the ground like that for a KABOOM: big screen

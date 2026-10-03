@@ -199,11 +199,13 @@
   // Spacesuit: white suit and helmet, blue visor, orange stripes
   const SUIT = { h: '#eef1f7', k: '#3b6fd8', s: '#9fd8ff', y: '#ff7a1a', c: '#f4f6fb', p: '#d6dce8', b: '#7d869a' };
   const HOT = { h: '#fff3b0', k: '#ff7a1a', s: '#ffd36b', y: '#ffffff', c: '#ffb23a', p: '#ff8a2a', b: '#e0433b' };
-  function drawSprite(frame, x, y, flip, sy, sx = 1, alpha = 1, pal = PAL) {
+  // rot: a tumble about the middle of the body (in space), in radians
+  function drawSprite(frame, x, y, flip, sy, sx = 1, alpha = 1, pal = PAL, rot = 0) {
     const rows = FRAMES[frame];
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(Math.round(x), Math.round(y));
+    if (rot) { ctx.translate(0, -24); ctx.rotate(rot); ctx.translate(0, 24); }
     ctx.scale(flip ? -sx : sx, sy);
     for (let j = 0; j < rows.length; j++) {
       const row = rows[j];
@@ -1201,6 +1203,24 @@
     }
   }
 
+  // Out of the air and into space, nothing keeps you upright: the tramp
+  // tumbles slowly on the way up, and rights itself on the way down so it
+  // still lands feet first. Space starts at the Kármán line on Earth, on the
+  // Moon straight away (no air), and above Mars's thin sky.
+  const inSpace = () => (level === 1 ? player.r > tierR(9) : level === 2 ? true : player.r > tierR(3));
+  function updateTumble(dt) {
+    if (player.onGround || player.inside) { player.spin = 0; return; }
+    let s = player.spin || 0;
+    if (player.vr > 0 && inSpace()) {
+      // Turning the way you're heading, a little faster when you steer hard
+      s += dt * (3.2 + Math.abs(player.vx) / 250) * (player.facing || 1);
+    } else {
+      s = wrap(s);
+      s -= s * Math.min(1, dt * 6);
+    }
+    player.spin = s;
+  }
+
   function update(dt) {
     clock += dt;
     if (state === 'splash' || state === 'descend') { updateIntro(dt); return; }
@@ -1328,6 +1348,7 @@
         }
       }
       fx.geoms = fx.geoms.filter((g) => g.t < g.life);
+      updateTumble(dt);
       if (level >= 2) updateSpace(dt);
     }
 
@@ -1365,7 +1386,7 @@
     fx.trailT -= dt;
     if (!player.onGround && Math.abs(player.vr) > 350 && fx.trailT <= 0) {
       fx.trailT = 0.022;
-      fx.trail.push({ a: -theta, r: player.r, flip: player.facing < 0, life: 0.16 });
+      fx.trail.push({ a: -theta, r: player.r, flip: player.facing < 0, life: 0.16, spin: player.spin || 0 });
     }
     for (const g of fx.trail) g.life -= dt;
     fx.trail = fx.trail.filter((g) => g.life > 0);
@@ -3269,12 +3290,12 @@
     const hidden = player.inside;
     for (const g of hidden ? [] : fx.trail) {
       const ph = g.a + theta;
-      drawSprite('jump', cx + g.r * Math.sin(ph), cy - g.r * Math.cos(ph), g.flip, 1, 1, g.life * 2);
+      drawSprite('jump', cx + g.r * Math.sin(ph), cy - g.r * Math.cos(ph), g.flip, 1, 1, g.life * 2, PAL, g.spin);
     }
     if (!hidden) {
       drawGuide(feetX, feetY);
       drawFire(feetX, feetY);
-      drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx, 1, player.heat > 0.55 ? HOT : player.suit ? SUIT : PAL);
+      drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx, 1, player.heat > 0.55 ? HOT : player.suit ? SUIT : PAL, player.spin || 0);
       if (level >= 2 && player.shield > 0 && (player.shield > 3 || Math.sin(clock * 20) > 0)) {
         ctx.fillStyle = 'rgba(143,208,255,0.14)'; ctx.strokeStyle = 'rgba(143,208,255,0.8)'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(feetX, feetY - 24, 36, 0, TAU); ctx.fill(); ctx.stroke();
