@@ -533,7 +533,7 @@
         if (rubble) { p.turn = (rnd() < 0.5 ? -1 : 1) * (1.6 + rnd()); p.shedT = rnd() * 4; }
         else if (!special) { p.w = 55 + rnd() * 75; p.turn = (rnd() < 0.5 ? -1 : 1) * (0.3 + rnd() * 1.2); }
         // Now and then an asteroid with a little moon going round it
-        if (!special && !rubble && rnd() < 0.012) rocks.push({ route: null, moonOf: p, rad: 95, w: (rnd() < 0.5 ? -1 : 1) * (1.3 + rnd() * 0.6), ph: rnd() * TAU, a, R, r: 16, spin: rnd() * TAU, turn: 1, flash: 0, cool: 0, wall: true });
+        if (!special && !rubble && rnd() < 0.012) rocks.push({ route: null, moonOf: p, rad: 95, w: (rnd() < 0.5 ? -1 : 1) * (1.3 + rnd() * 0.6), ph: rnd() * TAU, a, R, r: 22, spin: rnd() * TAU, turn: 0.4, flash: 0, cool: 0, wall: true });
         const r2 = rnd();
         if (r2 < 0.2) {
           // A neon pinball bumper floating above
@@ -3398,7 +3398,34 @@
     for (const q of world.back || []) { faint(q); at(q.a + theta, q.R, () => lump(q, q.route === 'hygiea' ? '#26222c' : '#3a3540', '#1c1a20'), 60); }
     for (const q of world.rocks || []) {
       faint(q);
+      if (q.moonOf) {
+        // Its orbit: a faint dotted ring round the asteroid it belongs to
+        const h = q.moonOf;
+        at(h.a + theta, h.R - 18, () => {
+          ctx.fillStyle = 'rgba(220,230,255,0.35)';
+          for (let i = 0; i < 28; i++) { const ang = (i * TAU) / 28; ctx.fillRect(Math.cos(ang) * q.rad - 1.5, -Math.sin(ang) * q.rad * 0.7 - 1.5, 3, 3); }
+        }, q.rad + 40);
+      }
       at(q.a + theta, q.R, () => {
+        if (q.moonOf) {
+          // A little moon: pale, cratered and glowing, unlike the rocks
+          const g = ctx.createRadialGradient(0, 0, q.r * 0.8, 0, 0, q.r * 2.2);
+          g.addColorStop(0, `rgba(230,236,255,${0.45 + q.flash * 0.4})`); g.addColorStop(1, 'rgba(230,236,255,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, q.r * 2.2, 0, TAU); ctx.fill();
+          ctx.fillStyle = q.flash > 0.5 ? '#ffffff' : '#dfe3ec'; ctx.beginPath(); ctx.arc(0, 0, q.r, 0, TAU); ctx.fill();
+          ctx.save(); ctx.beginPath(); ctx.arc(0, 0, q.r, 0, TAU); ctx.clip();
+          ctx.rotate(q.spin + clock * q.turn);
+          ctx.fillStyle = '#b4b8c6';
+          for (const [x, y, r] of [[-7, -6, 6], [8, 4, 5], [-2, 10, 4], [9, -10, 3]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+          ctx.rotate(-(q.spin + clock * q.turn));
+          ctx.fillStyle = 'rgba(20,20,40,0.3)'; ctx.beginPath(); ctx.arc(q.r * 0.5, q.r * 0.5, q.r, 0, TAU); ctx.fill();
+          ctx.restore();
+          ctx.save(); upright();
+          ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+          ctx.fillStyle = '#1b1530'; ctx.fillText('MOON', 1, -q.r - 7); ctx.fillStyle = '#eef1ff'; ctx.fillText('MOON', 0, -q.r - 8);
+          ctx.textAlign = 'start'; ctx.restore();
+          return;
+        }
         if (q.pinball) {
           // A neon pinball asteroid: dark rock, a glowing cyan rim, a ring of
           // chasing lights, and a bright flash when it flings you
