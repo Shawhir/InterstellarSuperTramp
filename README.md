@@ -189,6 +189,13 @@ button that drops you onto the safe rock at the start of the belt.
   often two asteroids collide nearby (a warning first): the blast of debris
   shoves you the other way. Real asteroid families are the pieces of old
   collisions.
+- **Real belt dangers, kept rare.** Some asteroids have little moons going
+  round them (like Dimorphos round Didymos, which NASA's DART hit in 2022):
+  solid, so time your way past. Loose, fast-spinning rubble piles throw off
+  pebbles (OSIRIS-REx saw Bennu doing it). And every minute or so a solar
+  flare: there's no magnetic field out here to shield you, so when the
+  countdown starts, get under an asteroid. Caught in the open, it costs a
+  force-field charge, or your multiplier.
 - **A light freighter and a space slug.** Partway up each route is a huge
   asteroid with a cave in it. Every so often a battered light freighter bolts
   out of the cave, with a giant space slug lunging out after it.

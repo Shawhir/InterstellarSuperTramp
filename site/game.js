@@ -161,7 +161,7 @@
   }
   const gravAt = (k) => (level >= 2 ? TIERS[Math.max(0, Math.min(TOP, k))].g || 0.6 : 1);
   const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220,
-    pad: 80, haven: 180, rocket: 116, kamo: 84, car: 150, comet: 140, phobos: 110, deimos: 80, cloudv: 140, mars: 220, venus: 220,
+    pad: 80, haven: 180, rubble: 104, rocket: 116, kamo: 84, car: 150, comet: 140, phobos: 110, deimos: 80, cloudv: 140, mars: 220, venus: 220,
     cloudm: 140, miner: 120, hauler: 160, outpost: 150, ceres: 160, vesta: 110, pallas: 106, hygiea: 96 };
   const MOON_R = 110; // the landing Moon's radius; its top is the last bouncy surface
   const tierR = (k) => R0 + 30 + k * TIER_GAP;
@@ -527,9 +527,13 @@
         const R = R0k + (rnd() - 0.5) * 90;
         if (!clear(a, R, 60)) continue;
         const special = t.type !== 'asteroid' && rnd() < 0.07;
-        const p = mk(null, k, a, special ? t.type : 'asteroid');
+        const rubble = !special && rnd() < 0.012;
+        const p = mk(null, k, a, special ? t.type : rubble ? 'rubble' : 'asteroid');
         p.R = R; p.main = true;
-        if (!special) { p.w = 55 + rnd() * 75; p.turn = (rnd() < 0.5 ? -1 : 1) * (0.3 + rnd() * 1.2); }
+        if (rubble) { p.turn = (rnd() < 0.5 ? -1 : 1) * (1.6 + rnd()); p.shedT = rnd() * 4; }
+        else if (!special) { p.w = 55 + rnd() * 75; p.turn = (rnd() < 0.5 ? -1 : 1) * (0.3 + rnd() * 1.2); }
+        // Now and then an asteroid with a little moon going round it
+        if (!special && !rubble && rnd() < 0.012) rocks.push({ route: null, moonOf: p, rad: 95, w: (rnd() < 0.5 ? -1 : 1) * (1.3 + rnd() * 0.6), ph: rnd() * TAU, a, R, r: 16, spin: rnd() * TAU, turn: 1, flash: 0, cool: 0, wall: true });
         const r2 = rnd();
         if (r2 < 0.2) {
           // A neon pinball bumper floating above
@@ -1132,6 +1136,70 @@
   // broken pieces of old crashes. Now and then two converge near you (watch
   // for the warning), smash together, and the blast of debris shoves you the
   // other way.
+  // Real dangers of the belt, kept rare:
+  //  - asteroid moons: some asteroids have a little moon going round them
+  //    (like Dimorphos round Didymos), solid, so time your way past
+  //  - rubble piles: loose heaps of boulders, spinning fast, that throw off
+  //    pebbles (NASA's OSIRIS-REx saw Bennu doing it)
+  //  - solar flares: no magnetic field out here to shield you. When one is
+  //    coming, get under an asteroid
+  function updateBeltHazards(dt) {
+    const near = (a, R, d) => Math.abs(wrap(a + theta)) * player.r < d && Math.abs(R - player.r) < d;
+    for (const q of world.rocks || []) {
+      if (!q.moonOf) continue;
+      const h = q.moonOf, ang = q.ph + clock * q.w;
+      q.R = h.R - 18 + Math.sin(ang) * q.rad * 0.7;
+      q.a = h.a + (Math.cos(ang) * q.rad) / h.R;
+      if (!fx.moonTold && state === 'play' && near(q.a, q.R, 260)) { fx.moonTold = true; toast('This asteroid has a moon! Plenty do: in 2022 NASA\'s DART spacecraft crashed into Dimorphos, the little moon of asteroid Didymos, and changed its orbit.', 6); }
+    }
+    fx.pebbles = fx.pebbles || [];
+    for (const p of world.plats) {
+      if (p.type !== 'rubble' || !near(p.a, p.R, 700)) continue;
+      p.shedT -= dt;
+      if (p.shedT <= 0) {
+        p.shedT = 3 + Math.random() * 3;
+        for (let i = 0; i < 5; i++) { const ang = Math.random() * Math.PI, v = 140 + Math.random() * 120; fx.pebbles.push({ a: p.a, R: p.R + 10, va: (Math.cos(ang) * v) / p.R, vr: Math.sin(ang) * v, t: 0, hit: false }); }
+        if (!fx.rubbleTold && near(p.a, p.R, 400)) { fx.rubbleTold = true; toast('A rubble pile: loose boulders held together by their own weak gravity. Spin one fast and it throws off pebbles, as NASA\'s OSIRIS-REx saw asteroid Bennu doing.', 6); }
+      }
+    }
+    for (const q of fx.pebbles) {
+      q.t += dt; q.a += q.va * dt; q.R += q.vr * dt;
+      if (q.hit || player.onGround || state !== 'play') continue;
+      const ph = q.a + theta, dx = q.R * Math.sin(ph), dy = q.R * Math.cos(ph) - (player.r + 24), d = Math.hypot(dx, dy) || 1;
+      if (d < 22) {
+        q.hit = true;
+        if (player.field > 0) { player.field--; pop(`PING! FIELD ${player.field}`, '#ff6ad5', player.r + 100); }
+        else { player.vx -= (dx / d) * 160; player.vr -= (dy / d) * 160; pop('PEBBLE!', '#ffab3d', player.r + 100); }
+        sfx.step();
+      }
+    }
+    fx.pebbles = fx.pebbles.filter((q) => q.t < 3 && !q.hit);
+    // Solar flares: a warning, then the blast. Safe if there's an asteroid
+    // right above you to hide under.
+    fx.flareT = (fx.flareT ?? 45) - dt;
+    if (!fx.flare && fx.flareT <= 0 && beltK() > 0.9 && state === 'play' && !player.adrift) {
+      fx.flareT = 60 + Math.random() * 30;
+      fx.flare = { t: 0, hit: false };
+      banner('SOLAR FLARE!', 'GET UNDER AN ASTEROID');
+      toast('A solar flare is coming! There\'s no magnetic field out here to shield you: get under an asteroid before it hits.', 4);
+      sfx.tier();
+    }
+    const f = fx.flare;
+    if (f) {
+      f.t += dt;
+      if (!f.hit && f.t >= FLARE_WARN) {
+        f.hit = true;
+        const covered = world.plats.some((p) => !p.dest && Math.abs(wrap(p.a + theta)) * p.R < p.w / 2 + 10 && p.R > player.r + 40 && p.R < player.r + 330)
+          || (world.rocks || []).some((q) => Math.abs(wrap(q.a + theta)) * q.R < q.r + 10 && q.R > player.r + 40 && q.R < player.r + 330);
+        fx.flash = 0.7;
+        if (covered) { pop('SHELTERED!', '#52e07a', player.r + 120); addScore(500); sfx.perfect(); }
+        else if (player.field > 0) { player.field--; pop(`FLARE! FIELD ${player.field}`, '#ff6ad5', player.r + 120); sfx.thud(); }
+        else { pop('FRIED!', '#ff5a4a', player.r + 120); loseMult(); sfx.thud(); }
+      }
+      if (f.t > FLARE_WARN + 1.6) fx.flare = null;
+    }
+  }
+  const FLARE_WARN = 4;
   function updateCrash(dt) {
     fx.crashT = (fx.crashT ?? 22) - dt;
     if (!fx.crash && fx.crashT <= 0 && beltK() > 0.9 && state === 'play' && !player.adrift) {
@@ -1402,6 +1470,7 @@
       updateLost();
       updateAdrift(dt);
       updateCrash(dt);
+      updateBeltHazards(dt);
       for (const c of world.caves || []) {
         if (!c.seen && Math.abs(wrap(c.a + theta)) * player.r < W * 0.5 && Math.abs(c.R - player.r) < H * 0.5) {
           c.seen = true;
@@ -3177,6 +3246,16 @@
       ctx.strokeStyle = 'rgba(240,250,255,0.85)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(-w / 2, 6); ctx.bezierCurveTo(-w / 4, -2, w / 4, 14, w / 2, 4); ctx.stroke();
     },
+    rubble(p, w) {
+      // A rubble pile: a loose heap of boulders, spinning fast
+      ctx.translate(0, 20); ctx.rotate(p.spin + clock * (p.turn || 2)); ctx.translate(0, -20);
+      for (let i = 0; i < 9; i++) {
+        const ang = i * 2.4 + p.spin, d = (i % 3) * 14 + 6, r = 9 + ((i * 7) % 5) * 2;
+        const x = Math.cos(ang) * d, y = 20 + Math.sin(ang) * d;
+        ctx.fillStyle = ['#7d7585', '#6f6670', '#8a8290'][i % 3]; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.4, 0, TAU); ctx.fill();
+      }
+    },
     haven(p, w) {
       // The safe rock at the turn: broad, flat and steady, with landing lights
       ctx.fillStyle = '#7d7585';
@@ -3431,6 +3510,30 @@
     ctx.fillStyle = '#1b1530'; ctx.fillText(d.world.name.toUpperCase(), x + 1, y + 21);
     ctx.fillStyle = d.world.pad; ctx.fillText(d.world.name.toUpperCase(), x, y + 20);
     ctx.textAlign = 'start';
+  }
+  function drawPebbles() {
+    for (const q of fx.pebbles || []) at(q.a + theta, q.R, () => { px(-3, -3, 6, 5, '#9a92a2'); px(-3, -3, 3, 2, '#d0c8d8'); }, 10);
+  }
+  // The flare, in screen space: a pulsing warning from the Sun's side with a
+  // countdown, then a blinding wash of light
+  function drawFlare() {
+    const f = fx.flare;
+    if (!f) return;
+    if (f.t < FLARE_WARN) {
+      const pulse = 0.12 + 0.1 * Math.sin(clock * 10);
+      const g = ctx.createRadialGradient(W * 0.14, H * 0.12, 10, W * 0.14, H * 0.12, Math.max(W, H));
+      g.addColorStop(0, `rgba(255,200,80,${pulse + 0.2})`); g.addColorStop(1, 'rgba(255,140,40,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.font = '22px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#1b1530'; ctx.fillText(String(Math.ceil(FLARE_WARN - f.t)), W / 2 + 2, H * 0.4 + 2);
+      ctx.fillStyle = '#ffd23f'; ctx.fillText(String(Math.ceil(FLARE_WARN - f.t)), W / 2, H * 0.4);
+      ctx.textAlign = 'start';
+    } else {
+      const k = clamp((f.t - FLARE_WARN) / 1.6, 0, 1);
+      ctx.fillStyle = `rgba(255,236,190,${0.55 * (1 - k)})`; ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = `rgba(255,200,90,${0.6 * (1 - k)})`; ctx.lineWidth = 6;
+      for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(W * 0.14, H * 0.12); ctx.lineTo(W * 0.14 + Math.cos(0.1 + i * 0.17) * W * 1.5, H * 0.12 + Math.sin(0.1 + i * 0.17) * W * 1.5); ctx.stroke(); }
+    }
   }
   function drawCrash() {
     const c = fx.crash;
@@ -3904,7 +4007,7 @@
       ctx.globalAlpha = 1;
     }
     if (level >= 2) drawHazards();
-    if (level === 3) { drawBeings(); drawCrash(); }
+    if (level === 3) { drawBeings(); drawCrash(); drawPebbles(); }
     for (const p of world.plats) {
       if (mode !== 'checkpoint' || !p.main || !CHECKPOINTS.has(p.tier)) continue;
       if (level >= 2 && p.route !== (route || (level === 3 ? p.route : 'mars'))) continue;
@@ -3962,7 +4065,7 @@
       ctx.restore();
     } else drawSpeedLines();
     if (level >= 2) { drawWind(); if (fk < 0.05) drawMeteorWarnings(); }
-    if (level === 3) { drawForeground(); drawImprobable(); drawWorldPointer(); }
+    if (level === 3) { drawForeground(); drawImprobable(); drawWorldPointer(); drawFlare(); }
     // The saucers fly in front of the scenery, across the top of the sky
     if (level === 3) drawConvoy(...EARTH_FROM_MARS(), clamp(1 - tierFloat(player.r) / 3.5, 0, 1), 'near');
     drawBanner();
