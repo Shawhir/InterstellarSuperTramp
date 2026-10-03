@@ -151,10 +151,13 @@ button that drops you onto the safe rock at the turn.
   bug eyes, toothy grins and ray guns, hop one by one into their flying
   saucers, lift off together and fly across the sky in convoy towards Earth.
   Then they're back on the field, ready to go again.
-- **Four trampolines.** The launch field has one for each world at the end of
-  the belt, colour-coded with a signpost: Ceres, Vesta, Pallas and Hygiea. The
-  one you bounce from is your target: the arrow leads you to it at the end,
-  and landing on it scores an ON TARGET bonus (any of the four still counts).
+- **Four trampolines, four routes.** A colour-coded trampoline sits a quarter
+  of the way round Mars from the next, one for each big world in the belt:
+  Ceres, Vesta, Pallas and Hygiea. The one you bounce from picks your route
+  (the others fade to ghosts), and each route has its own climb, its own turn
+  and safe rock, and its own passage through the belt to its world: wide and
+  calm to Ceres, narrow with mining lasers to Vesta, slanting to Pallas (the
+  tilted one), and dark, gappy and full of rogue asteroids to Hygiea.
 - **Robots on Mars.** Perseverance and Curiosity drive about, Ingenuity hovers,
   and InSight, Zhurong, Opportunity, Spirit (stuck in the sand), Sojourner and
   Viking 1 are where they stopped. Walk past one to hear its story. There's
@@ -172,11 +175,13 @@ button that drops you onto the safe rock at the turn.
   holding it at the turn as level.
 - **The being of light.** Waiting at the safe rock, it hums five notes and gives
   you a force field. It appears again at the belter outpost to top you up.
-- **The passage.** Past the safe rock the belt is zero gravity, a bit like a
-  pinball table: nothing pulls you back to Mars, you keep your momentum and
-  drift slowly forward. The passage runs straight, walled with asteroids at
-  the top and bottom of the screen that bounce you back in. Its platforms are
-  speed boosters on alternate sides: steer into one and it flings you on. A
+- **The passage.** From the turn on you're in outer space: zero gravity, like
+  a pinball table. Nothing pulls you back to Mars and you keep your speed,
+  forwards and sideways, until you steer. The passage runs straight, walled
+  with asteroids at the top and bottom of the screen; bounces off them are
+  elastic, so you come off at the speed you hit them. Its platforms (the safe
+  rock included) are speed boosters near the middle: fly into one and it
+  flings you on. A
   wall of bumpers just past the four worlds bounces you back if you overshoot.
   Asteroids drift past in the background, and now and then a rogue one
   (glowing orange) tumbles across the passage. Dodge it: the force field takes five hits
@@ -194,8 +199,12 @@ button that drops you onto the safe rock at the turn.
   with more rogue asteroids. Sci-fi nods along the way: mining rigs and claim
   flags, mining lasers fired by drones (dodge them), an ice hauler to land on
   for an ice shield, a belter outpost with a spinning ring, and a Kirkwood gap.
-- **Four worlds to finish.** The passage opens out to Ceres, Vesta, Pallas and
-  Hygiea; fly into one to land on it. Only Ceres is officially a dwarf planet in the belt (Hygiea may join
+- **Four worlds to finish.** Each passage ends at its own world: fly into it
+  to land.
+- **Ambience.** In the belt the music changes to its own pulsing groove with
+  pinball bleeps. Asteroids drift past in three layers of distance behind you,
+  lit by the Sun and glinting now and then, with dust in between, and every
+  so often a huge dark asteroid sweeps past right in front of you. Only Ceres is officially a dwarf planet in the belt (Hygiea may join
   it); Vesta and Pallas are the next biggest. Each has its own fact, and the
   title screen counts how many of the four you've visited.
 

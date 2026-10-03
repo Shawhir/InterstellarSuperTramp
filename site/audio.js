@@ -227,6 +227,7 @@
     earth: [[48, [60, 64, 67]], [43, [59, 62, 67]], [45, [57, 60, 64]], [41, [57, 60, 65]]], // C G Am F
     sky: [[41, [57, 60, 65]], [43, [59, 62, 67]], [48, [60, 64, 67]], [45, [57, 60, 64]]],   // F G C Am
     space: [[45, [57, 60, 64]], [41, [57, 60, 65]], [48, [60, 64, 67]], [43, [55, 59, 62]]], // Am F C G
+    belt: [[45, [57, 60, 64]], [45, [57, 60, 64]], [41, [57, 60, 65]], [43, [55, 59, 62]]],  // Am Am F G
   };
   // Lead phrases as chord-tone indexes per 8th note (-1 rest).
   const LEAD = [
@@ -245,8 +246,8 @@
       this.timer = setInterval(() => this.tick(), 25);
     },
     stop() { this.playing = false; clearInterval(this.timer); this.timer = null; },
-    set({ tierF = 0, speed = 1, won = false }) {
-      this.mood = won ? 'space' : tierF < 4.5 ? 'earth' : tierF < 9 ? 'sky' : 'space';
+    set({ tierF = 0, speed = 1, won = false, belt = false }) {
+      this.mood = won ? 'space' : belt ? 'belt' : tierF < 4.5 ? 'earth' : tierF < 9 ? 'sky' : 'space';
       this.speed = speed;
       this.space = Math.max(0, Math.min(1, (tierF - 8) / 4));
       this.intensity = won ? 0 : Math.min(1, tierF / 9);
@@ -255,7 +256,7 @@
     tick() {
       if (document.hidden || performance.now() - lastBeat > 600) { sleep(); dozing = true; return; }
       if (!musicOn) { this.next = ac.currentTime + 0.05; return; }
-      const bpm = 112 + (this.speed - 1) * 40 - this.space * 12;
+      const bpm = this.mood === 'belt' ? 124 + (this.speed - 1) * 30 : 112 + (this.speed - 1) * 40 - this.space * 12;
       const sixteenth = 60 / bpm / 4;
       // If the timer was paused (background, throttling), skip the missed notes
       // instead of cramming them all in at once, which sounds like stuttering.
@@ -269,6 +270,7 @@
     play(step, t, len) {
       const bar = Math.floor(step / 16), s = step % 16;
       const [root, chord] = PROGS[this.mood][bar];
+      if (this.mood === 'belt') { this.playBelt(bar, s, t, len, root, chord); return; }
       const space = this.mood === 'space';
       const b = musicBus;
       // Bass
@@ -288,6 +290,22 @@
         if (s === 4 || s === 12) noise({ t, dur: 0.12, vol: 0.18, bus: b, type: 'bandpass', freq: 1800, q: 0.8 });
       }
       if (s % 2 === 1 || (this.intensity > 0.6 && !space)) noise({ t, dur: 0.03, vol: space ? 0.03 : 0.06, bus: b, type: 'highpass', freq: 8000 });
+    },
+    // The asteroid belt: a pulsing minor groove with a pinball-bleep arpeggio
+    // racing over it, still drenched in the space echo
+    playBelt(bar, s, t, len, root, chord) {
+      const b = musicBus;
+      // Deep pulsing bass, octave jumps on the off-beats
+      if (s % 4 === 0 || s % 4 === 3) voice({ type: 'triangle', f: hz(root - 12 + (s % 4 === 3 ? 12 : 0)), t, dur: len * 1.4, vol: 0.3, bus: b });
+      // Bleeps: a quick up-and-down arpeggio, two octaves up on the last bar
+      const arp = chord[[0, 1, 2, 1, 2, 0, 1, 2][s % 8]] + 12 + (bar === 3 && s >= 8 ? 12 : 0);
+      voice({ type: 'square', f: hz(arp), t, dur: len * 0.5, vol: 0.028, bus: b });
+      // A long, soft pad underneath
+      if (s === 0) for (const n of chord) voice({ type: 'sine', f: hz(n), t, dur: len * 15, vol: 0.035, bus: b, attack: 0.3 });
+      // A light kick, a clap on 2 and 4, ticking hats
+      if (s === 0 || s === 8 || s === 10) voice({ type: 'sine', f: 140, f1: 45, t, dur: 0.14, vol: 0.45, bus: b });
+      if (s === 4 || s === 12) noise({ t, dur: 0.1, vol: 0.12, bus: b, type: 'bandpass', freq: 2200, q: 0.9 });
+      if (s % 2 === 1) noise({ t, dur: 0.025, vol: 0.04, bus: b, type: 'highpass', freq: 9000 });
     },
   };
 
