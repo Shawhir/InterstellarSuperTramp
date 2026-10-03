@@ -476,7 +476,7 @@
       let a;
       if (k > FLIP) {
         const side = (k - FLIP) % 2 ? 1 : -1;
-        a = beltA + (side * (55 + rnd() * 65)) / R;
+        a = beltA + (side * (10 + rnd() * 30)) / R;
       } else a = prevA + ((110 + (rnd() * 200) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.8 ? 1 : -1)) / R;
       if (k === FLIP) beltA = a;
       const mp = mk(k, a);
@@ -825,7 +825,7 @@
     player.lastPlat = p; player.lastH = bounceH; player.apexR = p.R;
     player.vr = bounceH > normalH ? player.speed * Math.sqrt(2 * G * player.g * bounceH) : p.bounce;
     if (rebound && bounceH > normalH + 150) pop('REBOUND!', '#8fd0ff', player.r + 110);
-    if (level === 3 && p.tier > FLIP) {
+    if (level === 3 && p.tier >= FLIP) {
       // In the belt's zero gravity every platform is a speed booster
       player.vr = BELT_BOOST + 60 * (player.speed - 1);
       pop('BOOST!', '#6dd3ff', player.r + 90);
@@ -1093,8 +1093,8 @@
   const BEAM_HALF = 260;
   // Inside the passage, past the safe rock, the belt is zero gravity
   const BELT_CRUISE = 70, BELT_BOOST = 380;
-  // (it starts once you've landed on the safe rock)
-  const beltFlight = () => level === 3 && flipK > 0.5 && lastTier >= FLIP && player.lost !== true && player.lost !== 'mars' && !player.onGround && player.r > tierR(FLIP) + 30;
+  // (from the moment the view turns: you're in outer space now)
+  const beltFlight = () => level === 3 && flipK > 0.5 && player.lost !== true && player.lost !== 'mars' && !player.onGround && player.r > tierR(FLIP) - TIER_GAP * 0.5;
   const safeRock = () => world.plats.find((q) => q.tier === FLIP && q.main);
   function updateLost() {
     if (player.onGround || state !== 'play' || flipK < 0.5) return;
@@ -1134,7 +1134,7 @@
     let vx = player.vx, vr = player.vr;
     const into = vx * nx + vr * ny;
     if (into > 0) { vx -= 2 * into * nx; vr -= 2 * into * ny; }
-    const away = -(vx * nx + vr * ny), min = 300;
+    const away = -(vx * nx + vr * ny), min = 120; // elastic: same speed out as in
     if (away < min) { vx -= nx * (min - away); vr -= ny * (min - away); }
     player.vx = vx; player.vr = vr;
     addScore(10);
@@ -1153,13 +1153,13 @@
     // The ice hauler's shield works as a force field too, without using it up
     if (player.field > 0 || player.shield > 0) {
       if (player.shield <= 0) player.field--;
-      // Bounce off: reflect the way you were going, with a bit extra
+      // Bounce off: reflect the way you were going, at the same speed
       let vx = player.vx, vr = player.vr;
       const into = vx * nx + vr * ny;
       if (into > 0) { vx -= 2 * into * nx; vr -= 2 * into * ny; }
-      const away = -(vx * nx + vr * ny), min = 480 * Math.sqrt(player.speed);
+      const away = -(vx * nx + vr * ny), min = 200;
       if (away < min) { vx -= nx * (min - away); vr -= ny * (min - away); }
-      player.vx = vx * 1.1; player.vr = vr * 1.1;
+      player.vx = vx; player.vr = vr;
       player.apexR = player.r; player.lastPlat = null; player.lastH = 0;
       addScore(100, -theta, player.r + 40);
       pop(player.shield > 0 ? 'BOING!' : player.field ? `BOING! FIELD ${player.field}` : 'FIELD GONE!', player.field || player.shield > 0 ? '#ff6ad5' : '#ffab3d', player.r + 100);
@@ -1325,7 +1325,9 @@
       if (Math.abs(dir) > 0.1) player.facing = Math.sign(dir);
       const sp = player.speed;
       const maxV = player.onGround ? WALK : AIR * Math.sqrt(sp);
-      player.vx = approach(player.vx, dir * maxV, (player.onGround ? 1800 : 1200 * sp) * dt);
+      // In the belt's zero gravity, sideways speed carries on until you steer
+      if (beltFlight() && Math.abs(dir) < 0.1) player.vx = clamp(player.vx, -900, 900);
+      else player.vx = approach(player.vx, dir * maxV, (player.onGround ? 1800 : 1200 * sp) * dt);
       theta -= (player.vx * dt) / player.r;
       if (player.onGround && Math.abs(player.vx) > 5) {
         const before = Math.floor(player.walkT);
@@ -1355,9 +1357,10 @@
         const prev = player.r;
         player.apexR = Math.max(player.apexR || player.r, player.r);
         if (beltFlight()) {
-          // Inside the belt's passage nothing pulls you back to Mars: you keep
-          // your momentum, easing back to a gentle forward cruise
-          player.vr += (BELT_CRUISE - player.vr) * Math.min(1, dt * 0.5);
+          // Out in the belt nothing pulls you back to Mars: you keep your
+          // speed. Only if you've all but stopped does the belt's drift
+          // nudge you gently on.
+          if (Math.abs(player.vr) < BELT_CRUISE) player.vr += (BELT_CRUISE - player.vr) * Math.min(1, dt * 0.5);
           player.vr = clamp(player.vr, -1100, 1300);
         } else {
           // Lost in space (level 3): you drift back slowly, so there's time to steer for the beam
@@ -1369,7 +1372,7 @@
           // Flying forward into a platform: it's a speed booster, and a belt
           // world catches you as you reach its near side
           for (const p of world.plats) {
-            if (p.tier <= FLIP) continue;
+            if (p.tier < FLIP) continue;
             // A world is reached when your head touches its near side
             const near = p.dest ? p.R - p.world.r * 2 - 44 : p.R, half = p.dest ? p.world.r * 0.9 : p.w / 2 + 8;
             if (prev < near && player.r >= near && Math.abs(wrap(p.a + theta) * p.R) <= half) {
@@ -4126,12 +4129,13 @@
     const rock = world.plats.find((q) => q.tier === FLIP && q.main);
     if (!rock) return;
     theta = -rock.a;
-    Object.assign(player, { r: rock.R + 140, vr: -60, vx: 0, onGround: false, suit: true, g: rock.g, speed: speedFor(FLIP - 1), apexR: rock.R + 140, lastPlat: null, lastH: 0 });
+    Object.assign(player, { r: rock.R, vr: 0, vx: 0, onGround: false, suit: true, g: rock.g, speed: speedFor(FLIP - 1), apexR: rock.R, lastPlat: null, lastH: 0 });
     lastTier = FLIP - 1; bestTier = FLIP - 1;
     cam.r = player.r; flipK = 1;
     fx.flipShown = true;
+    land(rock); // the being gives you your force field, and off you go
     banner('THE ASTEROID BELT', "STRAIGHT TO JUPITER'S PULL");
-    toast(touch ? 'Straight to the belt! Land on the safe rock, then bounce along the passage. Steer with ▲ ▼.' : 'Straight to the belt! Land on the safe rock, then bounce along the passage. Steer with ↑ ↓ (or W S).', 5);
+    toast(touch ? 'Straight to the belt! No gravity out here: hit the boosters, bounce off the walls. Steer with ▲ ▼.' : 'Straight to the belt! No gravity out here: hit the boosters, bounce off the walls. Steer with ↑ ↓ (or W S).', 5);
   }
   // Back to the title: the Earth turns behind it again
   function toTitle() {

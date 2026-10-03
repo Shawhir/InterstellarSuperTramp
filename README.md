@@ -172,11 +172,13 @@ button that drops you onto the safe rock at the turn.
   holding it at the turn as level.
 - **The being of light.** Waiting at the safe rock, it hums five notes and gives
   you a force field. It appears again at the belter outpost to top you up.
-- **The passage.** Past the safe rock the belt is zero gravity, a bit like a
-  pinball table: nothing pulls you back to Mars, you keep your momentum and
-  drift slowly forward. The passage runs straight, walled with asteroids at
-  the top and bottom of the screen that bounce you back in. Its platforms are
-  speed boosters on alternate sides: steer into one and it flings you on. A
+- **The passage.** From the turn on you're in outer space: zero gravity, like
+  a pinball table. Nothing pulls you back to Mars and you keep your speed,
+  forwards and sideways, until you steer. The passage runs straight, walled
+  with asteroids at the top and bottom of the screen; bounces off them are
+  elastic, so you come off at the speed you hit them. Its platforms (the safe
+  rock included) are speed boosters near the middle: fly into one and it
+  flings you on. A
   wall of bumpers just past the four worlds bounces you back if you overshoot.
   Asteroids drift past in the background, and now and then a rogue one
   (glowing orange) tumbles across the passage. Dodge it: the force field takes five hits
