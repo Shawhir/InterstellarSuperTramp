@@ -46,7 +46,7 @@ function checkRun(body) {
   if (!run.name) return { error: 'Please type a name (letters and numbers).' };
   if (run.mode !== 'checkpoint' && run.mode !== 'uber') return { error: 'Unknown mode.' };
   if (!(run.time_ms >= 5000 && run.time_ms <= 3600000)) return { error: "That time doesn't look like a real run." };
-  if (!(run.total_stars >= 1 && run.total_stars <= 100 && run.stars >= 0 && run.stars <= run.total_stars)) return { error: "Those stars don't add up." };
+  if (!(run.total_stars >= 1 && run.total_stars <= 200 && run.stars >= 0 && run.stars <= run.total_stars)) return { error: "Those stars don't add up." };
   if (!(run.falls >= 0 && run.falls <= 1000)) return { error: 'Too many falls to be real.' };
   if (!(run.score >= 0 && run.score <= 50000000)) return { error: "That score doesn't look real." };
   return { run };

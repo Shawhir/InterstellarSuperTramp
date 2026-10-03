@@ -11,13 +11,13 @@ and points down when you are lined up to land on it.
 
 ## Play
 
-Open `index.html` in a browser. There's no build step and nothing to install.
+Open `site/index.html` in a browser. There's no build step and nothing to install.
 
 ### On your phone
 
 The game is live at **https://shawhir.github.io/InterstellarSuperTramp/**.
 GitHub Pages serves the `gh-pages` branch; `.github/workflows/pages.yml` copies
-the game files there on every push to `main`, so changes go live a minute or two
+everything in `site/` there on every push to `main`, so changes go live a minute or two
 after they are pushed.
 
 On the phone, open the link and use **Add to Home Screen** (Safari: Share button;
@@ -35,7 +35,7 @@ says so if that happens.
 
 ## How it works
 
-- `game.js`: everything lives in polar coordinates around Earth's centre. The
+- `site/game.js`: everything lives in polar coordinates around Earth's centre. The
   player is fixed at the top; walking changes `theta`, the angle the whole world
   has turned, so the ground and every platform slide past underneath.
 - Each bouncy layer (tier) sits at a fixed height and bounces you just high enough
@@ -51,7 +51,7 @@ says so if that happens.
   (parallax), so they feel further away. They also sink more slowly than the
   ground as you climb, so the first few bounces reveal the far ranges behind,
   before they fade into the haze on the way to space.
-- `audio.js`: every sound is synthesised with the Web Audio API, no audio files.
+- `site/audio.js`: every sound is synthesised with the Web Audio API, no audio files.
   Bounces climb a pentatonic scale as you go higher; the chiptune soundtrack shifts
   from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow
   minor drift with echo in space, and speeds up with the bounce multiplier.
@@ -97,8 +97,8 @@ says so if that happens.
   The stars are green geoms: they drift to you when you're close and each adds +1
   to the multiplier; PERFECT landings and new layers burst out extra geoms that
   fade after a few seconds. Any miss resets the multiplier to x1.
-- `scoreboard.js`: shared scoreboard of fastest Moon landings per mode (see below).
-- `style.css`: HUD, overlays and the touch pad.
+- `site/scoreboard.js`: shared scoreboard of fastest Moon landings per mode (see below).
+- `site/style.css`: HUD, overlays and the touch pad.
 
 ## Level 2: the Moon to Mars or Venus
 
@@ -128,11 +128,55 @@ start level 2 from the title screen once you've landed there once.
 - **Real things out there.** Kamo'oalewa, Cruithne, 'Oumuamua, 3I/ATLAS, Phobos,
   a Mars meteorite, Venera 7, and a city in Venus's clouds at the end.
 - Dedicated to David Bowie, who looked up and made the rest of us look too.
+- **Mars's moons.** On the Mars route, Phobos and Deimos circle Mars in the sky
+  as it grows, then fade as it glides in to become the ground.
+
+## Level 3: Mars to the asteroid belt
+
+Land on Mars in level 2 and you can carry straight on (score and all), or start
+level 3 from the title screen once you've reached Mars once.
+
+- **Mars.** Shown in cross-section with its thin crust, thick mantle and big
+  liquid iron core, under a butterscotch sky (Mars has a thin carbon dioxide
+  atmosphere). Behind the base stand the great shield volcanoes, labelled:
+  Olympus Mons, the three Tharsis Montes and Elysium Mons, plus the rift of
+  Valles Marineris. Phobos races across the sky the "wrong" way; Deimos drifts.
+- **Robots on Mars.** Perseverance and Curiosity drive about, Ingenuity hovers,
+  and InSight, Zhurong, Opportunity, Spirit (stuck in the sand), Sojourner and
+  Viking 1 are where they stopped. Walk past one to hear its story. There's
+  also the Face on Mars, and a greenhouse full of potatoes.
+- **The air.** Mars's first bouncy layers are thin water-ice clouds and a dust
+  storm. Fall back into its sky and you heat up, as on Earth (a bit less), and
+  hit the ground in a red KABOOM.
+- **Mars orbit.** Bounce off Phobos and Deimos, then past a Mars trojan and the
+  Dawn probe, with 3I/ATLAS flying by.
+- **The turn.** Halfway out, Jupiter's pull swings the view a quarter turn: from
+  there it's a sideways bouncer, heading right, with Mars behind you on the
+  left. Steer with ↑ ↓ (or W S); on a phone the touch arrows turn into ▲ ▼,
+  and tilt steering switches to tipping the phone forward (up) and back (down),
+  counting the way you're holding it at the turn as level.
+- **The being of light.** Waiting at the turn, it hums five notes and gives you
+  a force field. With the field on, the drifting asteroids are pinball bumpers
+  you bounce off; each bounce uses one of five charges, and geoms charge it
+  back up. It appears again at the belter outpost to top you up. Without a
+  field, an asteroid knocks you back towards Mars. The turn is the last
+  checkpoint: get knocked back past it and you fall to Mars (in Uber Tramp,
+  any miss does).
+- **The belt.** Gravity is weak, so it's floaty, and it speeds up as you go.
+  Sci-fi nods along the way: mining rigs with claim flags, mining lasers fired
+  by drones (dodge them), an ice hauler to hitch a ride on (with an ice
+  shield), a belter outpost with a spinning ring, and a Kirkwood gap.
+- **Four worlds to finish.** Land on Ceres, Vesta, Pallas or Hygiea. Only Ceres
+  is officially a dwarf planet in the belt (Hygiea may join it); Vesta and
+  Pallas are the next biggest. Each has its own fact, and the title screen
+  counts how many of the four you've visited.
+
+A run straight from Earth to the belt goes on the scoreboard as one run.
 
 ## Online scoreboard
 
 The scoreboard lists the highest scores reaching the Moon for each mode (ties go to the faster run), best run per name.
-It lives in `scores.json` in this repo; the **Record a score** workflow
+It lives in `site/scores.json` in this repo; the **Record a score** workflow
 (`.github/workflows/score.yml`, checks in `.github/scripts/record_score.py`) adds
 runs to it and republishes the site. Runs reach it in one of two ways:
 
@@ -164,14 +208,14 @@ The claude.ai artifact version keeps its own board in the artifact's shared stor
    Add**: type **Secret**, name `GITHUB_TOKEN`, value = the token from step 1.
    Save / deploy.
 5. Copy the Worker's address (like `https://supertramp-scores.<you>.workers.dev`)
-   into `workerUrl` in `scoreboard-config.js` and push. The Moon screen then asks
+   into `workerUrl` in `site/scoreboard-config.js` and push. The Moon screen then asks
    for a name.
 
 Opening the Worker's address in a browser should show
 `{"ok":true,"service":"Interstellar SuperTramp scores"}`.
 
 With no login, anyone can type any name or try to fake a time. Impossible numbers
-are rejected, and an owner can delete a line from `scores.json` by hand.
+are rejected, and an owner can delete a line from `site/scores.json` by hand.
 
 ### Optional: Supabase instead of GitHub
 
@@ -186,8 +230,8 @@ Scores can live in a free Supabase database instead of this repo:
      name text not null check (char_length(name) between 1 and 16),
      mode text not null check (mode in ('checkpoint', 'uber')),
      time_ms integer not null check (time_ms between 5000 and 3600000),
-     stars integer not null check (stars between 0 and 100),
-     total_stars integer not null check (total_stars between 1 and 100),
+     stars integer not null check (stars between 0 and 200),
+     total_stars integer not null check (total_stars between 1 and 200),
      falls integer not null default 0 check (falls between 0 and 1000),
      score integer not null default 0 check (score between 0 and 50000000),
      created_at timestamptz not null default now()
@@ -198,4 +242,4 @@ Scores can live in a free Supabase database instead of this repo:
    ```
 
 3. Copy the **Project URL** and **anon public** key from **Project Settings → API**
-   into `scoreboard-config.js` and push. Players then type a nickname instead.
+   into `site/scoreboard-config.js` and push. Players then type a nickname instead.

@@ -180,6 +180,12 @@
       notes.forEach((m, i) => voice({ type: 'square', f: hz(m), t: t + i * 0.08, dur: i === notes.length - 1 ? 0.35 : 0.1, vol: 0.06 }));
       voice({ type: 'triangle', f: hz(notes[0] - 12), t, dur: 0.5, vol: 0.12 });
     },
+    // The being in the belt says hello in five notes: D E C, C an octave down, G
+    hum() {
+      if (!ok()) return;
+      const t = now();
+      [74, 76, 72, 60, 67].forEach((m, i) => voice({ type: 'sine', f: hz(m), t: t + i * 0.42, dur: i === 4 ? 0.9 : 0.38, vol: 0.12, attack: 0.04, vib: 3 }));
+    },
     // Airlock: a heavy clunk and a hiss of air
     airlock() {
       if (!ok()) return;
