@@ -26,7 +26,7 @@ Chrome: ⋮ menu). It then launches full screen with its own icon, like an app.
 | Action | Keys | Touch |
 |---|---|---|
 | Walk / steer | ← → or A D | ◀ ▶, or tap TILT and lean the phone |
-| Hop | Space, ↑ or W | HOP |
+| Hop on | walk up to a trampoline or launch pad and you hop on by yourself | |
 
 Tilt steering uses the phone's motion sensor. The angle you hold the phone at when
 you switch it on counts as level. It works when the game is opened from its own web
@@ -56,9 +56,13 @@ says so if that happens.
   from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow
   minor drift with echo in space, and speeds up with the bounce multiplier.
   Music and sound effects have separate on/off buttons.
-- Intro: a comet streaks through a rushing starfield and the title peels off its
-  tail; tap to fall from space down to Earth, then the menu fades in with the top
-  scores. On the menu the tramp hops along the logo (with the odd backflip off the
+- Intro: a comet writes the title off its tail above a turning pixel globe of
+  Earth, with real continents, clouds, the Moon beside it and the Sun rising
+  behind. Tap and the camera swoops in past Earth and the Moon, on past Venus and
+  Mercury towards the Sun, turns round, and zooms back in on Earth: the globe
+  becomes the game world as space fades to blue sky and you arrive on the ground
+  (no geoms in the way). Tap during the flight to skip to the landing. Then the
+  menu fades in with the top scores. On the menu the tramp hops along the logo (with the odd backflip off the
   end letter), and each mode plays its own jingle when picked.
 - Juice: screen shake on landings, squash and stretch, afterimage trail, landing
   rings, PERFECT! for centre landings, streak counter, layer banners, speed lines,
@@ -91,7 +95,7 @@ says so if that happens.
   off the Moon, and above Mars's thin sky) nothing keeps the tramp upright, so
   it somersaults slowly on the way up and rights itself on the way down to land
   feet first.
-- Re-entry (every level): miss and fall below the platform you bounced off, and the tramp
+- Re-entry (every level except inside the asteroid belt): miss and fall below the platform you bounced off, and the tramp
   heats up into a fireball (glow from 100px below it, full fire by 500px) with a
   flame trail and a rising roar. Hit the ground like that for a KABOOM: big screen
   shake, flash, shockwave, flying dirt and a smoking crater. Land on a platform
@@ -224,6 +228,13 @@ button that drops you onto the safe rock at the start of the belt.
   it); Vesta and Pallas are the next biggest. Each has its own fact, and the
   title screen counts how many of the four you've visited.
 
+- **No fireballs in the belt.** Out in the belt there's next to no pull back
+  towards Mars, so on the way down you soon slow to a gentle sink. Only a hard
+  knock gets you moving down fast, and even that soon slows. Nothing heats up.
+- **The belt worlds are halfway.** Ceres, Vesta, Pallas and Hygiea sit in the
+  middle of the belt, with more of it beyond them. Landing on one ends level 3,
+  and you can carry on to Jupiter in level 5.
+
 A run straight from Earth to the belt goes on the scoreboard as one run.
 
 ## Level 4: Venus to Mercury
@@ -251,6 +262,55 @@ and all) towards the Sun, or start here from the title screen.
   harder before a flare. Mercury, grey with its Caloris Basin, glides in as
   the landing. Facts along the way cover Parker Solar Probe, BepiColombo,
   MESSENGER's polar ice, and the extremes of Mercury's days and nights.
+
+## Level 5: the outer belt to Jupiter and Europa
+
+Land on a belt world at the end of level 3 and carry straight on (score and all),
+or start from the title screen (you start on Ceres).
+
+- **The outer belt.** Start on the world you reached, shown in cross-section:
+  Ceres with its muddy, salty mantle, Vesta with its iron core. Ceres has
+  Occator's bright salt spots, the ice volcano Ahuna Mons, and Dawn still
+  circling overhead, switched off. Bounce up through a ring of dark,
+  carbon-rich asteroids with pinball and pop bumpers between them. As in the
+  rest of the belt, there's no fireball and sinking back down is slow.
+- **Mass drivers.** About a third of the way through the rest of the belt,
+  the miners' magnet rails fling you on. From there it's a run: you fly
+  forward, faster and faster, steering left and right round what's coming.
+  First the outer belt, then open space, a corner of the Hilda asteroids'
+  great triangle, pieces of a comet torn apart by Jupiter (like
+  Shoemaker-Levy 9), and the sparks of Jupiter's radiation belts. A hit slows
+  you and costs the multiplier, never the game. Near misses score CLOSE!, and
+  geoms line the way.
+- **Jupiter** grows ahead the whole way, with its bands, the Great Red Spot and
+  the four Galilean moons. At the end you swing out round it and behind it, a
+  slingshot like Voyager's, and come out the other side.
+- **Europa.** You fly at it until it fills the view, then drift down onto its
+  cracked, salt-stained ice, with Jupiter a dark crescent in the sky. Facts on
+  the way cover Lucy and the asteroid Dinkinesh's moon, the Hildas,
+  Shoemaker-Levy 9, Jupiter's size and radiation, Europa's hidden ocean, and
+  Europa Clipper (launched 2024, arriving 2030).
+
+## Secret: conspiracy mode
+
+When the menu opens, a shooting star streaks across it (and again now and
+then). Click or tap it to switch on conspiracy mode; a green tag in the corner
+switches it off. You get:
+
+- a tinfoil hat;
+- props: a flat-earther's placard and a suspicious bird on Earth, a film set
+  with lamps, a camera and a director's chair at the Moon base, and the Face on
+  Mars;
+- "classified files" on the way up: a famous conspiracy theory, followed by
+  what's really true (the Moon landings, chemtrails, Nibiru, Mercury in
+  retrograde, and more);
+- **the hollow Earth.** On level 1, crash into Earth as a fireball and you smash
+  straight through the crust into the caverns of the hollow Earth. There's an
+  inner sun, an underground sea with something long-necked swimming in it, and
+  giant glowing mushrooms. Bounce up them to the hole you made and climb out.
+  A classified file then tells you what earthquake waves show is really down
+  there.
+- On Europa, a black monolith (a nod to Arthur C. Clarke's *2010*).
 
 ## Online scoreboard
 

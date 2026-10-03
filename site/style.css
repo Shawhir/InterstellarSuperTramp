@@ -163,7 +163,6 @@ body {
   justify-content: space-between;
   gap: 12px;
 }
-.pad .lr { display: flex; gap: 12px; }
 .pad button {
   width: 72px;
   height: 72px;
@@ -176,7 +175,6 @@ body {
 }
 .hud button[aria-pressed="false"] { color: var(--muted); border-style: dashed; }
 .pad button.on { border-color: var(--star); color: var(--star); }
-.pad .jump { width: 96px; font-size: 11px; }
 /* Intro and menu entrance */
 body.intro .hud, body.intro .toast { opacity: 0; pointer-events: none; }
 .hud { transition: opacity 0.6s; }
@@ -352,7 +350,6 @@ body.intro .hud, body.intro .toast { opacity: 0; pointer-events: none; }
   .hud button { font-size: 8px; padding: 5px 6px; }
   .pad { left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
   .pad button { width: 58px; height: 58px; font-size: 15px; }
-  .pad .jump { width: 80px; }
   .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important; max-width: min(420px, calc(100% - 260px)); font-size: 17px !important; padding: 6px 10px; }
   .overlay { place-items: start center; padding-block: 12px; }
   .card { max-width: 620px; padding: 14px 16px; gap: 8px; }
@@ -379,3 +376,32 @@ body.intro .hud, body.intro .toast { opacity: 0; pointer-events: none; }
 }
 .card button.level2 span { font-family: var(--body); font-size: 18px; opacity: 0.9; }
 .won-actions .level2 { flex-basis: 100%; }
+
+/* Secret: a shooting star crosses the title screen. Catch it for conspiracy mode. */
+.secret-star {
+  position: fixed; z-index: 30; left: 0; top: 0;
+  width: 64px; height: 64px; margin: -32px 0 0 -32px; padding: 0;
+  border: 0; background: transparent; cursor: pointer;
+  animation: shoot 2.8s linear forwards;
+}
+.secret-star::before {
+  content: ""; position: absolute; left: 26px; top: 26px; width: 12px; height: 12px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 10px 4px rgba(191, 232, 255, 0.9), 0 0 24px 10px rgba(143, 208, 255, 0.4);
+}
+.secret-star::after {
+  content: ""; position: absolute; left: -84px; top: 30px; width: 116px; height: 4px; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(143, 208, 255, 0), rgba(220, 240, 255, 0.95));
+  transform-origin: right center; transform: rotate(14deg);
+}
+@keyframes shoot {
+  from { transform: translate(-60px, 9vh); }
+  to { transform: translate(calc(100vw + 120px), 33vh); }
+}
+.conspiracy-tag {
+  position: fixed; z-index: 30; left: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  font-family: var(--display); font-size: 9px; line-height: 1.6; color: #8fff6a;
+  background: rgba(6, 20, 8, 0.85); border: 2px solid #8fff6a; padding: 6px 8px; cursor: pointer; text-align: left;
+}
+.conspiracy-tag span { display: block; font-family: var(--body); font-size: 15px; color: #c9f5b8; }
+body.conspiracy .card { border-color: #8fff6a; }
+body.playing .conspiracy-tag { display: none; }
