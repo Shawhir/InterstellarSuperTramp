@@ -100,7 +100,8 @@
   // knocked back towards Mars. Gravity is weak in the belt, so it's floaty.
   // On Mars there's a trampoline for each of the four big worlds at the end;
   // the one you bounce from is your target, but you can land on any.
-  const FLIP = 8; // the layer where the view turns sideways
+  const FLIP = 8; // the safe rock: the start of the asteroid belt
+  const SIDEWAYS = false; // the view used to turn sideways here; now you just keep climbing
   const L3_TIERS = [
     { km: 0, type: 'pad', layer: 'Jezero base', g: 0.5 },
     { km: 8, type: 'cloudm', layer: 'Martian sky', g: 0.5, note: "Mars has air, just thin: about 1% of Earth's, mostly carbon dioxide. Enough for wispy clouds of water ice." },
@@ -119,20 +120,27 @@
     { km: 112000000, type: 'asteroid', layer: 'Kirkwood gap', g: 0.33 },
     { km: 122000000, type: 'miner', layer: 'Main belt', g: 0.3, laser: 1, note: 'Asteroid mining: one metal-rich asteroid could hold more iron and nickel than humans have ever dug up. Watch out for the mining lasers.' },
     { km: 132000000, type: 'asteroid', layer: 'Main belt', g: 0.3 },
+    { km: 137000000, type: 'asteroid', layer: 'Main belt', g: 0.3 },
     { km: 142000000, type: 'outpost', layer: 'Main belt', g: 0.3, note: 'A belter outpost: spin the ring and you get a little gravity back. Science fiction loves building cities out here.' },
     { km: 152000000, type: 'asteroid', layer: 'Main belt', g: 0.3, laser: 1 },
+    { km: 158000000, type: 'asteroid', layer: 'Main belt', g: 0.3 },
     { km: 164000000, type: 'miner', layer: 'Outer belt', g: 0.3, note: 'The outer belt: darker asteroids, rich in carbon, and some of them full of water ice.' },
+    { km: 170000000, type: 'asteroid', layer: 'Outer belt', g: 0.3 },
     { km: 174000000, type: 'asteroid', layer: 'Outer belt', g: 0.3, laser: 1 },
     { km: 182000000, type: 'asteroid', layer: 'Outer belt', g: 0.3 },
+    { km: 186000000, type: 'asteroid', layer: 'Outer belt', g: 0.3 },
     { km: 190000000, type: 'ceres', layer: 'Dwarf planets' },
   ];
+  // Through the belt gravity fades layer by layer, so it gets floatier and
+  // floatier all the way up to the worlds
+  for (let k = FLIP; k < L3_TIERS.length; k++) L3_TIERS[k].g = 0.4 - 0.3 * ((k - FLIP) / (L3_TIERS.length - 1 - FLIP));
   // The four biggest worlds in the belt. Only Ceres is officially a dwarf planet;
   // Hygiea may qualify, and Vesta and Pallas are giant asteroids.
   const BELT_WORLDS = {
-    ceres: { name: 'Ceres', pad: '#ffd23f', kind: 'THE DWARF PLANET', padA: 0.55, half: 330, loose: 2, pops: 2, rogue: 0.6, gaps: 0.4, lasers: false, way: 'A wide, calm passage', r: 96, body: '#8d8a86', dark: '#6c6966', note: 'Ceres, 940 km across: the only dwarf planet in the belt. The bright spots in Occator crater are salt left by salty water seeping up from below.' },
-    vesta: { name: 'Vesta', pad: '#ff8a3a', kind: 'THE BRIGHTEST ASTEROID', padA: 0.55 + Math.PI / 2, half: 250, loose: 3, pops: 1, rogue: 1, gaps: 0.6, lasers: true, way: 'A narrow passage full of mining lasers', r: 66, body: '#a39a8a', dark: '#7d7466', note: 'Vesta, 525 km across, the brightest asteroid. Its Rheasilvia crater has a central peak about twice as tall as Everest.' },
-    pallas: { name: 'Pallas', pad: '#6dd3ff', kind: 'THE TILTED ONE', padA: 0.55 - Math.PI / 2, half: 290, loose: 3, pops: 1, rogue: 1, gaps: 0.6, lasers: false, tilt: 70, way: 'A passage that slants, like Pallas\'s tilted path', r: 64, body: '#7f8a94', dark: '#5f6971', note: 'Pallas, 512 km across, travels on a steeply tilted path, and its surface is pitted all over like a golf ball.' },
-    hygiea: { name: 'Hygiea', pad: '#b58cff', kind: 'THE ROUNDEST', padA: 0.55 + Math.PI, half: 280, loose: 4, pops: 1, rogue: 1.6, gaps: 0.95, lasers: true, dark: true, way: 'A dark passage, full of gaps and rogue asteroids', r: 58, body: '#5d5a5e', dark: '#444146', note: 'Hygiea, about 430 km across, is almost perfectly round. If it gets the title, it will be the smallest dwarf planet.' },
+    ceres: { name: 'Ceres', pad: '#ffd23f', kind: 'THE DWARF PLANET', padA: 0.55, half: 330, cols: 5, block: 0.35, pops: 0.6, rogue: 0.6, gaps: 0.4, lasers: false, way: 'A wide, calm passage', r: 96, body: '#8d8a86', dark: '#6c6966', note: 'Ceres, 940 km across: the only dwarf planet in the belt. The bright spots in Occator crater are salt left by salty water seeping up from below.' },
+    vesta: { name: 'Vesta', pad: '#ff8a3a', kind: 'THE BRIGHTEST ASTEROID', padA: 0.55 + Math.PI / 2, half: 250, cols: 3, block: 0.55, pops: 0.3, rogue: 1, gaps: 0.6, lasers: true, way: 'A narrow passage full of mining lasers', r: 66, body: '#a39a8a', dark: '#7d7466', note: 'Vesta, 525 km across, the brightest asteroid. Its Rheasilvia crater has a central peak about twice as tall as Everest.' },
+    pallas: { name: 'Pallas', pad: '#6dd3ff', kind: 'THE TILTED ONE', padA: 0.55 - Math.PI / 2, half: 290, cols: 4, block: 0.45, pops: 0.4, rogue: 1, gaps: 0.6, lasers: false, tilt: 70, way: 'A passage that slants, like Pallas\'s tilted path', r: 64, body: '#7f8a94', dark: '#5f6971', note: 'Pallas, 512 km across, travels on a steeply tilted path, and its surface is pitted all over like a golf ball.' },
+    hygiea: { name: 'Hygiea', pad: '#b58cff', kind: 'THE ROUNDEST', padA: 0.55 + Math.PI, half: 280, cols: 4, block: 0.6, pops: 0.4, rogue: 1.6, gaps: 0.95, lasers: true, dark: true, way: 'A dark passage, full of gaps and rogue asteroids', r: 58, body: '#5d5a5e', dark: '#444146', note: 'Hygiea, about 430 km across, is almost perfectly round. If it gets the title, it will be the smallest dwarf planet.' },
   };
   let level = 1;      // 1: Earth to the Moon. 2: the Moon to Mars or Venus. 3: Mars to the belt
   let route = null;   // the way you're going, picked by the launch pad you use: level 2 'mars' or 'venus', level 3 one of the belt worlds
@@ -142,9 +150,6 @@
     TIERS = level === 3 ? L3_TIERS : level === 2 ? L2_ROUTES[route || 'mars'] : L1_TIERS;
     TOP = TIERS.length - 1;
     CHECKPOINTS = checkpointsFor(TIERS);
-    // In the belt, the turn is the last checkpoint: get knocked back past it
-    // and you fall all the way back to Mars
-    if (level === 3) for (const k of [...CHECKPOINTS]) if (k > FLIP) CHECKPOINTS.delete(k);
   }
   // How far the Moon's cratered ground sits above (+) or below (-) the base radius
   function surfAt(a) {
@@ -460,88 +465,68 @@
       return p;
     };
     // Four routes, one per world, starting from trampolines a quarter of the
-    // way round Mars from each other. Each has its own climb, its own turn
-    // with a safe rock, and its own passage through the belt to its world.
+    // way round Mars from each other. Each has its own climb to a safe rock
+    // (where the being waits), then its own maze up through the belt to its
+    // world, which sits at the top in the middle.
     for (const [rt, W] of Object.entries(BELT_WORLDS)) {
       const pad = mk(rt, 0, W.padA);
       pad.aim = rt; pad.world = W; pad.main = true;
       let prevA = W.padA, beltA = 0;
-      // Where the middle of this route's passage runs at layer k (Pallas's slants)
+      // The middle of this route's maze at layer k (Pallas's leans over)
       const centre = (k) => beltA + ((W.tilt || 0) * (k - FLIP)) / tierR(k);
-      const lane = lanes[rt] = [];
+      lanes[rt] = [];
       for (let k = 1; k <= TOP; k++) {
         const R = tierR(k), t = T[k];
-        let a;
-        if (k === TOP) a = centre(k);
-        else if (k > FLIP) a = centre(k) + (((k - FLIP) % 2 ? 1 : -1) * (10 + rnd() * 30)) / R;
-        else a = prevA + ((110 + (rnd() * 200) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.8 ? 1 : -1)) / R;
+        if (k === TOP) {
+          const d = mk(rt, k, centre(k), rt);
+          d.main = true; d.dest = true; d.world = W;
+          break;
+        }
+        if (k > FLIP) {
+          // A row of asteroids of all sizes across the maze. The one nearest
+          // the middle is this layer's own (a mining rig, the outpost...).
+          // Above some of them floats a bumper asteroid that knocks you
+          // sideways or back down, so you have to find a way up past them.
+          const sp = (2 * W.half) / (W.cols - 1);
+          const mid = Math.floor(W.cols / 2) - (W.cols % 2 ? 0 : rnd() < 0.5 ? 1 : 0);
+          let open = 0;
+          for (let i = 0; i < W.cols; i++) {
+            const x = -W.half + i * sp + (rnd() - 0.5) * 50;
+            const p = mk(rt, k, centre(k) + x / R, i === mid ? t.type : 'asteroid');
+            if (i === mid) p.main = true;
+            else p.w = 60 + rnd() * 70;
+            const last = i === W.cols - 1 && !open;
+            if (!last && rnd() < W.block) {
+              const r = 24 + rnd() * 20, br = R + 115 + rnd() * 45;
+              rocks.push({ route: rt, a: centre(k) + (x + (rnd() - 0.5) * 30) / br, R: br, r, spin: rnd() * TAU, ph: rnd() * TAU, flash: 0, cool: 0, claim: r > 36 && rnd() < 0.4, wall: true, dark: W.dark });
+            } else {
+              open++;
+              stars.push({ a: centre(k) + x / R, R: R + 70 + rnd() * 60, taken: false, route: rt });
+            }
+          }
+          // The odd small loose rock and a pop bumper between the rows
+          if (rnd() < 0.6) { const r = 12 + rnd() * 10, br = R + 60 + rnd() * 40; rocks.push({ route: rt, a: centre(k) + ((rnd() - 0.5) * 2 * W.half) / br, R: br, r, spin: rnd() * TAU, ph: rnd() * TAU, flash: 0, cool: 0, claim: false, wall: true, dark: W.dark }); }
+          if (rnd() < W.pops) { const pr = R + 130 + rnd() * 30; pops.push({ route: rt, a: centre(k) + ((rnd() < 0.5 ? -1 : 1) * (sp * 0.5)) / pr, R: pr, r: 20, flash: 0, cool: 0, spin: rnd() * TAU }); }
+          if (t.fact) stars.push({ a: centre(k) - 110 / R, R: R + 150, taken: false, big: true, fact: t.fact, route: rt });
+          if (t.laser && W.lasers) for (const side of [-1, 1]) beams.push({ a: centre(k) + (side * (sp * (0.5 + Math.floor(rnd() * 2)))) / R, tier: k, period: 3 + rnd() * 1.2, phase: rnd() * 4, route: rt, kind: 'laser' });
+          continue;
+        }
+        const a = prevA + ((110 + (rnd() * 200) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.8 ? 1 : -1)) / R;
         if (k === FLIP) beltA = a;
-        const mp = mk(rt, k, a, k === TOP ? rt : t.type);
+        const mp = mk(rt, k, a);
         mp.main = true;
-        if (k === TOP) { mp.dest = true; mp.world = W; }
-        if (k > FLIP) { mp.side = Math.sign(wrap(a - centre(k))) || 1; lane.push({ R0: tierR(k - 1), R1: R, a0: centre(k - 1), a1: centre(k) }); }
-        if (k === TOP) break;
-        stars.push({ a: k > FLIP ? centre(k) + ((rnd() - 0.5) * W.half) / R : prevA + (a - prevA) * 0.62, R: R + 50, taken: false, route: rt });
+        stars.push({ a: prevA + (a - prevA) * 0.62, R: R + 50, taken: false, route: rt });
         if (t.type === 'rocket') for (let i = 0; i < 3; i++) stars.push({ a: a + 24 / R, R: R + 80 + i * 36, taken: false, ring: true, route: rt });
         if (t.fact) stars.push({ a: a - 110 / R, R: R + 150, taken: false, big: true, fact: t.fact, route: rt });
-        if (t.laser && W.lasers) for (const side of [-1, 1]) beams.push({ a: (k > FLIP ? centre(k) : a) + (side * (40 + rnd() * (W.half - 60))) / R, tier: k, period: 3 + rnd() * 1.2, phase: rnd() * 4, route: rt, kind: 'laser' });
+        if (t.laser && W.lasers) for (const side of [-1, 1]) beams.push({ a: a + (side * (120 + rnd() * 70)) / R, tier: k, period: 3 + rnd() * 1.2, phase: rnd() * 4, route: rt, kind: 'laser' });
         if (t.dust) dust.push({ a: a + (150 + rnd() * 80) / R, R: R + 125, phase: rnd() * TAU, route: rt }, { a: a - (210 + rnd() * 90) / R, R: R + 140, phase: rnd() * TAU, route: rt });
         const spare = t.type === 'cloudm' ? 'cloudm' : t.type === 'phobos' || t.type === 'deimos' ? 'rocket' : 'asteroid';
-        // From the turn on there are no spares: the safe rock is the only way on
-        for (let i = 0; i < (k >= FLIP ? 0 : k < 5 ? 2 : 1); i++) {
+        for (let i = 0; i < (k === FLIP ? 0 : k < 5 ? 2 : 1); i++) {
           const ea = a + ((340 + rnd() * 380) * (i % 2 ? -1 : 1)) / R;
           mk(rt, k, ea, spare);
           if (rnd() < 0.5) stars.push({ a: ea, R: R + 150, taken: false, route: rt });
         }
         prevA = a;
-      }
-      // The passage walls: a row you bounce off and a darker row behind, with
-      // gaps (how many depends on the route) you can slip out of
-      lane.forEach((L, i) => {
-        if (i < 1 || i >= lane.length - 1 || rnd() > W.gaps) return;
-        const g0 = L.R0 + 40 + rnd() * (L.R1 - L.R0 - 170);
-        gaps.push({ route: rt, side: rnd() < 0.5 ? -1 : 1, R0: g0, R1: g0 + 120 });
-      });
-      const inGap = (R, side) => gaps.some((g) => g.route === rt && g.side === side && R > g.R0 && R < g.R1);
-      for (const L of lane) {
-        for (let R = Math.max(L.R0, tierR(FLIP) + 70); R < L.R1; R += 36) {
-          const c = lerp(L.a0, L.a1, (R - L.R0) / (L.R1 - L.R0));
-          for (const side of [-1, 1]) {
-            if (inGap(R, side)) continue;
-            const jit = (rnd() - 0.5) * 14, r = rnd() < 0.15 ? 34 + rnd() * 18 : 14 + rnd() * 16;
-            rocks.push({ route: rt, a: c + (side * (W.half + 18 - r * 0.4 + jit)) / R, R: R + (rnd() - 0.5) * 10, r, spin: rnd() * TAU, ph: rnd() * TAU, flash: 0, cool: 0, claim: rnd() < 0.08, wall: true, dark: W.dark });
-            back.push({ route: rt, a: c + (side * (W.half + 52 + rnd() * 30)) / R, R: R + (rnd() - 0.5) * 30, r: 16 + rnd() * 16, spin: rnd() * TAU });
-          }
-        }
-      }
-      // Loose asteroids of all sizes scattered through the passage, from small
-      // rocks to big boulders, to pinball off; and glowing pop bumpers out in
-      // the open that kick you off faster
-      lane.forEach((L, i) => {
-        if (i < 1 || i >= lane.length - 1) return;
-        const placed = [];
-        for (let j = 0; j < W.loose; j++) {
-          for (let tries = 0; tries < 12; tries++) {
-            const r = rnd() < 0.3 ? 34 + rnd() * 26 : 12 + rnd() * 16;
-            const R = lerp(L.R0 + r + 20, L.R1 - r - 50, rnd()), c = lerp(L.a0, L.a1, (R - L.R0) / (L.R1 - L.R0));
-            const x = (rnd() - 0.5) * 2 * (W.half - r - 20);
-            if (placed.some((q) => Math.hypot(q.x - x, q.R - R) < q.r + r + 70)) continue;
-            placed.push({ x, R, r });
-            rocks.push({ route: rt, a: c + x / R, R, r, spin: rnd() * TAU, ph: rnd() * TAU, flash: 0, cool: 0, claim: r > 40 && rnd() < 0.4, wall: true, dark: W.dark });
-            break;
-          }
-        }
-        for (let j = 0; j < W.pops; j++) {
-          const R = lerp(L.R0, L.R1, j % 2 ? 0.78 : 0.24), c = lerp(L.a0, L.a1, (R - L.R0) / (L.R1 - L.R0));
-          pops.push({ route: rt, a: c + ((rnd() < 0.5 ? -1 : 1) * W.half * (0.35 + rnd() * 0.35)) / R, R, r: 20, flash: 0, cool: 0, spin: rnd() * TAU });
-        }
-      });
-      // The far end, just past its world: a wall of bumpers right across
-      const edgeR = tierR(TOP) + 230, ec = centre(TOP);
-      for (let x = -W.half - 120; x <= W.half + 120; x += 34) {
-        const r = 18 + rnd() * 12;
-        rocks.push({ route: rt, a: ec + x / edgeR, R: edgeR + (rnd() - 0.5) * 12, r, spin: rnd() * TAU, ph: rnd() * TAU, flash: 0, cool: 0, claim: false, wall: true, dark: W.dark });
-        back.push({ route: rt, a: ec + (x + 17) / edgeR, R: edgeR + 45 + rnd() * 20, r: 16 + rnd() * 14, spin: rnd() * TAU });
       }
     }
     stars.forEach((st, i) => { st.id = i; });
@@ -847,8 +832,8 @@
     player.lastPlat = p; player.lastH = bounceH; player.apexR = p.R;
     player.vr = bounceH > normalH ? player.speed * Math.sqrt(2 * G * player.g * bounceH) : p.bounce;
     if (rebound && bounceH > normalH + 150) pop('REBOUND!', '#8fd0ff', player.r + 110);
-    if (level === 3 && p.tier >= FLIP) {
-      // In the belt's zero gravity every platform is a speed booster
+    if (level === 3 && p.tier >= FLIP && SIDEWAYS) {
+      // (sideways belt only) in zero gravity every platform is a speed booster
       player.vr = BELT_BOOST + 60 * (player.speed - 1);
       pop('BOOST!', '#6dd3ff', player.r + 90);
     }
@@ -1096,6 +1081,8 @@
   }
   let radioAt = 0;
   let monolithSeen = false;
+  // How far into the belt you are: 0 before the safe rock, 1 once past it
+  const beltK = () => (level === 3 ? clamp(tierFloat(player.r) - (FLIP - 0.5), 0, 1) : 0);
   // Where the passage through the belt runs at radius R: its middle and half-width
   function laneAt(R, rt = route) {
     const L = ((world.lanes || {})[rt] || []).find((q) => R >= q.R0 && R <= q.R1);
@@ -1224,7 +1211,7 @@
     pop('FORCE FIELD!', '#ff6ad5', player.r + 140);
     ring(-theta, player.r + 24, '#ff6ad5', 1.6);
     fx.flash = 0.3;
-    if (first) toast('A being of light hums five notes and wraps you in a force field. Bounce along the passage, and dodge the rogue asteroids: the field takes 5 hits, and geoms charge it back up.', 7);
+    if (first) toast('A being of light hums five notes and wraps you in a force field: it takes 5 hits from rogue asteroids, and geoms charge it back up. From here gravity fades: find your way up through the asteroid maze.', 7);
   }
 
   function updateSpace(dt) {
@@ -1272,10 +1259,11 @@
     // the deeper into the belt you are
     if (level === 3) {
       fx.crossT -= dt;
-      if (flipK > 0.9 && lastTier > FLIP && lastTier < TOP && fx.crossT <= 0 && state === 'play') {
+      if (beltK() > 0.5 && lastTier >= FLIP && lastTier < TOP && fx.crossT <= 0 && state === 'play') {
         const depth = (lastTier - FLIP) / (TOP - FLIP);
         fx.crossT = (lerp(9, 5, depth) + Math.random() * 3) / (route ? BELT_WORLDS[route].rogue : 1);
-        const R = player.r + 170 + Math.random() * 250, L = laneAt(R);
+        // They come in from the side, across the way up, ahead of you
+        const R = player.r + 170 + Math.random() * 250, L = laneAt(R) || { a: -theta, half: W * 0.6 };
         if (L) {
           const side = Math.random() < 0.5 ? -1 : 1;
           fx.crossers.push({ a: L.a + (side * (L.half + 30)) / R, R, va: (-side * (110 + depth * 130)) / R, r: 15 + Math.random() * 9, spin: Math.random() * TAU, ph: 0, flash: 0, cool: 0, t: 0 });
@@ -1286,6 +1274,14 @@
       fx.crossers = fx.crossers.filter((q) => q.t < 9);
       updateLost();
       updateForeground(dt);
+      // Touch your world from any side and you've landed on it
+      if (state === 'play' && !player.onGround && player.r > tierR(TOP - 2)) {
+        const d = world.plats.find((q) => q.dest && q.route === route);
+        if (d) {
+          const cR = d.R - d.world.r, ph = d.a + theta, bodyR = player.r + 24;
+          if (Math.hypot(cR * Math.sin(ph), cR * Math.cos(ph) - bodyR) < d.world.r + 22) { theta = -d.a; land(d); }
+        }
+      }
     }
     // Solar wind pushes you sideways, unless you're shielded
     if (air && T.wind && player.shield <= 0) theta -= (T.wind * 70 * dt) / player.r;
@@ -1543,14 +1539,14 @@
     }
     for (const q of fx.shooting) q.t += dt;
     fx.shooting = fx.shooting.filter((q) => q.t < 0.9);
-    if (snd) snd.music.set({ tierF: tierFloat(player.r) + (level >= 2 ? 9 : 0), speed: player.speed, won: state === 'won', belt: state === 'play' && level === 3 && flipK > 0.5 });
+    if (snd) snd.music.set({ tierF: tierFloat(player.r) + (level >= 2 ? 9 : 0), speed: player.speed, won: state === 'won', belt: state === 'play' && beltK() > 0.5 });
     for (const q of particles) {
       q.R += q.vr * dt; q.a += (q.vt * dt) / q.R; q.vr -= 380 * dt; q.life -= dt;
     }
     particles = particles.filter((q) => q.life > 0);
 
     // Level 3: past halfway the view turns so the belt lies off to the right
-    const flipWant = level === 3 && state !== 'title' && player.r > tierR(FLIP) - TIER_GAP * 0.5 ? 1 : 0;
+    const flipWant = SIDEWAYS && level === 3 && state !== 'title' && player.r > tierR(FLIP) - TIER_GAP * 0.5 ? 1 : 0;
     flipK = approach(flipK, flipWant, dt / 1.3);
     if (flipWant && !fx.flipShown && state === 'play') {
       fx.flipShown = true;
@@ -1856,17 +1852,18 @@
     }
     // Once you're in the belt: asteroids far off in the background, sliding
     // past slowly as you go (the nearer ones faster)
-    if (flipK > 0 && world.far) {
+    const bk = beltK();
+    if (bk > 0 && world.far) {
       const travel = cam.r - tierR(FLIP);
       const wrapTo = (v, span) => ((v % span) + span) % span;
       // A faint haze of dust along the belt
       const hz = ctx.createLinearGradient(0, 0, 0, H);
-      hz.addColorStop(0, 'rgba(120,100,90,0)'); hz.addColorStop(0.5, `rgba(120,100,90,${0.1 * flipK})`); hz.addColorStop(1, 'rgba(120,100,90,0)');
+      hz.addColorStop(0, 'rgba(120,100,90,0)'); hz.addColorStop(0.5, `rgba(120,100,90,${0.1 * bk})`); hz.addColorStop(1, 'rgba(120,100,90,0)');
       ctx.fillStyle = hz; ctx.fillRect(0, 0, W, H);
       for (const q of world.far) {
-        const span = W + q.r * 4, x = wrapTo(q.x * span - travel * q.depth * 0.6, span) - q.r * 2;
-        const y = wrapTo(q.y * (H + q.r * 4) + theta * q.depth * 900, H + q.r * 4) - q.r * 2;
-        const a = flipK * (0.3 + q.depth * 0.9);
+        const x = wrapTo(q.x * (W + q.r * 4) + theta * q.depth * 900, W + q.r * 4) - q.r * 2;
+        const y = wrapTo(q.y * (H + q.r * 4) + travel * q.depth * 0.6, H + q.r * 4) - q.r * 2;
+        const a = bk * (0.3 + q.depth * 0.9);
         ctx.save(); ctx.translate(x, y); ctx.rotate(q.spin + clock * q.turn);
         const shape = () => { ctx.beginPath(); q.shape.forEach((k, i) => { const ang = (i * TAU) / 9; i ? ctx.lineTo(Math.cos(ang) * q.r * k, Math.sin(ang) * q.r * k) : ctx.moveTo(q.r * k, 0); }); ctx.closePath(); };
         ctx.globalAlpha = a;
@@ -1886,8 +1883,8 @@
       // Dust motes drifting past, nearer than the rocks
       ctx.fillStyle = '#d9cbb8';
       for (const m of world.motes || []) {
-        ctx.globalAlpha = flipK * 0.35;
-        ctx.fillRect(wrapTo(m.x * W - travel * m.depth - clock * 20 * m.depth, W), wrapTo(m.y * H + theta * m.depth * 900, H), 2, 2);
+        ctx.globalAlpha = bk * 0.35;
+        ctx.fillRect(wrapTo(m.x * W + theta * m.depth * 900, W), wrapTo(m.y * H + travel * m.depth + clock * 20 * m.depth, H), 2, 2);
       }
       ctx.globalAlpha = 1;
     }
@@ -3226,19 +3223,19 @@
   function updateForeground(dt) {
     fx.fore = fx.fore || [];
     fx.foreT = (fx.foreT ?? 4) - dt;
-    if (fx.foreT <= 0 && flipK > 0.9 && state === 'play') {
+    if (fx.foreT <= 0 && beltK() > 0.9 && state === 'play') {
       fx.foreT = 8 + Math.random() * 6;
       const r = 70 + Math.random() * 70;
-      fx.fore.push({ x: W + r * 2, y: H * (Math.random() < 0.5 ? 0.12 + Math.random() * 0.2 : 0.68 + Math.random() * 0.2), r, vx: -(1000 + Math.random() * 500), spin: Math.random() * TAU, turn: (Math.random() - 0.5) * 1.2, shape: Array.from({ length: 11 }, () => 0.7 + Math.random() * 0.3) });
+      fx.fore.push({ x: W * (Math.random() < 0.5 ? 0.08 + Math.random() * 0.2 : 0.72 + Math.random() * 0.2), y: -r * 2, r, vy: 1000 + Math.random() * 500, spin: Math.random() * TAU, turn: (Math.random() - 0.5) * 1.2, shape: Array.from({ length: 11 }, () => 0.7 + Math.random() * 0.3) });
     }
-    for (const q of fx.fore) { q.x += (q.vx - Math.max(0, player.vr) * 0.6) * dt; q.spin += q.turn * dt; }
-    fx.fore = fx.fore.filter((q) => q.x > -q.r * 3);
+    for (const q of fx.fore) { q.y += (q.vy + Math.max(0, player.vr) * 0.6) * dt; q.spin += q.turn * dt; }
+    fx.fore = fx.fore.filter((q) => q.y < H + q.r * 3);
   }
   function drawForeground() {
     for (const q of fx.fore || []) {
       // A smear of motion blur, then the rock itself, its edge rim-lit
       for (let i = 3; i >= 0; i--) {
-        ctx.save(); ctx.translate(q.x + i * q.r * 0.25, q.y); ctx.rotate(q.spin);
+        ctx.save(); ctx.translate(q.x, q.y - i * q.r * 0.25); ctx.rotate(q.spin);
         ctx.globalAlpha = i ? 0.12 : 0.95;
         ctx.fillStyle = '#0e0c12';
         ctx.beginPath(); q.shape.forEach((k, j) => { const ang = (j * TAU) / 11; j ? ctx.lineTo(Math.cos(ang) * q.r * k, Math.sin(ang) * q.r * k) : ctx.moveTo(q.r * k, 0); }); ctx.closePath(); ctx.fill();
@@ -4242,11 +4239,10 @@
     theta = -rock.a;
     Object.assign(player, { r: rock.R, vr: 0, vx: 0, onGround: false, suit: true, g: rock.g, speed: speedFor(FLIP - 1), apexR: rock.R, lastPlat: null, lastH: 0 });
     lastTier = FLIP - 1; bestTier = FLIP - 1;
-    cam.r = player.r; flipK = 1;
-    fx.flipShown = true;
+    cam.r = player.r; flipK = 0;
     land(rock); // the being gives you your force field, and off you go
     banner('THE ASTEROID BELT', `ON THE WAY TO ${BELT_WORLDS[route].name.toUpperCase()}`);
-    toast(touch ? 'Straight to the belt! No gravity out here: hit the boosters, bounce off the walls. Steer with ▲ ▼.' : 'Straight to the belt! No gravity out here: hit the boosters, bounce off the walls. Steer with ↑ ↓ (or W S).', 5);
+    toast(touch ? 'Straight to the belt! Gravity fades as you climb: find your way up through the asteroids.' : 'Straight to the belt! Gravity fades as you climb: find your way up through the asteroids.', 5);
   }
   // Back to the title: the Earth turns behind it again
   function toTitle() {
