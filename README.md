@@ -56,16 +56,13 @@ says so if that happens.
   from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow
   minor drift with echo in space, and speeds up with the bounce multiplier.
   Music and sound effects have separate on/off buttons.
-- Intro: skimming the Sun. Its surface is the horizon, boiling with
-  granules, with dark sunspots and loops of glowing gas rising off it, as a
-  comet writes the title. Tap and you lift off and fly out towards Earth (a
-  blue dot dead ahead), past Mercury and Venus, then past the Space
-  Station, the Moon and satellites. You dive straight in as the globe becomes
-  the game world and space fades to blue sky (no geoms in the way). The last
+- Intro: on the Moon. Its grey, cratered horizon turns slowly beneath you,
+  an old lander and its flag drift by on the skyline, and Earth rises over it,
+  like Apollo 8's "Earthrise" photo. Tap and you lift off and fly to Earth,
+  past the Space Station and satellites, and straight in: the globe becomes the
+  game world as space fades to blue sky (no geoms in the way). The last
   satellites carry on flying past as you drop. Tap during the flight to skip
-  to the zoom. Then the
-  menu fades in with the top scores. On the menu the tramp hops along the logo (with the odd backflip off the
-  end letter), and each mode plays its own jingle when picked.
+  to the zoom.
 - Juice: screen shake on landings, squash and stretch, afterimage trail, landing
   rings, PERFECT! for centre landings, streak counter, layer banners, speed lines,
   a sun, drifting clouds, aurora, shooting stars.
@@ -278,9 +275,13 @@ or start from the title screen (you start on Ceres).
   rest of the belt, there's no fireball and sinking back down is slow.
 - **Mass drivers.** About a third of the way through the rest of the belt,
   the miners' magnet rails fling you on. From there it's a run: you fly
-  forward, faster and faster, and the speed never lets up. Bands of asteroids
+  forward, slowly at first through empty space, until Jupiter's gravity picks
+  you up and pulls you in faster and faster (your speed shows in km/s, and
+  rings of its pull slide in towards it). It never lets up after that. Bands of asteroids
   stretch right across the way, each with a gap: through cleanly and your
-  multiplier goes up; clip one and it costs you points. On the way: the outer
+  multiplier goes up, and every 5 in a row is a streak bonus; clip one and it
+  costs you points. The bands spread out as you speed up, so there's always
+  time to react. On the way: the outer
   belt, the Hilda asteroids, drifting bands of comet pieces (like
   Shoemaker-Levy 9) and Jupiter's radiation belts. During the run, messages
   sit in a slim strip at the bottom and banners are see-through, so nothing
@@ -305,6 +306,8 @@ then). Click or tap it to switch on conspiracy mode; a green tag in the corner
 switches it off. You get:
 
 - a tinfoil hat;
+- its own music: an eerie, wavering, theremin-like tune over a slow pulse and
+  a ticking clock;
 - props: a flat-earther's placard and a suspicious bird on Earth, a film set
   with lamps, a camera and a director's chair at the Moon base, and the Face on
   Mars;
@@ -343,6 +346,12 @@ switches it off. You get:
   Hang Son Doong (a cave with its own jungle and clouds), Derinkuyu (a rock-cut
   city 85 m deep), St Kinga's Chapel (carved from salt), Coober Pedy's dugouts,
   and Beijing's Cold War tunnel city.
+
+  Behind each cavern are its own far-off walls in two parallax layers: jungle,
+  sea cliffs and waterfalls, golden towers, giant crystals, giant mushrooms,
+  smoking factories, volcanoes, skyscrapers with neon cables, tunnel mouths.
+  Each is drawn only inside its own cavern, so they blend as you climb from
+  one to the next.
 
   For juice: each cavern's floor lights its cavern, and light pours down
   through the gaps. Fireflies, spores, embers, sparkles and steam drift

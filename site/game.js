@@ -746,7 +746,7 @@
   // Level 5. Around the belt world you start on: the outer belt, a ring of
   // dark asteroids scattered through its whole depth, with pinball and pop
   // bumpers between, and the miners' mass drivers along the top.
-  const RUN_LEN = 24000; // how far the flat-out run to Jupiter goes, px
+  const RUN_LEN = 16000; // how far the run to Jupiter goes, px
   const DIVE_LEN = 7000; // then right through Jupiter
   const OCEAN_LEN = 5200; // and at the end, down into Europa's ocean
   function buildWorld5(seed) {
@@ -808,7 +808,8 @@
       }
       run.push({ d, kind, rocks, gap, vu: kind === 'frag' ? (rnd() < 0.5 ? -1 : 1) * (0.1 + rnd() * 0.08) : 0, off: 0 });
       if (run.length % 2 === 0) stars.push({ run: true, d: d + 2, u: gap, taken: false });
-      d += kind === 'open' ? 820 : dive ? 520 + rnd() * 80 : 540 + rnd() * 100;
+      // Further apart the faster you're going, so there's always time to react
+      d += dive ? 560 + rnd() * 80 : (lerp(380, 720, f * f) + rnd() * 80) * (kind === 'open' ? 1.5 : 1);
     }
     // Europa's ocean: glowing geoms to grab on the way down
     for (let od = 500; od < OCEAN_LEN - 400; od += 380 + rnd() * 200) stars.push({ ocean: true, d: od, u: rnd() * 1.6 - 0.8, taken: false });
@@ -990,7 +991,7 @@
       if (R.phase !== 'run') return R.phase === 'exit' ? 'Past Jupiter' : R.phase === 'ocean' ? "Europa's ocean" : 'Europa';
       const f = runF(), k = diveK();
       const name = R.d >= RUN_LEN ? (k < 0.2 || k > 0.85 ? 'Jupiter: cloud tops' : k < 0.4 || k > 0.65 ? 'Jupiter: deep down' : 'Jupiter: the middle') : f < 0.26 ? 'Outer belt' : f < 0.44 ? 'Past the belt' : f < 0.6 ? 'Hilda asteroids' : f < 0.75 ? 'Comet pieces' : 'Radiation belts';
-      return `${name} ×${(R.v / 340).toFixed(2)}`;
+      return `${name} · ${Math.round(R.v * 0.07)} km/s`;
     }
     if (level === 6 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? (player.r <= R0 + 1 ? 'In Pellucidar' : `On the floor: ${HOLLOW[hollowZone(tierFloat(player.r) + 0.5)].name}`) : 'Pellucidar';
     if (level === 5 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? `On ${l5Start.name}` : `${l5Start.name} base`;
@@ -1846,11 +1847,15 @@
   // and out the other side, down onto Europa, and into the ocean under its ice.
   const RUN_Y = 0.76; // where you fly on the screen, from the top
   const RUN_NOTES = [
+    [0.03 * RUN_LEN, 'EMPTY SPACE', "Coasting through empty space. Slow going… but Jupiter's gravity is already starting to pull."],
+    [0.16 * RUN_LEN, 'OUTER BELT', 'The last of the asteroid belt. Thread the gaps: every band you get through cleanly adds to your multiplier.'],
     [0.26 * RUN_LEN, 'EDGE OF THE BELT', "The outer edge of the main belt. Beyond here, Jupiter's pull has swept most of the asteroids away."],
+    [0.36 * RUN_LEN, "JUPITER'S PULL", "Jupiter's gravity has you now: from here it pulls you in faster and faster."],
     [0.44 * RUN_LEN, 'HILDA ASTEROIDS', "The Hildas go round the Sun three times for every two of Jupiter's orbits, and bunch up in a giant triangle. Here comes a corner of it!"],
     [0.6 * RUN_LEN, 'COMET PIECES', "A comet torn apart by Jupiter's gravity, like Shoemaker-Levy 9: its pieces smashed into Jupiter in 1994. These bands drift!"],
     [0.75 * RUN_LEN, 'RADIATION BELTS', "Jupiter's radiation belts are the fiercest of any planet. Europa Clipper keeps its electronics in a thick metal vault."],
-    [0.9 * RUN_LEN, 'JUPITER', "Jupiter: so big that all the other planets would fit inside it. It has no solid surface to hit… so you're going in."],
+    [0.84 * RUN_LEN, 'FALLING FAST', 'Falling towards Jupiter, the Juno probe reached about 265,000 km/h: one of the fastest speeds any spacecraft has ever hit.'],
+    [0.93 * RUN_LEN, 'JUPITER', "Jupiter: so big that all the other planets would fit inside it. It has no solid surface to hit… so you're going in."],
     [RUN_LEN + 0.12 * DIVE_LEN, 'LIGHTNING', 'Jupiter has lightning too: the Juno probe has seen flashes deep in its clouds.'],
     [RUN_LEN + 0.3 * DIVE_LEN, 'LIQUID HYDROGEN', 'Deeper in, the squeeze is so huge that hydrogen turns to liquid. Some scientists think it may even rain diamonds deep inside giant planets.'],
     [RUN_LEN + 0.48 * DIVE_LEN, 'METALLIC HYDROGEN', "The middle: hydrogen squeezed so hard it carries electricity like a metal, powering Jupiter's huge magnetic field. (Game physics: nothing could really fly through here!)"],
@@ -1867,8 +1872,8 @@
     fx.pops = []; particles = [];
     addScore(1000);
     banner('MASS DRIVER!', 'FLAT OUT FOR JUPITER');
-    toast(touch ? 'Flung by a mass driver! Steer with ◀ ▶ (or tilt) through the gap in each band: clean through and your multiplier goes up, clip one and it costs you points.'
-      : 'Flung by a mass driver! Steer with ← → through the gap in each band: clean through and your multiplier goes up, clip one and it costs you points.', 6);
+    toast(touch ? "Flung off a mass driver, out into empty space. Steer with ◀ ▶ (or tilt) through the gap in each band. Jupiter's gravity will soon pick you up."
+      : "Flung off a mass driver, out into empty space. Steer with ← → through the gap in each band. Jupiter's gravity will soon pick you up.", 6);
     sfx.whoosh(); sfx.tier(); addShake(10); fx.flash = 0.5; buzz([30, 30, 60]);
   }
   function runSteer(dt, lane) {
@@ -1885,8 +1890,12 @@
     R.pt += dt; R.flashT = Math.max(0, R.flashT - dt);
     const py = H * RUN_Y;
     if (R.phase === 'run') {
-      const want = lerp(340, 900, Math.pow(runF(), 1.1)) + (R.d > RUN_LEN ? 80 : 0);
-      R.v = approach(R.v, want, 260 * dt);
+      // Jupiter's gravity: slow going in empty space at first, then it pulls
+      // you in faster and faster the closer you get (speed rises as one over
+      // the square root of the distance left). Climbing out the far side, you slow.
+      const want = R.d < RUN_LEN ? 240 + 190 * (1 / Math.sqrt(1 - runF() + 0.04) - 1 / Math.sqrt(1.04)) : lerp(1000, 640, diveK());
+      R.v = approach(R.v, want, 700 * dt);
+      if (R.v > 760) shake = Math.max(shake, (R.v - 760) / 90);
       R.d += R.v * dt;
       R.hitT = Math.max(0, R.hitT - dt);
       runSteer(dt, lane);
@@ -1913,7 +1922,11 @@
         }
         if (!b.passed && y > by + 10) {
           b.passed = true;
-          if (!b.hit) { addMult(); addScore(50); pop(`x${mult}`, '#6dff7a', player.r + 70); }
+          if (!b.hit) {
+            addMult(); addScore(50); R.streak = (R.streak || 0) + 1;
+            if (R.streak % 5 === 0) { addScore(50 * R.streak); pop(`STREAK ${R.streak}!`, '#ffd23f', player.r + 110); sfx.perfect(); for (let i = 0; i < 14; i++) R.trail.push({ x: bx, y: by, vx: (Math.random() - 0.5) * 360, vy: (Math.random() - 0.5) * 360, t: 0, life: 0.6, c: '#ffd23f' }); }
+            else pop(`x${mult}`, '#6dff7a', player.r + 70);
+          } else R.streak = 0;
         }
       }
       for (const g of world.stars) {
@@ -2353,6 +2366,71 @@
   }
   // The round world: each cavern a ring round the inner sun, in its own
   // colour, with a shell of rock between one and the next
+  // Each cavern's own far-off walls, in two layers that slide by slower than
+  // the world (parallax). Each is drawn only inside its own cavern's ring, so
+  // when two caverns are on screen each shows its own, and nothing switches.
+  const hash3 = (a, b, c) => { const h = Math.sin(a * 12.9898 + b * 78.233 + c * 37.719) * 43758.5453; return h - Math.floor(h); };
+  function drawCavernParallax(z, Rin, Rout) {
+    const Z = HOLLOW[z], key = Z.key, anchorY = cy - cam.r, glow = ZONE_GLOW[z];
+    for (const [L, pf] of [[0, 0.35], [1, 0.62]]) {
+      const yF = anchorY + (cam.r - Rin) * pf, yC = anchorY + (cam.r - Rout) * pf;
+      if (yF < -60 && yC < -60) continue;
+      const Rm = (Rin + Rout) / 2, step = (L ? 150 : 110) / (Rm * pf), span = (W * 0.75) / (Rm * pf);
+      const dark = hexOf(mix(Z.col, '#000000', L ? 0.25 : 0.5)), mid = hexOf(mix(Z.col, '#000000', L ? 0.1 : 0.35));
+      ctx.globalAlpha = L ? 0.85 : 0.7;
+      // The cavern roof: a jagged mass of rock with stalactites
+      ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-20, yC - 400);
+      for (let x = -20; x <= W + 40; x += 30) ctx.lineTo(x, yC + 14 + 18 * Math.sin((x + theta * Rm * pf) * 0.05 + z + L) + 10 * Math.sin((x + theta * Rm * pf) * 0.13));
+      ctx.lineTo(W + 40, yC - 400); ctx.fill();
+      const i0 = Math.floor((-theta - span) / step), i1 = Math.ceil((-theta + span) / step);
+      for (let i = i0; i <= i1; i++) {
+        const x = W / 2 + wrap(i * step + theta) * Rm * pf, h1 = hash3(i, z, L), h2 = hash3(i + 7, z, L), h3 = hash3(i, z + 3, L + 5);
+        const H1 = (L ? 70 : 110) + h1 * (L ? 110 : 160), w = (L ? 30 : 40) + h2 * 40;
+        ctx.fillStyle = dark;
+        // From the roof: stalactites, roots, vines, cables
+        if (key === 'fungus' || key === 'shaft' || key === 'pellucidar') { ctx.fillStyle = key === 'pellucidar' ? '#1e3a18' : '#3a2a1a'; for (let k = 0; k < 3; k++) ctx.fillRect(x + (k - 1) * 9, yC + 10, 2, 30 + hash3(i, k, L) * 80); }
+        else if (key === 'city') { ctx.strokeStyle = h3 > 0.5 ? glow : '#8fff6a'; ctx.globalAlpha = 0.4; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 60, yC + 20); ctx.quadraticCurveTo(x, yC + 60 + h1 * 40, x + 60, yC + 20); ctx.stroke(); ctx.globalAlpha = L ? 0.85 : 0.7; }
+        else if (key === 'morlock') { ctx.fillRect(x - 70, yC + 30 + h1 * 30, 140, 6); px(x, yC + 10, 2, 40 + h2 * 40, dark); }
+        else { ctx.beginPath(); ctx.moveTo(x - 8, yC + 10); ctx.lineTo(x + 8, yC + 10); ctx.lineTo(x, yC + 40 + h1 * 60); ctx.fill(); if (key === 'crystal' || key === 'agartha') px(x - 1, yC + 14, 2, 20 + h1 * 30, glow); if (key === 'lava' && Math.sin(clock * 3 + i) > 0.6) px(x - 1, yC + 40 + h1 * 60 + ((clock * 60 + i * 13) % 80), 2, 4, '#ff8a3a'); }
+        // From the floor: each cavern's own far-off shapes
+        ctx.fillStyle = mid;
+        if (key === 'pellucidar') {
+          ctx.fillRect(x - 4, yF - H1, 8, H1); for (const [ox, oy, r] of [[0, 0, 26], [-18, 14, 18], [18, 12, 20]]) { ctx.beginPath(); ctx.arc(x + ox, yF - H1 + oy, r * (L ? 1 : 1.3), 0, TAU); ctx.fill(); }
+        } else if (key === 'sea') {
+          ctx.beginPath(); ctx.moveTo(x - w, yF); ctx.lineTo(x - w * 0.6, yF - H1); ctx.lineTo(x + w * 0.4, yF - H1 * 0.9); ctx.lineTo(x + w, yF); ctx.fill();
+          if (h3 > 0.55) { ctx.fillStyle = 'rgba(160,215,255,0.5)'; ctx.fillRect(x - 3, yC + 30, 6, yF - yC - 30); for (let k = 0; k < 3; k++) px(x - 3, yC + 30 + ((clock * 120 + k * 60 + i * 30) % Math.max(1, yF - yC - 30)), 6, 10, 'rgba(230,245,255,0.7)'); }
+        } else if (key === 'agartha') {
+          ctx.fillRect(x - w / 2, yF - H1, w, H1); ctx.beginPath(); ctx.arc(x, yF - H1, w / 2, Math.PI, TAU); ctx.fill();
+          for (let y = yF - H1 + 12; y < yF - 6; y += 16) px(x - 3, y, 6, 6, (Math.floor(clock * 2 + i + y) % 4) ? glow : '#fff3c4');
+        } else if (key === 'crystal') {
+          ctx.beginPath(); ctx.moveTo(x - w * 0.5, yF); ctx.lineTo(x - w * 0.15, yF - H1); ctx.lineTo(x + w * 0.1, yF - H1 * 1.08); ctx.lineTo(x + w * 0.5, yF); ctx.fill();
+          ctx.globalAlpha *= 0.6; px(x - w * 0.1, yF - H1 * 0.95, 3, H1 * 0.8, glow); ctx.globalAlpha = L ? 0.85 : 0.7;
+        } else if (key === 'fungus') {
+          ctx.fillRect(x - w * 0.12, yF - H1, w * 0.24, H1); ctx.beginPath(); ctx.ellipse(x, yF - H1, w * 0.9, H1 * 0.2, 0, Math.PI, TAU); ctx.fill();
+          for (const k of [-0.5, 0, 0.5]) px(x + k * w * 0.8 - 2, yF - H1 - 4, 4, 4, glow);
+        } else if (key === 'morlock') {
+          ctx.fillRect(x - w / 2, yF - H1 * 0.7, w, H1 * 0.7); ctx.fillRect(x - 6, yF - H1 * 1.2, 12, H1 * 0.5);
+          for (let k = 0; k < 3; k++) { const t = (clock * 0.25 + k / 3 + h1) % 1; ctx.fillStyle = `rgba(140,140,150,${0.35 * (1 - t)})`; ctx.beginPath(); ctx.arc(x + Math.sin(t * 3) * 8, yF - H1 * 1.2 - t * 70, 8 + t * 16, 0, TAU); ctx.fill(); }
+          for (let y = yF - H1 * 0.6; y < yF - 8; y += 14) px(x - w / 2 + 6, y, 6, 6, (Math.floor(clock + i + y) % 3) ? '#ff5a3a' : '#3a1a10');
+        } else if (key === 'lava') {
+          ctx.beginPath(); ctx.moveTo(x - w * 1.4, yF); ctx.lineTo(x - 8, yF - H1); ctx.lineTo(x + 8, yF - H1); ctx.lineTo(x + w * 1.4, yF); ctx.fill();
+          if (h3 > 0.4) { px(x - 2, yF - H1, 4, H1, '#ff6a1a'); if (Math.sin(clock * 4 + i) > 0.5) px(x - 3, yF - H1 - 8, 6, 6, '#ffd23f'); }
+        } else if (key === 'city') {
+          ctx.fillRect(x - w / 2, yF - H1 * 1.3, w, H1 * 1.3);
+          for (let y = yF - H1 * 1.3 + 8; y < yF - 6; y += 12) for (let xx = x - w / 2 + 5; xx < x + w / 2 - 5; xx += 10) if (hash3(i, y, xx) > 0.45) px(xx, y, 4, 5, hash3(xx, y, i) > 0.7 ? glow : '#8fff6a');
+        } else {
+          ctx.beginPath(); ctx.moveTo(x - w, yF); ctx.lineTo(x - w, yF - H1 * 0.5); ctx.arc(x, yF - H1 * 0.5, w, Math.PI, TAU); ctx.lineTo(x + w, yF); ctx.fill();
+          ctx.fillStyle = '#0a0806'; ctx.beginPath(); ctx.moveTo(x - w * 0.6, yF); ctx.lineTo(x - w * 0.6, yF - H1 * 0.5); ctx.arc(x, yF - H1 * 0.5, w * 0.6, Math.PI, TAU); ctx.lineTo(x + w * 0.6, yF); ctx.fill();
+          if (Math.sin(clock * 2 + i) > 0) px(x - 3, yF - H1 * 0.5 - 4, 6, 6, '#ffb23a');
+        }
+      }
+      // A low glow along the far floor in the cavern's colour
+      const fg = ctx.createLinearGradient(0, yF - 80, 0, yF + 10);
+      fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, hexOf(mix(Z.col, glow, 0.25)));
+      ctx.fillStyle = fg; ctx.fillRect(0, yF - 80, W, 90);
+      ctx.globalAlpha = 1;
+    }
+  }
   // How far from the middle of the world the screen reaches, nearest and furthest
   function viewRadii() {
     const nx = clamp(cx, view.x0, view.x1), ny = clamp(cy, view.y0, view.y1);
@@ -2371,6 +2449,9 @@
       const g = ctx.createRadialGradient(cx, cy, Rin, cx, cy, R);
       g.addColorStop(0, hexOf(mix(HOLLOW[z].col, ZONE_GLOW[z], 0.35))); g.addColorStop(0.35, HOLLOW[z].col); g.addColorStop(1, hexOf(mix(HOLLOW[z].col, '#000000', 0.5)));
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.clip();
+      drawCavernParallax(z, Rin, R);
+      ctx.restore();
     }
     // The way out: daylight beyond the last shell
     const outer = tierR(TOP) + 260;
@@ -6012,6 +6093,15 @@
         // Jupiter grows the whole way; at the end it fills everything as you hit it
         const m = Math.min(W, H);
         const jr = f < 0.92 ? lerp(10, 0.36 * m, Math.pow(f / 0.92, 2.2)) : 0.36 * m * Math.exp((f - 0.92) * 40);
+        // Jupiter's pull: faint rings sliding in towards it, stronger the closer you are
+        if (f > 0.1 && f < 0.97) {
+          ctx.lineWidth = 2;
+          for (let i = 0; i < 6; i++) {
+            const k = (clock * (0.25 + f * 0.6) + i / 6) % 1, rr = jr * (1.15 + (1 - k) * 5);
+            ctx.strokeStyle = `rgba(255,220,170,${0.18 * k * Math.min(1, f * 2)})`;
+            ctx.beginPath(); ctx.ellipse(W / 2, H * 0.2, rr, rr * 0.6, 0, 0, TAU); ctx.stroke();
+          }
+        }
         drawJupiter(W / 2, H * 0.2, jr);
         if (f < 0.95) drawGalileans(W / 2, H * 0.2, jr, clamp((f - 0.6) * 4, 0, 1));
       } else {
@@ -6603,25 +6693,20 @@
   }
 
   // ---- The intro's journey -----------------------------------------------------------
-  // It opens skimming the Sun: its surface is the horizon, boiling with
-  // granules, dark sunspots and loops of glowing gas. Tap and you lift off
-  // and fly out towards Earth (a blue dot dead ahead), past Mercury and
-  // Venus, past the Moon and satellites, and straight down into the Earth.
-  const TOUR = 6.6;      // seconds of flight before the zoom to the ground
+  // It opens on the Moon: its grey, cratered horizon turning slowly beneath
+  // you, an old lander and its flag on the skyline, and the Earth rising
+  // over it (like Apollo 8's famous "Earthrise" photo). Tap and you lift off
+  // and fly to Earth, past the Space Station and satellites, and straight in.
+  const TOUR = 5.6;      // seconds of flight before the zoom to the ground
   const zoomFrom = () => (Math.min(W, H) * 0.2) / R0;
   const smooth = (k) => k * k * k * (k * (k * 6 - 15) + 10);
-  // Things you fly past: when you pass them (s), where (as a share of the
-  // screen, off to the side), and their size
   const FLYBY = [
-    { kind: 'mercury', t: 2.3, x: -0.13, y: 0.03, r: 34, label: 'MERCURY' },
-    { kind: 'venus', t: 3.6, x: 0.13, y: -0.04, r: 52, label: 'VENUS' },
-    { kind: 'iss', t: 5.4, x: 0.1, y: -0.1, r: 26, label: 'SPACE STATION' },
-    { kind: 'moon', t: 5.9, x: -0.12, y: -0.06, r: 36, label: 'THE MOON' },
-    { kind: 'sat', t: 6.5, x: 0.12, y: 0.08, r: 12 },
-    { kind: 'sat', t: 7.2, x: -0.11, y: 0.1, r: 12 },
-    { kind: 'sat', t: 7.8, x: 0.09, y: -0.12, r: 10 },
+    { kind: 'iss', t: 3.9, x: 0.11, y: -0.09, r: 26, label: 'SPACE STATION' },
+    { kind: 'sat', t: 4.7, x: -0.12, y: 0.07, r: 12 },
+    { kind: 'sat', t: 5.6, x: 0.12, y: 0.09, r: 12 },
+    { kind: 'sat', t: 6.3, x: -0.1, y: -0.11, r: 10 },
+    { kind: 'sat', t: 7.0, x: 0.09, y: -0.1, r: 10 },
   ];
-  const EARTH_T = TOUR + 1.2; // Earth's "passing" time, after the hand-over
   function flyDepth(t, tp) { return Math.max(0.04, (tp - t) * 0.9 + 0.28); }
   function drawSatellite(kind, x, y, r) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(kind === 'iss' ? 0.2 : clock * 0.6);
@@ -6636,54 +6721,40 @@
     }
     ctx.restore();
   }
-  // The Sun's surface as a horizon: a vast curved limb, bright in the middle,
-  // darker and redder to the edge, with granulation, sunspots, spicules and
-  // prominences looping above it
-  function drawSunHorizon(top, alpha) {
-    if (alpha <= 0 || top > H + 200) return;
-    const Rs = Math.max(W, H) * 1.8, scx = W / 2, scy = top + Rs;
-    ctx.save(); ctx.globalAlpha = alpha;
-    const corona = ctx.createRadialGradient(scx, scy, Rs * 0.98, scx, scy, Rs * 1.22);
-    corona.addColorStop(0, 'rgba(255,220,150,0.65)'); corona.addColorStop(0.3, 'rgba(255,160,80,0.25)'); corona.addColorStop(1, 'rgba(255,120,60,0)');
-    ctx.fillStyle = corona; ctx.fillRect(0, 0, W, H);
-    // Prominences: loops of glowing gas, rising and falling
-    for (let i = 0; i < 5; i++) {
-      const x = W * (0.12 + i * 0.2) + Math.sin(i * 7) * 30, w = 50 + (i % 3) * 30, h = 50 + 30 * Math.sin(clock * 0.6 + i * 1.7) + (i % 2) * 40;
-      const yb = top + Math.pow((x - scx) / Rs, 2) * Rs * 0.5;
-      ctx.strokeStyle = `rgba(255,${110 + (i % 2) * 40},60,0.75)`; ctx.lineWidth = 6 + (i % 2) * 3;
-      ctx.beginPath(); ctx.moveTo(x - w / 2, yb + 6); ctx.bezierCurveTo(x - w / 2, yb - h * 1.3, x + w / 2, yb - h * 1.3, x + w / 2, yb + 6); ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,230,160,0.6)'; ctx.lineWidth = 2; ctx.stroke();
-    }
-    const body = ctx.createRadialGradient(scx, scy, Rs * 0.9, scx, scy, Rs);
-    body.addColorStop(0, '#fff7d6'); body.addColorStop(0.7, '#ffd36a'); body.addColorStop(1, '#ff8a2a');
-    ctx.fillStyle = body; ctx.beginPath(); ctx.arc(scx, scy, Rs, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(scx, scy, Rs, 0, TAU); ctx.clip();
-    // Granulation: a boiling patchwork of hot cells, each changing as it churns
-    for (let gy = top - 10; gy < H + 10; gy += 14) {
-      const depth = (gy - top) / Math.max(1, H - top);
-      for (let gx = -10; gx < W + 10; gx += 16) {
-        const n = Math.sin(gx * 0.37 + gy * 0.61 + clock * 1.3) * Math.sin(gx * 0.11 - gy * 0.27 - clock * 0.9);
-        if (n > -0.2 && n < 0.15) continue;
-        ctx.fillStyle = n > 0.15 ? `rgba(255,255,230,${0.22 + 0.1 * depth})` : 'rgba(200,90,20,0.22)';
-        ctx.beginPath(); ctx.ellipse(gx + ((gy / 14) % 2) * 8 + n * 3, gy + 5, 5 + Math.abs(n) * 3, 4 + Math.abs(n) * 2, n, 0, TAU); ctx.fill();
+  // The Moon as a horizon: a vast grey curve, its craters and hills turning
+  // slowly past, lit from the side so every crater has a shadow
+  function drawMoonHorizon(top) {
+    if (top > H + 40) return;
+    const Rm = Math.max(W, H) * 1.6, mx = W / 2, my = top + Rm, spin = clock * 0.012;
+    const yAt = (x) => my - Math.sqrt(Math.max(0, Rm * Rm - (x - mx) * (x - mx)));
+    // A thin bright rim where sunlight catches the edge
+    ctx.fillStyle = '#d9d7e0'; ctx.beginPath(); ctx.arc(mx, my, Rm + 2, 0, TAU); ctx.fill();
+    const g = ctx.createLinearGradient(0, top, 0, H);
+    g.addColorStop(0, '#b9b6c2'); g.addColorStop(0.4, '#8f8c99'); g.addColorStop(1, '#5c5a66');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(mx, my, Rm, 0, TAU); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(mx, my, Rm, 0, TAU); ctx.clip();
+    // Craters: rows of them, squashed flatter the nearer the horizon, sliding by
+    for (let row = 0; row < 7; row++) {
+      const depth = row / 6, yb = top + 10 + Math.pow(depth, 1.6) * (H - top), sc = 0.3 + depth * 1.4;
+      const n = 10 + row * 2, off = (spin * (0.6 + depth * 2) * W) % (W * 1.4);
+      for (let i = 0; i < n; i++) {
+        const h = Math.sin(i * 12.9898 + row * 78.233) * 43758.5453, fr = h - Math.floor(h);
+        let x = ((i / n) * W * 1.4 + off + fr * 60) % (W * 1.4) - W * 0.2;
+        const y = Math.max(yb, yAt(x) + 6), r = (6 + fr * 16) * sc;
+        ctx.fillStyle = 'rgba(70,68,80,0.55)'; ctx.beginPath(); ctx.ellipse(x, y, r, r * (0.25 + depth * 0.25), 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'rgba(230,228,240,0.45)'; ctx.beginPath(); ctx.ellipse(x + r * 0.2, y + r * 0.08, r * 0.85, r * (0.2 + depth * 0.2), 0, 0, Math.PI); ctx.fill();
       }
     }
-    // Sunspots: dark centres with lighter edges, each bigger than the Earth
-    for (const [fx2, fy, rr] of [[0.3, 0.25, 22], [0.36, 0.3, 10], [0.72, 0.45, 16]]) {
-      const x = W * fx2, y = top + (H - top) * fy;
-      ctx.fillStyle = 'rgba(150,70,20,0.8)'; ctx.beginPath(); ctx.ellipse(x, y, rr * 1.6, rr * 0.7, 0, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#3a1608'; ctx.beginPath(); ctx.ellipse(x, y, rr * 0.8, rr * 0.35, 0, 0, TAU); ctx.fill();
-    }
-    // Limb darkening right at the horizon, and spicules flickering on it
-    const limb = ctx.createLinearGradient(0, top, 0, top + 60);
-    limb.addColorStop(0, 'rgba(200,60,10,0.6)'); limb.addColorStop(1, 'rgba(200,60,10,0)');
-    ctx.fillStyle = limb; ctx.fillRect(0, top - 10, W, 70);
+    // Low hills on the skyline
+    ctx.fillStyle = '#a9a6b2';
+    for (let i = 0; i < 6; i++) { let x = ((i * 0.19 + spin * 0.6) % 1.2) * W * 1.2 - W * 0.1; const y = yAt(x); ctx.beginPath(); ctx.ellipse(x, y + 4, 60 + i * 12, 10, 0, Math.PI, TAU); ctx.fill(); }
     ctx.restore();
-    ctx.save(); ctx.globalAlpha = alpha;
-    for (let x = 0; x < W; x += 9) {
-      const yb = top + Math.pow((x - scx) / Rs, 2) * Rs * 0.5, h = 4 + 6 * Math.abs(Math.sin(x * 0.7 + clock * 3));
-      px(x, yb - h, 2, h, 'rgba(255,170,80,0.7)');
-    }
+    // An old lunar lander and its flag, drifting past on the skyline
+    let lx = ((0.3 + spin * 0.6) % 1.2) * W * 1.2 - W * 0.1;
+    const ly = yAt(lx);
+    ctx.save(); ctx.translate(lx, ly); ctx.rotate(Math.asin(clamp((lx - mx) / Rm, -1, 1)));
+    px(-12, -16, 24, 10, '#d9a63a'); px(-14, -6, 4, 6, '#9aa3b5'); px(10, -6, 4, 6, '#9aa3b5'); px(-6, -24, 12, 8, '#c9ced9');
+    px(26, -30, 2, 30, '#e8e8f0'); px(28, -30, 14, 9, '#e0433b'); px(28, -30, 6, 5, '#3f6fd8');
     ctx.restore();
   }
   function drawFlyby(f, t) {
@@ -6703,36 +6774,30 @@
     }
     ctx.globalAlpha = 1;
   }
+  // Earth: rising over the Moon at first, then gliding to the middle and
+  // growing until it becomes the game world
   function tourEarth(t) {
-    const target = R0 * zoomFrom(), rad = target * flyDepth(TOUR, EARTH_T) / 0.28;
-    const r = rad * 0.28 / flyDepth(t, EARTH_T);
-    const k = smooth(clamp((t - (TOUR - 2.2)) / 2.2, 0, 1));
-    return { x: W / 2, y: lerp(H * 0.48, H * 0.46 + target, k), r };
+    const k = smooth(clamp(t / TOUR, 0, 1)), target = R0 * zoomFrom(), r0 = Math.min(W, H) * 0.09;
+    return { x: lerp(W * 0.7, W / 2, k), y: lerp(H * 0.72, H * 0.46 + target, k), r: Math.exp(lerp(Math.log(r0), Math.log(target), k)) };
   }
   function drawTourScene(t, titleAlpha) {
     const bg = ctx.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, '#02030a'); bg.addColorStop(1, '#0b1030');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    // Stars, streaming out a little as you pick up speed
     const sp = state === 'tour' ? clamp(t / 2, 0, 1) : 0;
     for (const st of world.sky) {
-      const dx = st.x - 0.5, dy = st.y - 0.48, k = 1 + sp * ((clock * 0.15 + st.tw) % 1) * 0.6;
-      const x = W / 2 + dx * W * k, y = H * 0.48 + dy * H * k;
+      const dx = st.x - 0.5, dy = st.y - 0.48, k = 1 + sp * ((clock * 0.15 + st.tw) % 1) * 0.5;
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(clock * 2 + st.tw);
-      px(x, y, st.s, st.s * (1 + sp * 2), '#ffffff');
+      px(W / 2 + dx * W * k, H * 0.48 + dy * H * k, st.s, st.s * (1 + sp * 1.5), '#ffffff');
     }
     ctx.globalAlpha = 1;
-    // Lifting off the Sun: the horizon sinks away below
-    const lift = smooth(clamp(t / 2.4, 0, 1));
-    drawSunHorizon(lerp(H * 0.7, H * 1.25, lift), 1);
-    if (lift > 0.2) { const g = ctx.createLinearGradient(0, H * 0.7, 0, H); g.addColorStop(0, 'rgba(255,170,90,0)'); g.addColorStop(1, `rgba(255,170,90,${0.25 * lift})`); ctx.fillStyle = g; ctx.fillRect(0, H * 0.7, W, H * 0.3); }
-    // Earth, a blue dot ahead that grows all the way
+    // Earth (half in shadow, as from the Moon), then the Moon's horizon in front
     const E = tourEarth(t);
-    const later = FLYBY.filter((f) => flyDepth(t, f.t) > flyDepth(t, EARTH_T));
-    for (const f of later) drawFlyby(f, t);
-    if (state !== 'splash') drawGlobe(E.x, E.y, E.r, clock * 0.05 + 0.4, clamp(t / 1.2, 0, 1), 0.3);
-    if (E.r > 4 && E.r < 60 && state === 'tour') { ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,210,255,0.9)'; ctx.fillText('EARTH', E.x, E.y - E.r - 10); ctx.textAlign = 'start'; }
-    for (const f of FLYBY) if (!later.includes(f)) drawFlyby(f, t);
+    drawGlobe(E.x, E.y, E.r, clock * 0.05 + 0.4, 1, 0.3);
+    const lift = smooth(clamp(t / 2.6, 0, 1));
+    drawMoonHorizon(lerp(H * 0.74, H * 1.3, lift));
+    if (state === 'tour' && t > 1.4 && E.r < 70) { ctx.globalAlpha = clamp((t - 1.4) * 2, 0, 1); ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,210,255,0.9)'; ctx.fillText('EARTH', E.x, E.y - E.r - 12); ctx.textAlign = 'start'; ctx.globalAlpha = 1; }
+    for (const f of FLYBY) drawFlyby(f, t);
     if (titleAlpha > 0) {
       ctx.save(); ctx.translate(0, -(1 - titleAlpha) * H * 0.4);
       drawComet(titleAlpha);
@@ -7242,6 +7307,7 @@
     document.body.classList.toggle('conspiracy', on);
     $('conspiracy-tag').hidden = !on;
     $('l6-start').hidden = !on;
+    if (snd) snd.music.conspiracy = on;
   }
   secretStar.addEventListener('click', (e) => {
     e.stopPropagation();

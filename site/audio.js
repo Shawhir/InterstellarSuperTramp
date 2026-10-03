@@ -70,14 +70,14 @@
   const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
 
   // One synth voice with an attack/decay envelope and optional pitch slide.
-  function voice({ type = 'square', f, f1, t, dur, vol = 0.1, bus = sfxBus, attack = 0.005, vib = 0 }) {
+  function voice({ type = 'square', f, f1, t, dur, vol = 0.1, bus = sfxBus, attack = 0.005, vib = 0, vibRate = 18 }) {
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = type;
     o.frequency.setValueAtTime(f, t);
     if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
     if (vib) {
       const lfo = ac.createOscillator(), lg = ac.createGain();
-      lfo.frequency.value = 18; lg.gain.value = vib;
+      lfo.frequency.value = vibRate; lg.gain.value = vib;
       lfo.connect(lg).connect(o.frequency); lfo.start(t); lfo.stop(t + dur + 0.05);
     }
     g.gain.setValueAtTime(0.0001, t);
@@ -228,7 +228,17 @@
     sky: [[41, [57, 60, 65]], [43, [59, 62, 67]], [48, [60, 64, 67]], [45, [57, 60, 64]]],   // F G C Am
     space: [[45, [57, 60, 64]], [41, [57, 60, 65]], [48, [60, 64, 67]], [43, [55, 59, 62]]], // Am F C G
     belt: [[45, [57, 60, 64]], [45, [57, 60, 64]], [41, [57, 60, 65]], [43, [55, 59, 62]]],  // Am Am F G
+    x: [[50, [62, 65, 69]], [50, [62, 65, 69]], [46, [58, 62, 65]], [45, [57, 61, 64]]],     // Dm Dm Bb A
   };
+  // Conspiracy mode's own theme (original): a wavering, theremin-like tune
+  // over a slow pulse and a ticking clock, drenched in echo. MIDI notes per
+  // 8th (-1 rest); a note can slide up into the next.
+  const X_LEAD = [
+    [74, -1, -1, 77, 76, -1, 74, -1],
+    [69, -1, 72, -1, 74, -1, -1, -1],
+    [70, -1, 69, 67, 69, -1, -1, 65],
+    [73, -1, 76, -1, 74, -1, -1, -1],
+  ];
   // Lead phrases as chord-tone indexes per 8th note (-1 rest).
   const LEAD = [
     [0, -1, 1, 2, -1, 1, 0, -1],
@@ -239,7 +249,7 @@
 
   const music = {
     playing: false, step: 0, next: 0, timer: null,
-    mood: 'earth', speed: 1, space: 0, intensity: 0,
+    mood: 'earth', speed: 1, space: 0, intensity: 0, conspiracy: false,
     start() {
       if (!ac || this.playing || document.hidden) return;
       this.playing = true; this.step = 0; this.next = ac.currentTime + 0.1;
@@ -247,16 +257,16 @@
     },
     stop() { this.playing = false; clearInterval(this.timer); this.timer = null; },
     set({ tierF = 0, speed = 1, won = false, belt = false }) {
-      this.mood = won ? 'space' : belt ? 'belt' : tierF < 4.5 ? 'earth' : tierF < 9 ? 'sky' : 'space';
+      this.mood = won ? 'space' : this.conspiracy ? 'x' : belt ? 'belt' : tierF < 4.5 ? 'earth' : tierF < 9 ? 'sky' : 'space';
       this.speed = speed;
       this.space = Math.max(0, Math.min(1, (tierF - 8) / 4));
       this.intensity = won ? 0 : Math.min(1, tierF / 9);
-      if (echo) echo.gain.setTargetAtTime(this.space * 0.8, ac.currentTime, 0.5);
+      if (echo) echo.gain.setTargetAtTime(this.mood === 'x' ? 0.7 : this.space * 0.8, ac.currentTime, 0.5);
     },
     tick() {
       if (document.hidden || performance.now() - lastBeat > 600) { sleep(); dozing = true; return; }
       if (!musicOn) { this.next = ac.currentTime + 0.05; return; }
-      const bpm = this.mood === 'belt' ? 124 + (this.speed - 1) * 30 : 112 + (this.speed - 1) * 40 - this.space * 12;
+      const bpm = this.mood === 'x' ? 92 + (this.speed - 1) * 16 : this.mood === 'belt' ? 124 + (this.speed - 1) * 30 : 112 + (this.speed - 1) * 40 - this.space * 12;
       const sixteenth = 60 / bpm / 4;
       // If the timer was paused (background, throttling), skip the missed notes
       // instead of cramming them all in at once, which sounds like stuttering.
@@ -271,6 +281,7 @@
       const bar = Math.floor(step / 16), s = step % 16;
       const [root, chord] = PROGS[this.mood][bar];
       if (this.mood === 'belt') { this.playBelt(bar, s, t, len, root, chord); return; }
+      if (this.mood === 'x') { this.playX(bar, s, t, len, root, chord); return; }
       const space = this.mood === 'space';
       const b = musicBus;
       // Bass
@@ -290,6 +301,21 @@
         if (s === 4 || s === 12) noise({ t, dur: 0.12, vol: 0.18, bus: b, type: 'bandpass', freq: 1800, q: 0.8 });
       }
       if (s % 2 === 1 || (this.intensity > 0.6 && !space)) noise({ t, dur: 0.03, vol: space ? 0.03 : 0.06, bus: b, type: 'highpass', freq: 8000 });
+    },
+    playX(bar, s, t, len, root, chord) {
+      const b = musicBus;
+      // A slow, deep pulse
+      if (s === 0 || s === 6 || s === 8) voice({ type: 'triangle', f: hz(root - 12), t, dur: len * 5, vol: 0.3, bus: b, attack: 0.02 });
+      // Soft, glassy arpeggio rising through the chord
+      if (s % 2 === 0) voice({ type: 'sine', f: hz(chord[(s / 2) % 3] + 12), t, dur: len * 3, vol: 0.04, bus: b, attack: 0.02 });
+      // The wavering lead
+      if (s % 2 === 0) {
+        const n = X_LEAD[bar][s / 2], next = X_LEAD[bar][s / 2 + 1];
+        if (n >= 0) voice({ type: 'sine', f: hz(n), f1: next === -1 && s % 4 === 2 ? hz(n + 1) : undefined, t, dur: len * 3.6, vol: 0.075, bus: b, attack: 0.06, vib: 9, vibRate: 5.5 });
+      }
+      // A clock ticking, and a low thud now and then
+      if (s % 4 === 2) noise({ t, dur: 0.02, vol: 0.045, bus: b, type: 'highpass', freq: 7000 });
+      if (s === 12 && bar % 2 === 1) voice({ type: 'sine', f: 90, f1: 40, t, dur: 0.3, vol: 0.4, bus: b });
     },
     // The asteroid belt: a pulsing minor groove with a pinball-bleep arpeggio
     // racing over it, still drenched in the space echo
