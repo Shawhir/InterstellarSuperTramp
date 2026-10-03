@@ -66,11 +66,16 @@ says so if that happens.
   the flight to skip to the zoom.
 - Arriving at a new world (the Moon, Mars, Venus, Mercury, the belt worlds,
   and daylight at the end of the hollow Earth): after you've watched it grow
-  in the sky, the whole view turns upside down (it was above you; now it's
-  under your feet) while something of that world hides the change. That's a
-  dust cloud on the Moon, an entry fireball at Mars, acid clouds at Venus,
-  glare at Mercury, rubble at the belt worlds. Then you drop onto its real
-  landscape (slowly where gravity is weak), plant a flag, and hear about it.
+  in the sky, its gravity grabs you as you get close, swinging you over and
+  pulling you down onto it faster and faster. Then the whole view turns
+  upside down (it was above you; now it's under your feet) while something of
+  that world hides the change. That's a dust cloud on the Moon, an entry
+  fireball at Mars, acid clouds at Venus, glare at Mercury, rubble at the belt
+  worlds. When it clears you're dropping onto the playable next level, with
+  that world's own gravity (slowly on the Moon), the score carried on and the
+  whole trip counted as one run. Mercury and Europa are the ends of the line:
+  there you land on the real landscape, plant a flag and get the results
+  screen.
 - Hopping on: walk up to a trampoline or launch pad and you hop on in one
   smooth arc that lands you on its middle.
 - Juice: screen shake on landings, squash and stretch, afterimage trail, landing
