@@ -2094,10 +2094,71 @@
     pop(`LEVEL ${from} DONE! +${fmtScore(bonus)}`, '#ffd23f', player.r + 110);
     sfx.tier();
   }
+  // ---- Climbing out to the next world ------------------------------------------
+  // From the last platform you bounce up after the world that's slid out of
+  // sight above you, and keep going: its pull has you now. The view turns
+  // right over (you stay upright; the old world swings overhead), and then
+  // you're falling feet first onto the next level's ground.
+  const climbOut = () => (level === 1 || level === 2 || level === 6) && nextLevel() > 0;
+  const CLIMB_TURN = [0.45, 1.75], CLIMB_SWAP = 1.8, DROP_H = 420;
+  const climbTurn = () => (fx.climb ? Math.PI * smooth(clamp((fx.climb.t - CLIMB_TURN[0]) / (CLIMB_TURN[1] - CLIMB_TURN[0]), 0, 1)) : 0);
+  function startClimb() {
+    fx.climb = { t: 0, next: nextLevel(), time: playTime, vr: Math.max(player.vr, 500) };
+    lastTier = TOP; bestTier = TOP;
+    player.heat = 0; fx.flames = []; player.hopLock = 0;
+    banner(level === 6 ? 'DAYLIGHT!' : `${destName().replace('the ', '').toUpperCase()}'S PULL`, level === 6 ? 'UP AND OUT' : 'UP AND OVER');
+    sfx.whoosh(); addShake(4);
+  }
+  function updateClimb(dt) {
+    const C = fx.climb;
+    C.t += dt;
+    if (state === 'play') playTime += dt;
+    // Nothing pulls you back now: you speed on up towards it
+    C.vr = Math.min(C.vr + 700 * dt, 1500);
+    player.vr = C.vr; player.r += C.vr * dt; player.onGround = false;
+    player.spin = -climbTurn(); // stays upright on screen as the world turns
+    cam.r += (player.r - cam.r) * Math.min(1, dt * 8);
+    cam.anchor = lerp(cam.anchor || 0.46, 0.5, Math.min(1, dt * 6));
+    for (const q of particles) { q.R += q.vr * dt; q.a += (q.vt * dt) / q.R; q.vr -= 380 * dt; q.life -= dt; }
+    particles = particles.filter((q) => q.life > 0);
+    for (const q of fx.pops) q.t += dt;
+    fx.pops = fx.pops.filter((q) => q.t < 1.1);
+    if (fx.banner) { fx.banner.t += dt; if (fx.banner.t > 2.6) fx.banner = null; }
+    shake = Math.max(0, shake - dt * 30);
+    if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0.4) hud.toast.style.opacity = '0'; if (toastTimer <= 0) hud.toast.hidden = true; }
+    if (C.t >= CLIMB_SWAP) climbSwap();
+  }
+  // Drawn turned over about the tramp
+  function drawClimb() {
+    const turn = climbTurn(), c = Math.abs(Math.cos(turn)), sn = Math.abs(Math.sin(turn));
+    // Zoomed in just enough as it turns that no corners ever show
+    const z = Math.max((W * c + H * sn) / W, (W * sn + H * c) / H);
+    ctx.save();
+    ctx.translate(W / 2, H / 2); ctx.rotate(turn); ctx.scale(z, z); ctx.translate(-W / 2, -H / 2);
+    const was = snapping; snapping = true; renderWorld(); snapping = was;
+    ctx.restore();
+  }
+  // The turn's done: from here on it's the next level, with you high above its ground
+  function climbSwap() {
+    const C = fx.climb, from = level;
+    landSnap = landSnap || document.createElement('canvas');
+    landSnap.width = canvas.width; landSnap.height = canvas.height;
+    fx.banner = null; snapping = true; drawClimb(); snapping = false;
+    const sc = landSnap.getContext('2d');
+    sc.globalCompositeOperation = 'copy'; sc.drawImage(canvas, 0, 0); sc.globalCompositeOperation = 'source-over';
+    playTime = C.time + C.t;
+    const bonus = win(true);
+    startGame(C.next, { score, mult, ...lastWin });
+    player.r = R0 + DROP_H; player.vr = -120; player.onGround = false; player.apexR = player.r; player.spin = 0;
+    cam.r = player.r; cam.anchor = 0.5; cam.zoom = 1;
+    fx.drop = true; fx.land = { t: -0.15 };
+    pop(`LEVEL ${from} DONE! +${fmtScore(bonus)}`, '#ffd23f', player.r + 110);
+    sfx.tier();
+  }
   // The ground is the same size and in the same place either side of the
   // change; this just blends the two skies for a moment
   function drawLandSnap() {
-    const a = 1 - fx.land.t / LAND_T;
+    const a = Math.min(1, 1 - fx.land.t / LAND_T);
     if (!landSnap || a <= 0) return;
     ctx.save(); ctx.globalAlpha = a; ctx.drawImage(landSnap, 0, 0, W, H); ctx.restore();
   }
@@ -3223,6 +3284,7 @@
     if (state === 'splash' || state === 'tour' || state === 'descend') { updateIntro(dt); return; }
     if (fx.run) { updateRunFrame(dt); return; }
     if (fx.arrive) { updateArriveFrame(dt); return; }
+    if (fx.climb) { updateClimb(dt); return; }
     for (const p of world.plats) {
       if (p.sway) p.a = p.a0 + p.sway * Math.sin(clock * p.freq + p.phase);
       if (p.ride) updateRide(p, dt);
@@ -3309,6 +3371,7 @@
           if (inBelt() && player.vr < -sink) player.vr += (-sink - player.vr) * Math.min(1, dt * 2.5);
         }
         player.r += player.vr * dt;
+        if (state === 'play' && climbOut() && lastTier === TOP - 1 && player.vr > 0 && player.r > tierR(TOP - 1) + 120) { startClimb(); return; }
         // Close to the world you're heading for, its gravity takes hold and
         // pulls you in
         if (state === 'play' && !beltFlight() && player.vr > 0) {
@@ -3332,7 +3395,8 @@
             }
           }
         }
-        if (player.vr < 0) {
+        if (fx.drop) { player.heat = 0; player.vr = Math.max(player.vr, -650); }
+        if (player.vr < 0 && !fx.drop) {
           let landed = false;
           for (const p of world.plats) {
             if (ghost(p) || p.broken) continue;
@@ -3355,6 +3419,7 @@
         if (state === 'play' && player.r <= R0) {
           const hard = player.vr < -900;
           if (lastTier >= 0) { falls++; loseMult(); }
+          if (fx.drop) { fx.drop = false; addShake(6); sfx.thud(); }
           player.r = R0; player.vr = 0; player.onGround = true; player.squash = 1; player.lost = false;
           if (player.heat > 0.3 && conspiracy && level === 1) enterHollowEarth();
           else if (player.heat > 0.3) impact(player.heat);
@@ -3480,7 +3545,8 @@
 
     // Camera: follow height, and look further down while falling.
     cam.r += (player.r - cam.r) * Math.min(1, dt * 7);
-    const want = player.vr < -250 ? 0.34 : 0.46;
+    // (dropping onto a new world: look down at it coming up to meet you)
+    const want = fx.drop ? 0.24 : player.vr < -250 ? 0.34 : 0.46;
     cam.anchor = lerp(cam.anchor || want, want, Math.min(1, dt * 2));
     // Pull the camera out during a ride so you can watch the Earth turn below.
     const onRide = player.lastPlat && player.lastPlat.ride && (player.lastPlat.ride.state === 'moving') && riding(player.lastPlat);
@@ -3597,6 +3663,12 @@
     const xW = cx + rc * Math.sin(phi), yW = cy - rc * Math.cos(phi);
     const k = clamp((tf - (TOP - 5)) / (5 - 0.6), 0, 1);
     const t = k * k * (3 - 2 * k); // smoothstep
+    if (climbOut()) {
+      // It grows as you climb, then slides up out of sight above you: you'll
+      // bounce up after it and come down on it from the other side
+      const up = smooth(clamp((tf - (TOP - 4)) / 2.6, 0, 1)), rr = rS * (1 + 1.6 * k);
+      return { p, phi, t: 0, x: xS, y: yS - up * (yS + rr * 1.7 + 40), r: rr, alpha: lerp(0.55 + f * 0.45, 1, k) };
+    }
     const r = lerp(rS, mr, t);
     // If its real spot is off screen, keep it peeking in from that edge so it
     // never disappears; walk that way and it slides into its true position.
@@ -6652,6 +6724,7 @@
       drawArriveCover();
       return;
     }
+    if (fx.climb) { drawClimb(); drawBanner(); drawRail(); return; }
     renderWorld();
     if (fx.land) drawLandSnap();
   }
@@ -6767,7 +6840,7 @@
     if (level === 2 || level === 4) drawFlare();
     // The saucers fly in front of the scenery, across the top of the sky
     if (level === 3) drawConvoy(...EARTH_FROM_MARS(), clamp(1 - tierFloat(player.r) / 3.5, 0, 1), 'near');
-    drawBanner();
+    if (!snapping) drawBanner();
     if (fx.dedication > 0) {
       // For the man who fell to Earth
       ctx.globalAlpha = clamp(Math.min(fx.dedication, 7 - fx.dedication), 0, 1);
