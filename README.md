@@ -304,12 +304,26 @@ switches it off. You get:
 - "classified files" on the way up: a famous conspiracy theory, followed by
   what's really true (the Moon landings, chemtrails, Nibiru, Mercury in
   retrograde, and more);
-- **the hollow Earth.** On level 1, crash into Earth as a fireball and you smash
-  straight through the crust into the caverns of the hollow Earth. There's an
-  inner sun, an underground sea with something long-necked swimming in it, and
-  giant glowing mushrooms. Bounce up them to the hole you made and climb out.
-  A classified file then tells you what earthquake waves show is really down
-  there.
+- **level 6, the hollow Earth.** On level 1, crash into Earth as a fireball and
+  you smash straight through the crust, score and all. (Or pick "Secret: the
+  hollow Earth" on the menu.) Climb back out through seven caverns, from the
+  little "inner sun" at the bottom to the hole you made:
+  - the inner sun, with glowing mushrooms;
+  - the underground sea (a nod to Jules Verne), with drifting rafts and
+    something long-necked in the water;
+  - the crystal caves, whose crystals shatter after one bounce;
+  - the mushroom forest, its mushrooms swaying, spores drifting;
+  - the lava tubes, with lava jets that bubble, then blast;
+  - Lizard city, with neon signs ("NOTHING TO SEE HERE") and burrowing drill
+    machines crossing;
+  - the way out, with roots, bats and daylight above.
+
+  Each cavern has a real fact or a classified file (Naica's giant crystals, the
+  honey fungus, lava tubes, the Kola Superdeep Borehole, Veryovkina). In
+  Checkpoint mode a rock floor with a flag at the start of each cavern catches
+  you; in Uber Tramp there's none. Geoms, falls, medals and records work as on
+  the other levels, and from the finish you can carry your score back up to
+  the Moon.
 - On Europa, a black monolith (a nod to Arthur C. Clarke's *2010*).
 
 ## Online scoreboard
