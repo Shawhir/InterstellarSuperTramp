@@ -139,7 +139,7 @@ start level 2 from the title screen once you've landed there once.
 
 Land on Mars in level 2 and you can carry straight on (score and all), or start
 level 3 from the title screen. There's also a "Straight to the asteroid belt"
-button that drops you onto the safe rock at the turn.
+button that drops you onto the safe rock at the start of the belt.
 
 - **Mars.** Shown in cross-section with its thin crust, thick mantle and big
   liquid iron core, under a butterscotch sky (Mars has a thin carbon dioxide
