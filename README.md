@@ -177,9 +177,12 @@ button that drops you onto the safe rock at the turn.
   you a force field. It appears again at the belter outpost to top you up.
 - **The passage.** From the turn on you're in outer space: zero gravity, like
   a pinball table. Nothing pulls you back to Mars and you keep your speed,
-  forwards and sideways, until you steer. The passage runs straight, walled
-  with asteroids at the top and bottom of the screen; bounces off them are
-  elastic, so you come off at the speed you hit them. Its platforms (the safe
+  forwards and sideways, until you steer. The passage is long and wide,
+  walled at the top and bottom with asteroids of all sizes (big boulders jut
+  in), with loose asteroids of all sizes scattered along it and glowing pop
+  bumpers. Bounce off any asteroid and you come off at the speed you hit it,
+  never slower than a lively bounce; a pop bumper kicks you off faster still,
+  for points. Through it all there's an outer belt before the worlds. Its platforms (the safe
   rock included) are speed boosters near the middle: fly into one and it
   flings you on. A
   wall of bumpers just past the four worlds bounces you back if you overshoot.
