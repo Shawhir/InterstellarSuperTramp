@@ -809,7 +809,7 @@
       run.push({ d, kind, rocks, gap, vu: kind === 'frag' ? (rnd() < 0.5 ? -1 : 1) * (0.1 + rnd() * 0.08) : 0, off: 0 });
       if (run.length % 2 === 0) stars.push({ run: true, d: d + 2, u: gap, taken: false });
       // Further apart the faster you're going, so there's always time to react
-      d += dive ? 560 + rnd() * 80 : (lerp(380, 720, f * f) + rnd() * 80) * (kind === 'open' ? 1.5 : 1);
+      d += dive ? 700 + rnd() * 80 : (lerp(380, 900, f * f) + rnd() * 80) * (kind === 'open' ? 1.5 : 1);
     }
     // Europa's ocean: glowing geoms to grab on the way down
     for (let od = 500; od < OCEAN_LEN - 400; od += 380 + rnd() * 200) stars.push({ ocean: true, d: od, u: rnd() * 1.6 - 0.8, taken: false });
@@ -991,7 +991,7 @@
       if (R.phase !== 'run') return R.phase === 'exit' ? 'Past Jupiter' : R.phase === 'ocean' ? "Europa's ocean" : 'Europa';
       const f = runF(), k = diveK();
       const name = R.d >= RUN_LEN ? (k < 0.2 || k > 0.85 ? 'Jupiter: cloud tops' : k < 0.4 || k > 0.65 ? 'Jupiter: deep down' : 'Jupiter: the middle') : f < 0.26 ? 'Outer belt' : f < 0.44 ? 'Past the belt' : f < 0.6 ? 'Hilda asteroids' : f < 0.75 ? 'Comet pieces' : 'Radiation belts';
-      return `${name} · ${Math.round(R.v * 0.07)} km/s`;
+      return `${name} · ${Math.round(R.v * 0.045)} km/s`;
     }
     if (level === 6 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? (player.r <= R0 + 1 ? 'In Pellucidar' : `On the floor: ${HOLLOW[hollowZone(tierFloat(player.r) + 0.5)].name}`) : 'Pellucidar';
     if (level === 5 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? `On ${l5Start.name}` : `${l5Start.name} base`;
@@ -1893,9 +1893,15 @@
       // Jupiter's gravity: slow going in empty space at first, then it pulls
       // you in faster and faster the closer you get (speed rises as one over
       // the square root of the distance left). Climbing out the far side, you slow.
-      const want = R.d < RUN_LEN ? 240 + 190 * (1 / Math.sqrt(1 - runF() + 0.04) - 1 / Math.sqrt(1.04)) : lerp(1000, 640, diveK());
-      R.v = approach(R.v, want, 700 * dt);
-      if (R.v > 760) shake = Math.max(shake, (R.v - 760) / 90);
+      const want = R.d < RUN_LEN ? 240 + 264 * (1 / Math.sqrt(1 - runF() + 0.04) - 1 / Math.sqrt(1.04)) : lerp(1300, 700, diveK());
+      R.v = approach(R.v, want, 900 * dt);
+      // How fast it *looks*: the stars and dust stream by far faster than the
+      // bands come at you, so near Jupiter it feels like a fall from the sky
+      R.vis = R.v * (R.d < RUN_LEN ? 1 + 2.4 * runF() * runF() : 2.6 - 1.4 * diveK());
+      R.vd = (R.vd || 0) + R.vis * dt;
+      if (R.v > 600) shake = Math.max(shake, (R.v - 600) / 70);
+      // Hitting Jupiter's air at this speed: a fireball, just like falling to Earth
+      R.heat = R.d < RUN_LEN ? clamp((runF() - 0.86) / 0.14, 0, 1) : clamp(1 - diveK() / 0.3, 0, 1);
       R.d += R.v * dt;
       R.hitT = Math.max(0, R.hitT - dt);
       runSteer(dt, lane);
@@ -1947,7 +1953,7 @@
       if (R.d >= RUN_LEN && !R.field && !R.inJ) {
         R.inJ = true; R.field = 100; fx.flash = 0.9; addShake(14); sfx.whoosh();
         banner('FORCE FIELD ON!', 'INTO JUPITER');
-        toast('FORCE FIELD ON! Straight into Jupiter. Each storm you clip weakens the field; what\'s left when you come out is bonus points.', 5.5);
+        toast('FORCE FIELD ON! Straight into Jupiter as a fireball. (In 1995 the Galileo probe hit Jupiter\'s air at 47 km/s, and most of its heat shield burned away.) Storms you clip weaken the field.', 6);
       }
       if (R.inJ) {
         R.field = Math.min(100, R.field + 3 * dt);
@@ -2018,7 +2024,7 @@
   function updateRunFrame(dt) {
     if (state === 'play') playTime += dt;
     updateRun(dt);
-    if (snd) snd.music.set({ tierF: 9 + TOP + runF() * 6, speed: 1 + runF(), won: state === 'won', belt: state === 'play' });
+    if (snd) { snd.music.set({ tierF: 9 + TOP + runF() * 6, speed: 1 + runF(), won: state === 'won', belt: state === 'play' }); snd.sfx.burn(fx.run.phase === 'run' ? fx.run.heat || 0 : 0); }
     for (const q of fx.pops) q.t += dt;
     fx.pops = fx.pops.filter((q) => q.t < 1.1);
     if (fx.banner) { fx.banner.t += dt; if (fx.banner.t > 2.6) fx.banner = null; }
@@ -6248,14 +6254,14 @@
     if (inJ) drawJupiterInside(R);
     else {
       for (const st of world.sky) {
-        const y = (st.y * H + scroll * 0.05 * st.s) % H;
-        px(st.x * W, y, st.s, st.s * (1 + sp / 300), st.s > 1 ? '#fff3c4' : '#c9d7f0');
+        const vis = R.vis || sp, y = (st.y * H + (R.vd || scroll) * (0.15 + st.s * 0.18)) % H;
+        px(st.x * W, y, st.s, st.s * (1 + vis / 160), st.s > 1 ? '#fff3c4' : '#c9d7f0');
       }
       if (R.phase === 'run') {
         const sg = ctx.createRadialGradient(W / 2, H * 1.15, 4, W / 2, H * 1.15, H * 0.5);
         sg.addColorStop(0, `rgba(255,236,190,${0.35 * (1 - f)})`); sg.addColorStop(1, 'rgba(255,236,190,0)');
         ctx.fillStyle = sg; ctx.fillRect(0, H * 0.6, W, H * 0.4);
-        drawFarRocks(0, scroll * 0.4, clamp(1 - (f - 0.25) * 3, 0, 1));
+        drawFarRocks(0, (R.vd || scroll) * 0.3, clamp(1 - (f - 0.25) * 3, 0, 1));
         // Jupiter grows the whole way; at the end it fills everything as you hit it
         const m = Math.min(W, H);
         const jr = f < 0.92 ? lerp(10, 0.36 * m, Math.pow(f / 0.92, 2.2)) : 0.36 * m * Math.exp((f - 0.92) * 40);
@@ -6266,6 +6272,14 @@
             const k = (clock * (0.25 + f * 0.6) + i / 6) % 1, rr = jr * (1.15 + (1 - k) * 5);
             ctx.strokeStyle = `rgba(255,220,170,${0.18 * k * Math.min(1, f * 2)})`;
             ctx.beginPath(); ctx.ellipse(W / 2, H * 0.2, rr, rr * 0.6, 0, 0, TAU); ctx.stroke();
+          }
+        }
+        // Warp streaks pouring out of Jupiter as you fall towards it
+        if (f > 0.35) {
+          ctx.strokeStyle = `rgba(255,235,200,${Math.min(0.5, (f - 0.35) * 0.9)})`; ctx.lineWidth = 2;
+          for (let i = 0; i < 46; i++) {
+            const a = i * 2.39996, k = ((clock * (0.6 + f * 1.6) + i * 0.137) % 1), r0 = jr + k * k * W, r1 = r0 + 20 + k * (R.vis || sp) * 0.08;
+            ctx.beginPath(); ctx.moveTo(W / 2 + Math.cos(a) * r0, H * 0.2 + Math.sin(a) * r0 * 0.8); ctx.lineTo(W / 2 + Math.cos(a) * r1, H * 0.2 + Math.sin(a) * r1 * 0.8); ctx.stroke();
           }
         }
         drawJupiter(W / 2, H * 0.2, jr);
@@ -6286,10 +6300,17 @@
     if (R.phase === 'run') {
       // Speed lines down the sides
       ctx.fillStyle = inJ ? 'rgba(255,240,210,0.3)' : `rgba(220,235,255,${0.12 + f * 0.25})`;
-      for (let i = 0; i < 14; i++) {
-        const x = (i / 14) * W, y = (i * 211 + scroll * 1.6) % (H + 200) - 100;
-        if (Math.abs(x - W / 2) < lane * 0.6) continue;
-        ctx.fillRect(x, y, 2, 40 + sp * 0.12);
+      const vis = R.vis || sp, nLines = Math.round(14 + vis / 120);
+      for (let i = 0; i < nLines; i++) {
+        const x = ((i * 0.618) % 1) * W, y = (i * 211 + (R.vd || scroll) * 1.2) % (H + 300) - 150;
+        if (Math.abs(x - W / 2) < lane * 0.5 && i % 3) continue;
+        ctx.fillRect(x, y, 2, 30 + vis * 0.09);
+      }
+      // Where the next band's gap is, before it comes on screen
+      const nb = world.run.find((b) => py - (b.d - R.d) < -20);
+      if (nb && !nb.passed) {
+        const gx = W / 2 + (nb.gap + nb.off) * lane, al = 0.5 + 0.4 * Math.sin(clock * 8);
+        ctx.fillStyle = `rgba(109,255,122,${al})`; ctx.beginPath(); ctx.moveTo(gx - 12, 6); ctx.lineTo(gx + 12, 6); ctx.lineTo(gx, 20); ctx.fill();
       }
       for (const b of world.run) {
         const y = py - (b.d - R.d);
@@ -6321,8 +6342,20 @@
     ctx.globalAlpha = 1;
     if (R.phase === 'run' || R.phase === 'exit') {
       const bx = W / 2 + R.x, tilt0 = clamp(R.vx / 2000, -0.3, 0.3);
-      if (R.hitT <= 0 || Math.sin(clock * 30) > 0) drawSprite('jump', bx, py, player.facing < 0, 1, 1, 1, SUIT, tilt0);
+      if (R.hitT <= 0 || Math.sin(clock * 30) > 0) drawSprite('jump', bx, py, player.facing < 0, 1, 1, 1, (R.heat || 0) > 0.55 ? HOT : SUIT, tilt0);
       if (conspiracy) drawFoilHat(bx, py, tilt0);
+      if (R.heat > 0 && R.phase === 'run') {
+        // The fireball: flames streaming back off you, the same as falling to Earth
+        const hk = R.heat;
+        const g = ctx.createRadialGradient(bx, py - 24, 6, bx, py - 24, 70 + hk * 40);
+        g.addColorStop(0, `rgba(255,240,170,${0.55 * hk})`); g.addColorStop(1, 'rgba(255,120,40,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(bx, py - 24, 110, 0, TAU); ctx.fill();
+        for (let i = 0; i < 26; i++) {
+          const k = ((clock * 3 + i * 0.173) % 1), x = bx + Math.sin(i * 7.3 + clock * 9) * (10 + k * 26), y = py - 30 + k * (120 + hk * 140);
+          ctx.fillStyle = i % 3 ? `rgba(255,${140 + (i % 4) * 25},40,${(1 - k) * hk})` : `rgba(255,250,210,${(1 - k) * hk})`;
+          ctx.beginPath(); ctx.arc(x, y, (14 - k * 10) * (0.6 + hk * 0.6), 0, TAU); ctx.fill();
+        }
+      }
       if (R.inJ && R.phase === 'run') drawForceField(bx, py - 24, R.field);
     }
     if (R.flashT > 0) { ctx.fillStyle = `rgba(220,235,255,${R.flashT * 3})`; ctx.fillRect(0, 0, W, H); }

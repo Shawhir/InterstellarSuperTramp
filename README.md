@@ -287,7 +287,10 @@ or start from the title screen (you start on Ceres).
   the miners' magnet rails fling you on. From there it's a run: you fly
   forward, slowly at first through empty space, until Jupiter's gravity picks
   you up and pulls you in faster and faster (your speed shows in km/s, and
-  rings of its pull slide in towards it). It never lets up after that. Bands of asteroids
+  rings of its pull slide in towards it). Near the end the stars, dust and
+  speed lines stream past faster than a fireball fall to Earth, with warp
+  streaks pouring out of Jupiter, and you hit its air as a roaring fireball. A
+  green marker at the top shows where the next band's gap is. Bands of asteroids
   stretch right across the way, each with a gap: through cleanly and your
   multiplier goes up, and every 5 in a row is a streak bonus; clip one and it
   costs you points. The bands spread out as you speed up, so there's always
