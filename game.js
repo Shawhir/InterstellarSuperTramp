@@ -1087,10 +1087,8 @@
     }
     if (p.launch) { lastTier = TOP; bestTier = TOP; startRun(p); return; }
     if (p.dest) {
-      if (p.world) landedOn = p.world;
       player.vr = 0; player.onGround = true;
-      lastTier = TOP; bestTier = TOP;
-      startArrival(p);
+      reachDest(p);
       return;
     }
     // Rebound: a platform throws you back as high as you fell from. Each repeat
@@ -2056,16 +2054,54 @@
     hygiea: { g: 0.01, cover: 'rubble', sky: ['#000000', '#05060c'], ground: ['#5d5a5e', '#2e2c30'], curve: 1.2, note: 'On Hygiea: almost perfectly round, so it may count as a dwarf planet. Its dark surface is carbon-rich rock.' },
     earth: { g: 1, cover: 'daylight', sky: ['#58b4f0', '#d4f0ff'], ground: ['#4fb34a', '#2f6f2a'], curve: 5, note: "Back in daylight! You climbed right out of the hollow Earth. Nobody's ever going to believe you." },
   };
+  // Where each world leads on to: you land on the next level, ready to play
+  const nextLevel = () => (level === 1 ? 2 : level === 2 ? (route === 'venus' ? 4 : 3) : level === 3 ? 5 : level === 6 ? 1 : 0);
+  const ARR_PULL = 0.9;
+  function reachDest(p) {
+    if (p.world) landedOn = p.world;
+    lastTier = TOP; bestTier = TOP;
+    startArrival(p);
+  }
   function startArrival(p) {
     const key = level === 6 ? 'earth' : level === 3 && p.world ? p.world.name.toLowerCase() : p.type;
     if (!ARRIVE[key]) { win(); return; }
-    fx.arrive = { key, t: 0, landed: false, bits: [], time: playTime };
-    player.vr = 0; player.vx = 0; player.onGround = true; player.spin = 0; player.heat = 0; fx.flames = [];
+    // The clock starts below zero: first the world's pull takes you, then the turn
+    const pull = player.onGround ? 0 : ARR_PULL;
+    fx.arrive = { key, t: -pull, landed: false, bits: [], time: playTime, next: nextLevel(), aim: -p.a, th0: theta, r0: player.r, R: p.R };
+    player.vx = 0; player.spin = 0; player.heat = 0; fx.flames = [];
     sfx.whoosh();
+    if (pull) { addShake(4); banner(level === 6 ? 'DAYLIGHT!' : `${destName().replace('the ', '').toUpperCase()}'S PULL`, level === 6 ? 'UP AND OUT' : 'HERE WE GO'); }
+  }
+  // Straight on into the next level: it's built behind the cover, and you
+  // drop onto its ground with its own gravity
+  function goOn() {
+    const A = fx.arrive, from = level;
+    playTime = A.time;
+    const bonus = win(true);
+    startGame(A.next, { score, mult, ...lastWin });
+    player.r = R0 + 240; player.vr = 0; player.onGround = false; player.apexR = player.r;
+    cam.r = player.r; cam.anchor = 0.34;
+    fx.cover = { key: A.key, t: ARR_SWAP };
+    pop(`LEVEL ${from} DONE! +${fmtScore(bonus)}`, '#ffd23f', player.r + 110);
+    sfx.tier();
   }
   function updateArrive(dt) {
     const A = fx.arrive, D = ARRIVE[A.key];
     A.t += dt;
+    if (A.t < 0) {
+      // Its gravity takes you: a last little rise, then you're swung over
+      // and pulled down onto it, faster and faster
+      const u = clamp(1 + A.t / ARR_PULL, 0, 1);
+      theta = A.th0 + wrap(A.aim - A.th0) * smooth(u);
+      player.r = lerp(A.r0, A.R, u * u * u) + 150 * Math.sin(Math.PI * Math.min(1, u * 1.2));
+      player.onGround = false; player.facing = wrap(A.aim - A.th0) > 0 ? 1 : -1;
+      cam.r += (player.r - cam.r) * Math.min(1, dt * 10);
+      shake = Math.max(shake, 1 + 4 * u * u);
+    } else if (!A.down) {
+      A.down = true; player.r = A.R; player.onGround = true; player.squash = 1; theta = A.aim;
+      if (A.r0 !== A.R) { addShake(8); sfx.thud(); burst(-theta, A.R, ARRIVE[A.key].ground[0], 14, 160); }
+    }
+    if (A.t > ARR_SWAP && A.next) { goOn(); return; }
     if (A.t > ARR_SWAP && !A.started) { A.started = true; sfx.tier(); }
     const fall = clamp(0.45 / Math.sqrt(D.g), 0.45, 1.6);
     if (!A.landed && A.t > ARR_SWAP + 0.4 + fall) {
@@ -2080,6 +2116,10 @@
   }
   function updateArriveFrame(dt) {
     updateArrive(dt);
+    if (!fx.arrive) return; // carried straight on into the next level
+    for (const q of particles) { q.R += q.vr * dt; q.a += (q.vt * dt) / q.R; q.vr -= 380 * dt; q.life -= dt; }
+    particles = particles.filter((q) => q.life > 0);
+    player.squash = Math.max(0, player.squash - dt * 4);
     for (const q of fx.pops) q.t += dt;
     fx.pops = fx.pops.filter((q) => q.t < 1.1);
     if (fx.banner) { fx.banner.t += dt; if (fx.banner.t > 2.6) fx.banner = null; }
@@ -2095,8 +2135,8 @@
   const arriveTurn = () => { const A = fx.arrive; return A && A.t < ARR_SWAP ? Math.PI * smooth(clamp((A.t - ARR_TURN[0]) / (ARR_TURN[1] - ARR_TURN[0]), 0, 1)) : 0; };
   // Each world's own way of hiding the change: 0 to 1, peaking at the swap
   const coverK = (t) => (t < ARR_SWAP ? clamp((t - 0.4) / (ARR_SWAP - 0.5), 0, 1) : clamp(1 - (t - ARR_SWAP - 0.15) / 0.7, 0, 1));
-  function drawArriveCover() {
-    const A = fx.arrive, k = coverK(A.t), kind = ARRIVE[A.key].cover;
+  function drawArriveCover(A = fx.arrive) {
+    const k = coverK(A.t), kind = ARRIVE[A.key].cover;
     if (k <= 0) return;
     if (kind === 'glare' || kind === 'daylight') {
       const g = ctx.createRadialGradient(W / 2, H * 0.4, 10, W / 2, H * 0.4, Math.max(W, H));
@@ -3164,6 +3204,7 @@
     if (state === 'splash' || state === 'tour' || state === 'descend') { updateIntro(dt); return; }
     if (fx.run) { updateRunFrame(dt); return; }
     if (fx.arrive) { updateArriveFrame(dt); return; }
+    if (fx.cover && (fx.cover.t += dt) > ARR_SWAP + 1) fx.cover = null;
     for (const p of world.plats) {
       if (p.sway) p.a = p.a0 + p.sway * Math.sin(clock * p.freq + p.phase);
       if (p.ride) updateRide(p, dt);
@@ -3250,6 +3291,15 @@
           if (inBelt() && player.vr < -sink) player.vr += (-sink - player.vr) * Math.min(1, dt * 2.5);
         }
         player.r += player.vr * dt;
+        // Close to the world you're heading for, its gravity takes hold and
+        // pulls you in
+        if (state === 'play' && !beltFlight() && player.vr > 0) {
+          for (const p of world.plats) {
+            if (!p.dest || ghost(p) || p.broken) continue;
+            if (prev < p.R - 60 && player.r >= p.R - 60 && Math.abs(wrap(p.a + theta) * p.R) <= p.w / 2 + 160) { reachDest(p); break; }
+          }
+          if (fx.arrive) return;
+        }
         if (beltFlight() && player.vr > 0) {
           // Flying forward into a platform: it's a speed booster, and a belt
           // world catches you as you reach its near side
@@ -6579,6 +6629,7 @@
       return;
     }
     renderWorld();
+    if (fx.cover) drawArriveCover(fx.cover);
   }
   function renderWorld() {
     if (fx.run) {
@@ -7246,7 +7297,8 @@
   const L5_TIME_MEDALS = [[90, 'gold'], [130, 'silver'], [190, 'bronze']];
   const L6_TIME_MEDALS = [[120, 'gold'], [180, 'silver'], [260, 'bronze']];
   const START_BODY = { 1: 'Earth', 2: 'the Moon', 3: 'Mars', 4: 'Venus', 6: 'the hollow Earth' };
-  function win() {
+  // go: carrying straight on into the next level, so no results screen
+  function win(go = false) {
     buzz([30, 60, 30, 60, 90]);
     state = 'won';
     document.body.classList.remove('playing');
@@ -7320,6 +7372,7 @@
     $('won-mode').textContent = MODES[mode].name + (conspiracy ? ' · 👁 Conspiracy' : '') + (carry ? ' · ' + trail.join(' to ') : '');
     lastRun = { mode, timeMs: (c.time + playTime) * 1000, stars: c.got + got, total: c.total + total, falls: c.falls + falls, score: Math.round(score) };
     lastWin = { time: c.time + playTime, got: c.got + got, total: c.total + total, falls: c.falls + falls, trail };
+    if (go) return bonus;
     offerPost();
     $('medals').innerHTML = [
       medalHtml(tMedal, 'Time', fmtTime(playTime), newTime, nextTime ? `${nextTime[1]} under ${fmtTime(nextTime[0])}` : 'top medal'),
