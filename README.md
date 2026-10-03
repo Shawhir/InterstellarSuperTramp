@@ -56,12 +56,14 @@ says so if that happens.
   from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow
   minor drift with echo in space, and speeds up with the bounce multiplier.
   Music and sound effects have separate on/off buttons.
-- Intro: dawn on Earth's horizon. A comet writes the title off its tail while
-  the Sun rises over the Atlantic. Tap and the view lifts gently off the
-  horizon until Earth is a globe, with Mercury and Venus beside the Sun, and
-  the Moon and Mars, all labelled. Then it zooms straight down: the globe
-  becomes the game world as space fades to blue sky (no geoms in the way).
-  Tap during the rise to skip to the zoom. Then the
+- Intro: skimming the Sun. Its surface is the horizon, boiling with
+  granules, with dark sunspots and loops of glowing gas rising off it, as a
+  comet writes the title. Tap and you lift off and fly out towards Earth (a
+  blue dot dead ahead), past Mercury and Venus, then past the Space
+  Station, the Moon and satellites. You dive straight in as the globe becomes
+  the game world and space fades to blue sky (no geoms in the way). The last
+  satellites carry on flying past as you drop. Tap during the flight to skip
+  to the zoom. Then the
   menu fades in with the top scores. On the menu the tramp hops along the logo (with the odd backflip off the
   end letter), and each mode plays its own jingle when picked.
 - Juice: screen shake on landings, squash and stretch, afterimage trail, landing
@@ -328,8 +330,25 @@ switches it off. You get:
     machines (a nod to Burroughs' Iron Mole);
   - **the way out**, with roots, bats and daylight.
 
-  Floating islands carry buildings, creatures and waterfalls next to the way
-  up, and each cavern has its own skyline behind. Real facts and classified
+  Each cavern's floor is a crust of its own, right round: land on it, walk
+  about, and drop through its gap into the cavern below if you wander in.
+  On every floor stands a whole town (a back row for depth, then the front
+  row), with its people and creatures walking about: dinosaurs and gorilla-like
+  Sagoths, Verne's giant shepherd and his mastodons, robed Agarthans under a
+  hovering saucer, salt miners with headlamps, villagers and their goats,
+  lantern-carrying Morlocks, mine carts full of opals, and lizard people in
+  suits. They jump in surprise when you land near them.
+
+  Real places underground are there too; stand by one to hear about it:
+  Hang Son Doong (a cave with its own jungle and clouds), Derinkuyu (a rock-cut
+  city 85 m deep), St Kinga's Chapel (carved from salt), Coober Pedy's dugouts,
+  and Beijing's Cold War tunnel city.
+
+  For juice: each cavern's floor lights its cavern, and light pours down
+  through the gaps. Fireflies, spores, embers, sparkles and steam drift
+  about, landings burst in the cavern's colours, a sparkle trail follows you
+  up, and reaching a new cavern sets off fireworks. Floating islands carry
+  more buildings, creatures and waterfalls next to the way up. Real facts and classified
   files come on the way. Checkpoints, geoms, medals and records work as on
   the other levels, and from the finish you can carry your score back up to
   the Moon.
