@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
-<link rel="stylesheet" href="style.css?v=f4c2f5b">
+<link rel="stylesheet" href="style.css?v=933c141">
 </head>
 <body>
 <canvas id="game" tabindex="0" aria-label="Interstellar SuperTramp game"></canvas>
@@ -37,6 +37,8 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
+<button class="secret-star" id="secret-star" type="button" aria-label="A shooting star" hidden></button>
+<button class="conspiracy-tag" id="conspiracy-tag" type="button" hidden>👁 CONSPIRACY MODE ON <span>tap to switch off</span></button>
 
 <div class="overlay" id="title">
   <div class="card">
@@ -64,11 +66,12 @@
     <button id="l2-start" class="level2" type="button" hidden>Level 2: start on the Moon<span>Mars or Venus?</span></button>
     <button id="l3-start" class="level2" type="button">Level 3: start on Mars<span>Out to the asteroid belt</span></button>
     <button id="l4-start" class="level2" type="button">Level 4: start on Venus<span>Through the solar storms to Mercury</span></button>
+    <button id="l5-start" class="level2" type="button">Level 5: start in the belt<span>Flat out for Jupiter and Europa</span></button>
     <button id="belt-start" class="level2" type="button">Straight to the asteroid belt<span>Skip ahead to the turn</span></button>
     <button id="open-board" class="secondary" type="button" hidden>Full scoreboard</button>
     <p>The world turns under your feet. Hop on a trampoline and bounce from cloud to balloon to satellite, all the way to the Moon.</p>
     <p>Grab <span class="geom-word">green geoms</span> to grow your score multiplier. A miss resets it. When the arrow under your feet turns <span class="go">green and points down</span>, you're lined up to land.</p>
-    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> steer &nbsp; <kbd>SPACE</kbd> hop &nbsp; On a phone: the buttons, or TILT.</p>
+    <p class="keys"><kbd>←</kbd> <kbd>→</kbd> walk and steer: walk up to a trampoline and you hop on. On a phone: the buttons, or TILT.</p>
   </div>
 </div>
 
@@ -93,6 +96,7 @@
       <button id="to-l2" class="level2" type="button" hidden>On to Mars or Venus<span>Level 2, score carried on</span></button>
       <button id="to-l3" class="level2" type="button" hidden>On to the asteroid belt<span>Level 3, score carried on</span></button>
       <button id="to-l4" class="level2" type="button" hidden>On to Mercury<span>Level 4, score carried on</span></button>
+      <button id="to-l5" class="level2" type="button" hidden>On to Jupiter<span>Level 5, score carried on</span></button>
       <button id="again" type="button">Bounce again</button>
       <button id="change-mode" class="secondary" type="button">Change mode</button>
       <button id="won-board" class="secondary" type="button" hidden>Scoreboard</button>
@@ -114,17 +118,14 @@
 </div>
 
 <div class="pad" aria-label="Touch controls">
-  <div class="lr">
-    <button type="button" data-key="left" aria-label="Walk left">◀</button>
-    <button type="button" data-key="right" aria-label="Walk right">▶</button>
-  </div>
-  <button type="button" class="jump" data-key="jump" aria-label="Hop">HOP</button>
+  <button type="button" data-key="left" aria-label="Walk left">◀</button>
+  <button type="button" data-key="right" aria-label="Walk right">▶</button>
 </div>
 
-<script src="scoreboard-config.js?v=f4c2f5b"></script>
-<script src="scoreboard.js?v=f4c2f5b"></script>
-<script src="audio.js?v=f4c2f5b"></script>
-<script src="game.js?v=f4c2f5b"></script>
+<script src="scoreboard-config.js?v=933c141"></script>
+<script src="scoreboard.js?v=933c141"></script>
+<script src="audio.js?v=933c141"></script>
+<script src="game.js?v=933c141"></script>
 <script>
   // Play offline once the game has been opened (on the public site only)
   if ('serviceWorker' in navigator && /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname)) {
