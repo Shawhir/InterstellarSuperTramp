@@ -992,7 +992,7 @@
       const name = R.d >= RUN_LEN ? (k < 0.2 || k > 0.85 ? 'Jupiter: cloud tops' : k < 0.4 || k > 0.65 ? 'Jupiter: deep down' : 'Jupiter: the middle') : f < 0.26 ? 'Outer belt' : f < 0.44 ? 'Past the belt' : f < 0.6 ? 'Hilda asteroids' : f < 0.75 ? 'Comet pieces' : 'Radiation belts';
       return `${name} ×${(R.v / 340).toFixed(2)}`;
     }
-    if (level === 6 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? 'In Pellucidar' : 'Pellucidar';
+    if (level === 6 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? (player.r <= R0 + 1 ? 'In Pellucidar' : `On the floor: ${HOLLOW[hollowZone(tierFloat(player.r) + 0.5)].name}`) : 'Pellucidar';
     if (level === 5 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? `On ${l5Start.name}` : `${l5Start.name} base`;
     if (player.onGround) return lastTier === TOP ? `On ${destName()}` : level === 4 ? 'Above Venus' : level === 3 ? 'On Mars' : level === 2 ? 'On the Moon' : 'On the ground';
     const k = Math.floor(tierFloat(player.r));
@@ -1071,6 +1071,15 @@
     fx.whistled = false;
     player.lost = false; player.adrift = 0; fx.improbable = null;
     if (level === 6 && p.type === 'crystal' && !p.breakAt) p.breakAt = clock + 0.35;
+    if (level === 6) {
+      const col = ZONE_GLOW[hollowZone(p.tier)];
+      burst(-theta, p.R, col, 10, 240); hollowStartle(p.R);
+      if (TIERS[p.tier] && p.tier > bestTier && p.tier > 0 && TIERS[p.tier].layer !== TIERS[p.tier - 1].layer) {
+        // A new cavern: fireworks in its colours
+        for (let i = 0; i < 6; i++) { const da = ((Math.random() - 0.5) * 500) / p.R, dr = 80 + Math.random() * 260; burst(-theta + da, p.R + dr, i % 2 ? col : '#ffffff', 16, 260); ring(-theta + da, p.R + dr, col, 1 + Math.random()); }
+        addShake(10); pop('NEW CAVERN!', col, player.r + 150);
+      }
+    }
     if (p.crumble && !p.breakAt) {
       p.breakAt = clock + 0.3;
       if (!fx.crumbleTold) { fx.crumbleTold = true; toast('Cracked asteroids are loose rubble: bounce off one and it falls apart behind you. No going back down that way!', 5); }
@@ -1692,9 +1701,9 @@
     if (fx.dedication > 0) fx.dedication -= dt;
     updateFlare(dt);
     // Walk past something on the ground to hear about it
-    if (player.onGround && player.r <= R0 + 1) {
+    if (player.onGround && (player.r <= R0 + 1 || level === 6)) {
       for (const d of world.decor) {
-        if (d.note && !d.seen && Math.abs(wrap(d.a + theta)) * R0 < 28) { d.seen = true; toast(d.note, 6); }
+        if (d.note && !d.seen && Math.abs(wrap(d.a + theta)) * player.r < 34 && (level !== 6 || Math.abs(d.R - player.r) < 4)) { d.seen = true; toast(d.note, 7); }
       }
     }
     // The Martians set off when you first come near their field, or after a while
@@ -2196,51 +2205,79 @@
       prevA = a;
     }
     stars.forEach((st, i) => { st.id = i; });
-    // Scenery along the way, cavern by cavern. Rock shells divide the caverns,
-    // with a wide opening where the way up goes through
+    // Each cavern's floor is a crust of its own, right round, that you can
+    // land on and walk about (and drop through its gap to the one below).
+    // On it, a whole town: a back row of tall shapes for depth, a front row of
+    // buildings, and people and creatures wandering about. Some are real
+    // places underground; walk up to them to hear about them.
     const shells = [];
+    const CITY = {
+      pellucidar: { front: ['treefern', 'stilthut', 'fernbush', 'treefern', 'rocks', 'hut'], back: 'jungle', walk: ['dino', 'dino', 'sagoth'], gap: 120 },
+      sea: { front: ['stilthut', 'boat', 'bigmush', 'rocks', 'lighthouse', 'nets'], back: 'cliff', walk: ['mastodon', 'mastodon', 'shepherd'], gap: 130 },
+      agartha: { front: ['temple', 'dome', 'spire', 'ziggurat', 'vril', 'dome'], back: 'goldtower', walk: ['agarthan', 'agarthan'], gap: 110 },
+      crystal: { front: ['crystals', 'saltstatue', 'crystals', 'minehead', 'crystals'], back: 'crystalspire', walk: ['miner', 'miner'], gap: 110 },
+      fungus: { front: ['carved', 'mushfarm', 'bigmush', 'carved', 'rollstone'], back: 'mesa', walk: ['villager', 'goat', 'villager'], gap: 115 },
+      morlock: { front: ['machine', 'wellshaft', 'conveyor', 'factory', 'machine'], back: 'chimney', walk: ['morlock', 'morlock', 'morlock'], gap: 120 },
+      lava: { front: ['dugout', 'minehead', 'opals', 'lavarock', 'dugout'], back: 'volcano', walk: ['minecart', 'opalminer'], gap: 120 },
+      city: { front: ['tower', 'neonsign', 'lifttower', 'tower', 'kiosk'], back: 'skyscraper', walk: ['lizard', 'lizard', 'lizard'], gap: 100 },
+      shaft: { front: ['bunker', 'lantern', 'tunnelsign', 'bunker', 'crates'], back: 'tunnelmouth', walk: ['shelterer', 'shelterer'], gap: 120 },
+    };
+    const SIGNS = ['LIZARD HQ', 'NOTHING TO SEE HERE', 'AREA 52', 'HUMANS: KEEP OUT', 'WE ARE NOT HERE', 'REPTILE SPA', 'SCALES R US'];
+    const REAL = {
+      pellucidar: ['sign', 'HANG SON DOONG?', "For real: Vietnam's Hang Son Doong, the biggest cave known, is so huge it has its own jungle inside, and even its own clouds."],
+      fungus: ['carved', '', 'For real: Derinkuyu in Turkey is a city dug out of soft rock, at least 8 levels and 85 m deep, with wells, stables, chapels and air shafts. It could shelter around 20,000 people, with their animals.'],
+      crystal: ['saltchapel', '', "For real: St Kinga's Chapel in Poland's Wieliczka salt mine, 101 m down, is carved entirely from salt: the walls, the altar, even the chandeliers."],
+      lava: ['dugout', '', 'For real: in Coober Pedy, an opal-mining town in the Australian desert, about half the people live underground in "dugouts", where it stays around 23°C while it\'s 37°C up top.'],
+      shaft: ['bunker', '', "For real: under Beijing is Dixia Cheng, a Cold War tunnel city dug from 1969 to 1979 to shelter people from war, with shops, cinemas and even a mushroom farm."],
+    };
     HOLLOW.forEach((Z, z) => {
       const k0 = T.findIndex((t) => t.zone === z), base = zoneBase(z), top = z < HOLLOW.length - 1 ? zoneBase(z + 1) : tierR(TOP) + 200;
       const around = pathA[Math.max(0, k0 - 1)];
-      if (z > 0) shells.push({ R: base, gapA: (pathA[k0 - 1] + pathA[k0]) / 2, gapW: 520 / base });
-      const near = () => around + ((rnd() < 0.5 ? -1 : 1) * (380 + rnd() * 1300)) / base;
-      const on = (kind, extra = {}) => decor.push({ a: near(), R: base, kind, ...extra });
-      if (Z.key === 'pellucidar') {
-        for (let i = 0; i < 18; i++) decor.push({ a: rnd() * TAU, R: R0, kind: 'fernbush', size: 0.6 + rnd() * 0.8 });
-        decor.push({ a: 0.2, R: R0, kind: 'sign', text: 'PELLUCIDAR', col: '#8fff6a' }, { a: -0.3, R: R0, kind: 'hut' }, { a: 1.0, R: R0, kind: 'hut' });
-        for (let i = 0; i < 3; i++) decor.push({ a: rnd() * TAU, R: R0, kind: 'dino', drive: { a0: rnd() * TAU, span: 0.25, w: 0.05 + rnd() * 0.04, ph: rnd() * TAU } });
-        for (let i = 0; i < 4; i++) decor.push({ a: around + (rnd() - 0.5) * 1.2, R: R0 + 260 + rnd() * 400, kind: 'mahar', ph: rnd() * TAU });
-      } else if (Z.key === 'sea') {
-        decor.push({ R: base, kind: 'seaband' });
-        decor.push({ a: around + 260 / base, R: base, kind: 'plesio' }, { a: around - 380 / base, R: base, kind: 'ichthyo' });
-        for (let i = 0; i < 5; i++) decor.push({ a: near(), R: top, kind: 'waterfall', len: top - base, w: 18 + rnd() * 20 });
-        for (let i = 0; i < 4; i++) on('bigmush', { size: 0.8 + rnd() * 0.6 });
-      } else if (Z.key === 'agartha') {
-        for (let i = 0; i < 9; i++) on(rnd() < 0.5 ? 'dome' : 'spire', { size: 0.7 + rnd() * 0.7 });
-        for (let i = 0; i < 3; i++) decor.push({ a: near(), R: top, kind: 'waterfall', len: top - base, w: 14 + rnd() * 14, gold: true });
-        decor.push({ a: around + 300 / base, R: base, kind: 'sign', text: 'AGARTHA', col: '#ffd23f' });
-      } else if (Z.key === 'crystal') {
-        for (let i = 0; i < 10; i++) on('crystals', { size: 0.6 + rnd() * 1 });
-        for (let i = 0; i < 26; i++) decor.push({ a: around + ((rnd() - 0.5) * 3600) / top, R: top, kind: 'glowworm', len: 20 + rnd() * 50 });
-      } else if (Z.key === 'fungus') {
-        for (let i = 0; i < 10; i++) on('bigmush', { size: 0.8 + rnd() * 1 });
-        decor.push({ a: around - 300 / base, R: base, kind: 'pool' });
-        for (let i = 0; i < 2; i++) decor.push({ a: near(), R: top, kind: 'waterfall', len: top - base, w: 12 + rnd() * 10 });
-      } else if (Z.key === 'morlock') {
-        for (let i = 0; i < 7; i++) on('machine', { size: 0.8 + rnd() * 0.5, ph: rnd() * TAU });
-        for (let i = 0; i < 4; i++) on('wellshaft');
-        for (let i = 0; i < 14; i++) decor.push({ a: around + ((rnd() - 0.5) * 3000) / base, R: base + 40 + rnd() * (top - base - 80), kind: 'eyes', ph: rnd() * 9 });
-      } else if (Z.key === 'lava') {
-        decor.push({ R: base, kind: 'lavaband' });
-        for (let i = 0; i < 4; i++) decor.push({ a: near(), R: top, kind: 'waterfall', len: top - base, w: 16 + rnd() * 16, lava: true });
-      } else if (Z.key === 'city') {
-        for (let i = 0; i < 9; i++) on('tower', { h: 120 + rnd() * 160, ph: rnd() * 9 });
-        const signs = ['LIZARD HQ', 'NOTHING TO SEE HERE', 'AREA 52', 'HUMANS: KEEP OUT', 'WE ARE NOT HERE'];
-        signs.forEach((text, i) => decor.push({ a: near(), R: base, kind: 'neonsign', text, ph: i }));
-        for (let i = 0; i < 5; i++) on('lizard', { ph: rnd() * 9 });
-      } else if (Z.key === 'shaft') {
-        for (let i = 0; i < 30; i++) decor.push({ a: around + ((rnd() - 0.5) * 3000) / top, R: top, kind: 'root', len: 30 + rnd() * 90 });
+      const shell = z > 0 ? { R: base, zone: z, gapA: (pathA[k0 - 1] + pathA[k0]) / 2, gapW: 380 / base } : null;
+      if (shell) shells.push(shell);
+      const inGap = (a) => shell && Math.abs(wrap(a - shell.gapA)) < shell.gapW / 2 + 40 / base;
+      const C = CITY[Z.key];
+      // The back row, then the front row, right round the floor
+      for (let a = rnd() * 0.05; a < TAU; a += (C.gap * 1.6 + rnd() * C.gap) / base) if (!inGap(a)) decor.push({ a, R: base, kind: C.back, back: true, h: 0.6 + rnd() * 0.8, ph: rnd() * 9, size: 0.8 + rnd() * 0.5 });
+      for (let a = rnd() * 0.05; a < TAU; a += (C.gap + rnd() * C.gap * 0.8) / base) {
+        if (inGap(a)) continue;
+        const kind = C.front[Math.floor(rnd() * C.front.length)];
+        decor.push({ a, R: base, kind, size: 0.75 + rnd() * 0.5, h: 120 + rnd() * 160, ph: rnd() * 9, text: kind === 'neonsign' ? SIGNS[Math.floor(rnd() * SIGNS.length)] : '' });
       }
+      // A real underground place, close to where you arrive
+      if (REAL[Z.key]) {
+        const [kind, text, note] = REAL[Z.key];
+        const a = around + (inGap(around + 200 / base) ? -200 : 200) / base;
+        decor.push({ a, R: base, kind, size: 1.2, h: 200, ph: 1, text, col: '#ffd23f', note, real: true });
+      }
+      // Lakes on the sea floor, and pools of lava in the tubes, each with life in them
+      if (Z.key === 'sea' || Z.key === 'lava') {
+        for (let i = 0; i < 10; i++) {
+          const a = around + ((i - 5) * 900 + rnd() * 300) / base;
+          if (!inGap(a)) decor.push({ a, R: base, kind: Z.key === 'sea' ? 'lake' : 'lavapool', w: 160 + rnd() * 140, ph: rnd() * 9, beast: Z.key === 'sea' ? (i % 3 === 0 ? 'plesio' : i % 3 === 1 ? 'ichthyo' : 'fish') : 'bubbles' });
+        }
+      }
+      // People and creatures wandering about near the way
+      for (let i = 0; i < 22; i++) {
+        const a0 = around + ((rnd() - 0.5) * 5000) / base;
+        if (inGap(a0)) continue;
+        const kind = C.walk[Math.floor(rnd() * C.walk.length)];
+        decor.push({ a: a0, R: base, kind, walker: true, ph: rnd() * 9, drive: { a0, span: (60 + rnd() * 200) / base, w: (kind === 'minecart' ? 0.5 : 0.2) + rnd() * 0.3, ph: rnd() * TAU } });
+      }
+      // From the roof: waterfalls, glow-worms, roots, Morlock eyes, flying things
+      const roof = (n, fn) => { for (let i = 0; i < n; i++) { const a = around + ((rnd() - 0.5) * 4200) / top; fn(a); } };
+      if (Z.key === 'sea' || Z.key === 'fungus' || Z.key === 'agartha') roof(6, (a) => decor.push({ a, R: top, kind: 'waterfall', len: top - base - 10, w: 14 + rnd() * 18, gold: Z.key === 'agartha' }));
+      if (Z.key === 'lava') roof(5, (a) => decor.push({ a, R: top, kind: 'waterfall', len: top - base - 10, w: 16 + rnd() * 16, lava: true }));
+      if (Z.key === 'crystal') roof(40, (a) => decor.push({ a, R: top, kind: 'glowworm', len: 20 + rnd() * 70 }));
+      if (Z.key === 'crystal') roof(6, (a) => decor.push({ a, R: top, kind: 'chandelier', len: 40 + rnd() * 30, ph: rnd() * 9 }));
+      if (Z.key === 'shaft' || Z.key === 'fungus') roof(30, (a) => decor.push({ a, R: top, kind: 'root', len: 30 + rnd() * 90 }));
+      if (Z.key === 'morlock') roof(20, (a) => decor.push({ a, R: base + 60 + rnd() * (top - base - 120), kind: 'eyes', ph: rnd() * 9 }));
+      if (Z.key === 'pellucidar') roof(6, (a) => decor.push({ a, R: R0 + 260 + rnd() * 400, kind: 'mahar', ph: rnd() * TAU }));
+      if (Z.key === 'pellucidar') roof(5, (a) => decor.push({ a, R: R0 + 160 + rnd() * 500, kind: 'mist', ph: rnd() * 9, w: 120 + rnd() * 160 }));
+      if (Z.key === 'agartha') roof(3, (a) => decor.push({ a, R: base + 200 + rnd() * 300, kind: 'vimana', ph: rnd() * 9 }));
+      if (Z.key === 'city') roof(2, (a) => decor.push({ a, R: base + 230, kind: 'monorail', ph: rnd() * 9 }));
+      if (Z.key === 'pellucidar') decor.push({ a: 0.2, R: R0, kind: 'sign', text: 'PELLUCIDAR', col: '#8fff6a' });
+      if (Z.key === 'agartha') decor.push({ a: around + 320 / base, R: base, kind: 'sign', text: 'AGARTHA', col: '#ffd23f' });
     });
     // Floating islands of rock near the way up, so there's always something
     // to see: each cavern's buildings, creatures and waterfalls
@@ -2255,11 +2292,9 @@
           fall: Z.key === 'sea' || Z.key === 'agartha' || Z.key === 'fungus' || Z.key === 'lava' ? rnd() < 0.6 : rnd() < 0.15, lava: Z.key === 'lava', gold: Z.key === 'agartha', len: 160 + rnd() * 160, text: Z.key === 'city' ? ['LIZARD HQ', 'AREA 52', 'NOTHING TO SEE HERE'][Math.floor(rnd() * 3)] : '' });
       }
     }
-    // Far-off scenery for each cavern's backdrop (drawn behind everything)
-    const back = HOLLOW.map(() => Array.from({ length: 14 }, () => ({ x: rnd(), h: 0.25 + rnd() * 0.6, w: 0.04 + rnd() * 0.08, ph: rnd() * 9, far: rnd() < 0.5 })));
     const sky = [];
     for (let i = 0; i < 160; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.15 ? 2 : 1, tw: rnd() * TAU });
-    return { seed, plats, stars, decor, crust: [], swirls: [], sky, ranges: [], issPlat: null, beams, dust: [], movers, shells, back };
+    return { seed, plats, stars, decor, crust: [], swirls: [], sky, ranges: [], issPlat: null, beams, dust: [], movers, shells };
   }
   // In from a crash on level 1: the score comes too
   function enterHollowEarth() {
@@ -2268,9 +2303,29 @@
     fx.flash = 0.8; addShake(16); sfx.boom(1); buzz([60, 40, 120]);
     toast('You smashed straight through the crust… into the HOLLOW EARTH, with a little sun at its middle! Climb back out, cavern by cavern.', 6);
   }
+  const ZONE_GLOW = ['#8fff6a', '#6ac4d8', '#ffd23f', '#b8a8ff', '#b8ff6a', '#ff6a3a', '#ff8a1a', '#ff6ad5', '#e8c88a'];
+  const shellGap = (sh) => Math.abs(wrap(-theta - sh.gapA)) < sh.gapW / 2;
+  // Landing on a cavern's floor: from a fall it costs the multiplier, and the
+  // arrow points you back up from there
+  function landShell(sh) {
+    const k0 = HOLLOW_TIERS.findIndex((t) => t.zone === sh.zone), fell = lastTier >= k0, col = ZONE_GLOW[sh.zone];
+    Object.assign(player, { r: sh.R, vr: 0, onGround: true, squash: 1, lastPlat: null, lastH: 0, heat: 0, hopLock: 0 });
+    fx.whistled = false;
+    if (fell) { falls++; loseMult(); toast(`Back down on the floor of ${HOLLOW[sh.zone].name}. Walk under a platform to hop back up.`, 3.5); }
+    lastTier = k0 - 1;
+    sfx.thud(); addShake(fell ? 9 : 4);
+    burst(-theta, sh.R, '#b8a080', 14, 200); burst(-theta, sh.R, col, 10, 160); ring(-theta, sh.R, col, 1.4);
+    for (let i = 0; i < 10; i++) fx.puffs.push({ a: -theta, R: sh.R + 4, vt: (Math.random() - 0.5) * 260, vr: 20 + Math.random() * 90, r: 5 + Math.random() * 8, t: 0, life: 0.9, nlc: false, dust: true });
+    hollowStartle(sh.R);
+  }
+  // Creatures near where you land jump in surprise
+  function hollowStartle(R) {
+    for (const d of world.decor) if (d.walker && Math.abs(d.R - R) < 420 && Math.abs(wrap(d.a + theta)) * d.R < 320) d.hopT = clock + Math.random() * 0.2;
+  }
   // Level 6 each frame: the movers (bats, the Iron Mole drills), and crystals
   // that shatter under you and grow back
   function updateHollow(dt, collide) {
+    if (!player.onGround && player.vr > 300 && Math.random() < dt * 24) particles.push({ a: -theta + (Math.random() - 0.5) * 16 / player.r, R: player.r + 10 + Math.random() * 30, vt: (Math.random() - 0.5) * 60, vr: -60 - Math.random() * 60, life: 0.6, color: ZONE_GLOW[hollowZone(tierFloat(player.r))], size: 2 + Math.floor(Math.random() * 2) * 2 });
     for (const q of world.movers || []) {
       q.a = q.a0 + (q.amp * Math.sin(clock * q.sp + q.ph)) / q.R;
       collide(q, () => { q.cool = 0.6; q.flash = 1; spaceHit(q.kind === 'bats' ? 'BATS!' : 'DRILLED!', true); });
@@ -2296,54 +2351,27 @@
     }
     ctx.globalAlpha = 1;
   }
-  function drawHollowBackdrop(z) {
-    const Z = HOLLOW[z], items = world.back[z], tf = tierFloat(player.r);
-    for (const far of [true, false]) {
-      const par = far ? 120 : 260, lift = (tf % 4) * (far ? 8 : 18);
-      const base = H * (far ? 0.86 : 1.02) + lift;
-      for (const b of items) {
-        if (b.far !== far) continue;
-        let x = ((b.x * W * 1.6 - theta * par) % (W * 1.6)); if (x < 0) x += W * 1.6; x -= W * 0.3;
-        const h = b.h * H * (far ? 0.5 : 0.7), w = b.w * W * (far ? 1 : 1.4);
-        ctx.globalAlpha = far ? 0.35 : 0.6;
-        const dark = hexOf(mix(Z.col, '#000000', far ? 0.2 : 0.45)), lit = Z.key === 'agartha' ? '#ffd23f' : Z.key === 'city' ? (b.ph % 2 > 1 ? '#ff6ad5' : '#8fff6a') : Z.key === 'crystal' ? '#b8a8ff' : Z.key === 'fungus' || Z.key === 'pellucidar' ? '#b8ff6a' : Z.key === 'lava' ? '#ffab3d' : Z.key === 'morlock' ? '#ff5a4a' : '#9fd8ff';
-        ctx.fillStyle = dark;
-        if (Z.key === 'agartha' || Z.key === 'city' || Z.key === 'morlock') {
-          // A skyline: towers (domes in Agartha, chimneys at the Morlock works) with lit windows
-          ctx.fillRect(x - w / 2, base - h, w, h);
-          if (Z.key === 'agartha') { ctx.beginPath(); ctx.arc(x, base - h, w / 2, Math.PI, TAU); ctx.fill(); }
-          if (Z.key === 'morlock') { ctx.fillRect(x - w * 0.15, base - h * 1.3, w * 0.3, h * 0.3); for (let i = 0; i < 3; i++) { const k = (clock * 0.3 + i / 3 + b.ph) % 1; ctx.fillStyle = `rgba(150,150,160,${0.3 * (1 - k)})`; ctx.beginPath(); ctx.arc(x, base - h * 1.3 - k * 80, 8 + k * 20, 0, TAU); ctx.fill(); } }
-          for (let wy = base - h + 10; wy < base - 8; wy += 14) for (let wx = x - w / 2 + 5; wx < x + w / 2 - 5; wx += 12) if ((Math.floor(wx + wy + b.ph * 7)) % 3 === 0) px(wx, wy, 4, 5, lit);
-        } else if (Z.key === 'crystal') {
-          ctx.beginPath(); ctx.moveTo(x - w / 2, base); ctx.lineTo(x - w * 0.2, base - h); ctx.lineTo(x + w * 0.1, base - h * 1.05); ctx.lineTo(x + w / 2, base); ctx.fill();
-          ctx.fillStyle = lit; ctx.globalAlpha *= 0.4; ctx.fillRect(x - w * 0.15, base - h * 0.9, 3, h * 0.8);
-        } else if (Z.key === 'fungus' || Z.key === 'pellucidar' || Z.key === 'sea') {
-          // Giant mushrooms (or tree ferns), their caps glowing
-          ctx.fillRect(x - w * 0.12, base - h, w * 0.24, h);
-          ctx.beginPath(); ctx.ellipse(x, base - h, w * 0.8, h * 0.18, 0, Math.PI, TAU); ctx.fill();
-          ctx.fillStyle = lit; for (const k of [-0.4, 0, 0.4]) { ctx.beginPath(); ctx.arc(x + k * w * 0.8, base - h - h * 0.05, 3, 0, TAU); ctx.fill(); }
-          if (Z.key === 'sea') { ctx.fillStyle = 'rgba(160,210,255,0.6)'; ctx.fillRect(x + w, base - h * 1.2, 6, h * 1.2); } // a far-off waterfall
-        } else if (Z.key === 'lava') {
-          ctx.beginPath(); ctx.moveTo(x - w, base); ctx.lineTo(x, base - h); ctx.lineTo(x + w, base); ctx.fill();
-          ctx.fillStyle = lit; ctx.fillRect(x - 3, base - h, 6, h); // lava pouring down
-        } else {
-          ctx.fillRect(x - 1, 0, 2, h * 0.6); // roots hanging
-        }
-      }
-      ctx.globalAlpha = 1;
-    }
-  }
   // The round world: each cavern a ring round the inner sun, in its own
   // colour, with a shell of rock between one and the next
+  // How far from the middle of the world the screen reaches, nearest and furthest
+  function viewRadii() {
+    const nx = clamp(cx, view.x0, view.x1), ny = clamp(cy, view.y0, view.y1);
+    const dmin = Math.hypot(nx - cx, ny - cy);
+    const dmax = Math.max(...[[view.x0, view.y0], [view.x1, view.y0], [view.x0, view.y1], [view.x1, view.y1]].map(([x, y]) => Math.hypot(x - cx, y - cy)));
+    return [dmin, dmax];
+  }
   function drawHollowWorld() {
-    // Cavern rings, outermost first
+    const [dmin, dmax] = viewRadii();
+    hollowView = [dmin, dmax];
+    // Cavern rings, outermost first (only the ones on screen)
     for (let z = HOLLOW.length - 1; z >= 0; z--) {
-      const R = z < HOLLOW.length - 1 ? zoneBase(z + 1) : tierR(TOP) + 260;
-      if (cy - R > view.y1 + 50 && false) continue;
-      ctx.fillStyle = HOLLOW[z].col; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+      const R = z < HOLLOW.length - 1 ? zoneBase(z + 1) : tierR(TOP) + 260, Rin = z === 0 ? R0 : zoneBase(z);
+      if (R < dmin - 40 || Rin > dmax + 40) continue;
+      // Lit from the town on its floor, fading into the dark under the roof
+      const g = ctx.createRadialGradient(cx, cy, Rin, cx, cy, R);
+      g.addColorStop(0, hexOf(mix(HOLLOW[z].col, ZONE_GLOW[z], 0.35))); g.addColorStop(0.35, HOLLOW[z].col); g.addColorStop(1, hexOf(mix(HOLLOW[z].col, '#000000', 0.5)));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
     }
-    // Far-off scenery for the cavern you're in (in screen space)
-    if (cam.zoom > 0.999) drawHollowBackdrop(hollowZone(tierFloat(player.r)));
     // The way out: daylight beyond the last shell
     const outer = tierR(TOP) + 260;
     ctx.strokeStyle = '#4a3a2a'; ctx.lineWidth = 60; ctx.beginPath(); ctx.arc(cx, cy, outer, 0, TAU); ctx.stroke();
@@ -2367,11 +2395,29 @@
     for (const s of world.shells) {
       if (cy - s.R > view.y1 + 60) continue;
       const g0 = s.gapA - s.gapW / 2 + theta - Math.PI / 2, g1 = s.gapA + s.gapW / 2 + theta - Math.PI / 2;
-      ctx.strokeStyle = '#3a2e26'; ctx.lineWidth = 34;
-      ctx.beginPath(); ctx.arc(cx, cy, s.R, g1, g0 + TAU); ctx.stroke();
-      ctx.strokeStyle = 'rgba(120,100,80,0.6)'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(cx, cy, s.R - 16, g1, g0 + TAU); ctx.stroke();
+      // Light pouring down through the gap from the cavern above
+      at(s.gapA + theta, s.R, () => {
+        const w = s.gapW * s.R, lg = ctx.createLinearGradient(0, -20, 0, 320);
+        lg.addColorStop(0, `rgba(255,240,200,${0.13 + 0.04 * Math.sin(clock * 1.3 + s.R)})`); lg.addColorStop(1, 'rgba(255,240,200,0)');
+        ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(-w / 2, 0); ctx.lineTo(w / 2, 0); ctx.lineTo(w * 0.6, 320); ctx.lineTo(-w * 0.6, 320); ctx.fill();
+        for (const side of [-1, 1]) { ctx.fillStyle = '#3a2e26'; ctx.beginPath(); ctx.arc(side * w / 2, 22, 26, 0, TAU); ctx.fill(); px(side * w / 2 - 14, -2, 28, 5, hexOf(mix('#8a7056', ZONE_GLOW[s.zone], 0.25))); }
+        for (let i = 0; i < 8; i++) px(Math.sin(clock * 0.7 + i * 2.1) * w * 0.4, ((clock * 30 + i * 47) % 300), 2, 2, 'rgba(255,250,220,0.6)');
+      }, 400);
+      // The crust: solid rock you can walk on, its top at the shell's radius
+      ctx.strokeStyle = '#3a2e26'; ctx.lineWidth = 48;
+      ctx.beginPath(); ctx.arc(cx, cy, s.R - 24, g1, g0 + TAU); ctx.stroke();
+      ctx.strokeStyle = hexOf(mix('#8a7056', ZONE_GLOW[s.zone], 0.25)); ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(cx, cy, s.R - 2, g1, g0 + TAU); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(cx, cy, s.R - 30, g1, g0 + TAU); ctx.stroke();
+      // Its underside: stalactites hanging into the cavern below
+      for (let i = -14; i <= 14; i++) {
+        const a = -theta + (i * 70) / s.R;
+        if (Math.abs(wrap(a - s.gapA)) < s.gapW / 2 + 0.01) continue;
+        at(a, s.R - 48, () => { ctx.fillStyle = '#3a2e26'; ctx.beginPath(); ctx.moveTo(-8, -2); ctx.lineTo(8, -2); ctx.lineTo(0, 14 + ((i * 37) % 5) * 6); ctx.fill(); }, 40);
+      }
     }
+    drawHollowAmbient();
     // Bands: the Lidenbrock Sea, and a river of lava
     for (const d of world.decor) {
       if (d.kind !== 'seaband' && d.kind !== 'lavaband') continue;
@@ -2383,9 +2429,31 @@
       ctx.beginPath(); ctx.arc(cx, cy, d.R + 88 + Math.sin(clock * 2) * 2, 0, TAU); ctx.stroke();
     }
   }
+  // Life in the air round you: fireflies, spores, sparkles, embers, steam and
+  // dust, in the colours of whatever cavern each one is in
+  function drawHollowAmbient() {
+    for (let i = 0; i < 46; i++) {
+      const u = ((i * 0.6180339) % 1) - 0.5, v = ((i * 0.4142135) % 1) - 0.45;
+      const R = player.r + v * H * 1.1 + Math.sin(clock * 0.5 + i) * 20;
+      const a = -theta + (u * W * 1.2 + Math.sin(clock * 0.3 + i * 1.7) * 40) / R;
+      const z = hollowZone((R - R0 - 30) / TIER_GAP), key = HOLLOW[z].key;
+      at(a, R, () => {
+        const tw = 0.5 + 0.5 * Math.sin(clock * 3 + i * 1.3);
+        if (key === 'lava') { const y = -((clock * 40 + i * 31) % 120); px(0, y, 2, 3, `rgba(255,${140 + (i % 3) * 30},40,${0.9 - (-y / 120)})`); }
+        else if (key === 'morlock') { ctx.fillStyle = `rgba(200,200,210,${0.12 * tw})`; ctx.beginPath(); ctx.arc(0, 0, 10 + tw * 8, 0, TAU); ctx.fill(); }
+        else if (key === 'crystal') { if (tw > 0.7) { px(-3, 0, 7, 1, '#ffffff'); px(0, -3, 1, 7, '#ffffff'); } }
+        else if (key === 'city') px(0, 0, 2, 2, i % 2 ? `rgba(255,106,213,${tw})` : `rgba(143,255,106,${tw})`);
+        else if (key === 'shaft') px(0, 0, 2, 2, `rgba(230,210,170,${0.4 * tw})`);
+        else { ctx.fillStyle = `rgba(${key === 'sea' ? '160,230,255' : '200,255,120'},${0.3 + 0.7 * tw})`; ctx.beginPath(); ctx.arc(0, 0, 2.5, 0, TAU); ctx.fill(); }
+      }, 20);
+    }
+  }
+  let hollowView = [0, 1e9];
   function drawHollowDecor() {
+    const [dmin, dmax] = hollowView;
     for (const d of world.decor) {
       if (d.kind === 'seaband' || d.kind === 'lavaband') continue;
+      if (d.R + 400 < dmin || d.R - (d.len || 0) - 400 > dmax) continue;
       const dr = d.kind === 'waterfall' || d.kind === 'glowworm' || d.kind === 'root' || d.kind === 'island' ? d.len || 0 : 0;
       at(d.a + theta, d.R, () => {
         if (d.kind === 'island') {
@@ -2408,7 +2476,191 @@
     {
       {
         const k = d.kind;
-        if (k === 'lavarock') {
+        if (k === 'lake' || k === 'lavapool') {
+          // Water (or lava) lying in a dip in the floor, with life in it
+          const lava = k === 'lavapool', w = d.w;
+          ctx.fillStyle = lava ? '#ff5a1a' : '#1e5a70';
+          ctx.beginPath(); ctx.ellipse(0, 2, w / 2, 9, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = lava ? '#ffd23f' : '#6ac4d8';
+          for (let i = 0; i < 4; i++) px(-w / 2 + 12 + ((i * 41 + clock * (lava ? 6 : 14)) % (w - 24)), -1 + Math.sin(clock * 3 + i) * 1.5, 10, 2, ctx.fillStyle);
+          if (d.beast === 'bubbles') { for (let i = 0; i < 3; i++) { const t = (clock * 0.7 + i / 3 + d.ph) % 1; ctx.fillStyle = `rgba(255,200,80,${1 - t})`; ctx.beginPath(); ctx.arc(-w / 4 + i * w / 4, -t * 14, 3 + t * 3, 0, TAU); ctx.fill(); } }
+          else if (d.beast === 'fish') { const t = (clock * 0.5 + d.ph) % 3; if (t < 1) { const x = lerp(-w / 4, w / 4, t), y = -Math.sin(t * Math.PI) * 40; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.cos(t * Math.PI) * -0.8); ctx.fillStyle = '#c9d7f0'; ctx.beginPath(); ctx.ellipse(0, 0, 9, 4, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-14, -4); ctx.lineTo(-14, 4); ctx.fill(); ctx.restore(); } }
+          else drawHollowItem({ kind: d.beast }, 0, 4);
+        } else if (k === 'jungle') {
+          // Back row: tall jungle trees in the haze
+          ctx.globalAlpha = 0.55; const h = 160 * d.h;
+          px(-5, -h, 10, h, '#1e3018'); ctx.fillStyle = '#24401c';
+          for (const [x, y, r] of [[0, -h, 34], [-22, -h + 20, 24], [22, -h + 16, 26]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+          ctx.globalAlpha = 1;
+        } else if (k === 'treefern') {
+          const h = 70 + d.size * 40, sway = Math.sin(clock * 0.9 + d.ph) * 0.08;
+          px(-3, -h, 6, h, '#5a3a20');
+          ctx.save(); ctx.translate(0, -h); ctx.rotate(sway);
+          ctx.fillStyle = '#3f8f3a';
+          for (let i = 0; i < 6; i++) { ctx.save(); ctx.rotate(-1.4 + i * 0.56); ctx.beginPath(); ctx.ellipse(0, -18, 5, 20, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+          ctx.restore();
+        } else if (k === 'stilthut') {
+          px(-20, -50, 3, 50, '#5a3a20'); px(17, -50, 3, 50, '#5a3a20');
+          px(-24, -62, 48, 14, '#8a6a3a'); ctx.fillStyle = '#a5824a'; ctx.beginPath(); ctx.moveTo(-28, -62); ctx.lineTo(0, -86); ctx.lineTo(28, -62); ctx.fill();
+          px(-5, -60, 10, 10, Math.sin(clock * 2 + d.ph) > -0.5 ? '#ffb23a' : '#3a2a1a');
+          for (let i = 0; i < 3; i++) { const t = (clock * 0.4 + i / 3 + d.ph) % 1; ctx.fillStyle = `rgba(200,200,200,${0.4 * (1 - t)})`; ctx.beginPath(); ctx.arc(10, -88 - t * 40, 4 + t * 8, 0, TAU); ctx.fill(); }
+        } else if (k === 'rocks') {
+          ctx.fillStyle = '#5a4a40'; ctx.beginPath(); ctx.moveTo(-26, 0); ctx.lineTo(-14, -22); ctx.lineTo(4, -18); ctx.lineTo(10, -30); ctx.lineTo(26, 0); ctx.fill(); px(-12, -20, 10, 3, '#7a6a5a');
+        } else if (k === 'cliff') {
+          ctx.globalAlpha = 0.6; const h = 180 * d.h;
+          ctx.fillStyle = '#16343c'; ctx.beginPath(); ctx.moveTo(-50, 0); ctx.lineTo(-36, -h); ctx.lineTo(30, -h * 0.9); ctx.lineTo(50, 0); ctx.fill();
+          ctx.fillStyle = 'rgba(160,210,255,0.6)'; ctx.fillRect(-4, -h * 0.9, 6, h * 0.9);
+          ctx.globalAlpha = 1;
+        } else if (k === 'boat') {
+          const bob = Math.sin(clock * 1.5 + d.ph) * 2;
+          ctx.fillStyle = '#7a4a28'; ctx.beginPath(); ctx.moveTo(-28, -10 + bob); ctx.lineTo(28, -10 + bob); ctx.lineTo(20, 0 + bob); ctx.lineTo(-20, 0 + bob); ctx.fill();
+          px(-1, -50 + bob, 2, 40, '#5a3a20'); ctx.fillStyle = '#e8e0d0'; ctx.beginPath(); ctx.moveTo(1, -48 + bob); ctx.lineTo(24, -16 + bob); ctx.lineTo(1, -16 + bob); ctx.fill();
+        } else if (k === 'lighthouse') {
+          px(-10, -110, 20, 110, '#e8e0d0'); for (let y = -100; y < 0; y += 26) px(-10, y, 20, 8, '#e0433b');
+          px(-12, -122, 24, 12, '#3b3b4f'); px(-8, -120, 16, 8, '#fff3b0');
+          ctx.save(); ctx.translate(0, -116); ctx.rotate(clock * 1.5);
+          const g = ctx.createLinearGradient(0, 0, 160, 0); g.addColorStop(0, 'rgba(255,240,180,0.5)'); g.addColorStop(1, 'rgba(255,240,180,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(160, -18); ctx.lineTo(160, 18); ctx.fill();
+          ctx.restore();
+        } else if (k === 'nets') {
+          px(-24, -30, 2, 30, '#5a3a20'); px(22, -30, 2, 30, '#5a3a20');
+          ctx.strokeStyle = 'rgba(200,190,160,0.7)'; ctx.lineWidth = 1;
+          for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.moveTo(-22, -28 + i * 4); ctx.quadraticCurveTo(0, -18 + i * 4 + Math.sin(clock + i) * 2, 22, -28 + i * 4); ctx.stroke(); }
+        } else if (k === 'temple') {
+          // A golden temple of Agartha, with columns and a glowing doorway
+          px(-50, -8, 100, 8, '#b88a2a'); for (let x = -42; x <= 34; x += 19) px(x, -66, 8, 58, '#e0b040');
+          ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.moveTo(-56, -66); ctx.lineTo(0, -96); ctx.lineTo(56, -66); ctx.fill();
+          const g = 0.5 + 0.5 * Math.sin(clock * 2 + d.ph); px(-8, -40, 16, 32, `rgba(255,240,160,${0.5 + g * 0.5})`);
+        } else if (k === 'ziggurat') {
+          for (let i = 0; i < 5; i++) px(-50 + i * 10, -16 - i * 16, 100 - i * 20, 16, i % 2 ? '#c99a3a' : '#e0b040');
+          px(-6, -96, 12, 16, '#fff3c4'); if (Math.sin(clock * 3 + d.ph) > 0) px(-2, -110, 4, 14, '#ffffff');
+        } else if (k === 'vril') {
+          // A lamp of "vril", the glowing power of the people in Bulwer-Lytton's The Coming Race (1871)
+          px(-2, -60, 4, 60, '#b88a2a');
+          const g = ctx.createRadialGradient(0, -66, 2, 0, -66, 30); g.addColorStop(0, 'rgba(180,255,255,0.9)'); g.addColorStop(1, 'rgba(120,220,255,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, -66, 30 + Math.sin(clock * 4 + d.ph) * 4, 0, TAU); ctx.fill();
+          px(-5, -71, 10, 10, '#e6ffff');
+        } else if (k === 'goldtower') {
+          ctx.globalAlpha = 0.5; const h = 220 * d.h;
+          ctx.fillStyle = '#7a5a20'; ctx.fillRect(-18, -h, 36, h); ctx.beginPath(); ctx.arc(0, -h, 18, Math.PI, TAU); ctx.fill();
+          for (let y = -h + 20; y < -10; y += 22) px(-4, y, 8, 8, '#ffd23f');
+          ctx.globalAlpha = 1;
+        } else if (k === 'vimana') {
+          // A flying saucer, Agartha's "vimana", hovering and turning
+          const y = Math.sin(clock * 1.1 + d.ph) * 12, x = Math.cos(clock * 0.4 + d.ph) * 50;
+          ctx.fillStyle = '#c9ced9'; ctx.beginPath(); ctx.ellipse(x, y, 40, 9, 0, 0, TAU); ctx.fill();
+          ctx.fillStyle = 'rgba(191,232,255,0.7)'; ctx.beginPath(); ctx.arc(x, y - 6, 14, Math.PI, TAU); ctx.fill();
+          for (let i = 0; i < 5; i++) px(x - 30 + i * 14, y - 1, 4, 3, (Math.floor(clock * 6) + i) % 2 ? '#ffd23f' : '#ff6ad5');
+          const g = ctx.createLinearGradient(0, y + 8, 0, y + 90); g.addColorStop(0, 'rgba(180,255,220,0.35)'); g.addColorStop(1, 'rgba(180,255,220,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(x - 14, y + 8); ctx.lineTo(x + 14, y + 8); ctx.lineTo(x + 30, y + 90); ctx.lineTo(x - 30, y + 90); ctx.fill();
+        } else if (k === 'crystalspire') {
+          ctx.globalAlpha = 0.5; const h = 200 * d.h;
+          ctx.fillStyle = '#4a3a8a'; ctx.beginPath(); ctx.moveTo(-26, 0); ctx.lineTo(-10, -h); ctx.lineTo(4, -h - 20); ctx.lineTo(26, 0); ctx.fill();
+          px(-6, -h * 0.9, 3, h * 0.8, 'rgba(200,190,255,0.6)'); ctx.globalAlpha = 1;
+        } else if (k === 'saltstatue') {
+          // A statue carved from salt, as in the Wieliczka mine
+          px(-14, -8, 28, 8, '#d8d0c8'); px(-7, -44, 14, 36, '#e8e2da'); ctx.fillStyle = '#e8e2da'; ctx.beginPath(); ctx.arc(0, -52, 8, 0, TAU); ctx.fill();
+          px(-12, -36, 6, 14, '#d8d0c8'); px(6, -36, 6, 14, '#d8d0c8');
+        } else if (k === 'saltchapel') {
+          // St Kinga's Chapel: an arched hall carved from salt, with salt chandeliers
+          px(-80, -100, 160, 100, '#cfc6b8'); ctx.fillStyle = '#b8ae9e'; ctx.beginPath(); ctx.moveTo(-90, -100); ctx.lineTo(0, -140); ctx.lineTo(90, -100); ctx.fill();
+          for (let x = -60; x <= 40; x += 33) { ctx.fillStyle = '#8a7e6e'; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, -50); ctx.arc(x + 10, -50, 10, Math.PI, TAU); ctx.lineTo(x + 20, 0); ctx.fill(); }
+          for (const x of [-40, 40]) { px(x - 1, -100, 2, 14, '#e8e2da'); const g = 0.7 + 0.3 * Math.sin(clock * 3 + x); for (let i = -2; i <= 2; i++) px(x + i * 6 - 2, -86 + Math.abs(i) * 3, 4, 8, `rgba(255,245,220,${g})`); }
+          ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#5a4a3a'; ctx.fillText('ST KINGA', 0, -112); ctx.textAlign = 'start';
+        } else if (k === 'chandelier') {
+          // Hanging from the roof (down is +y): a salt chandelier, glittering
+          px(-1, 0, 2, d.len, '#d8d0c8');
+          for (let i = -3; i <= 3; i++) { const g = 0.6 + 0.4 * Math.sin(clock * 4 + i + d.ph); px(i * 7 - 2, d.len + Math.abs(i) * 3, 4, 10, `rgba(255,248,230,${g})`); }
+        } else if (k === 'minehead') {
+          // A mine shaft head with a winding wheel that turns
+          px(-24, -80, 4, 80, '#5a4a3a'); px(20, -80, 4, 80, '#5a4a3a'); px(-24, -82, 48, 4, '#5a4a3a');
+          ctx.save(); ctx.translate(0, -92); ctx.rotate(clock * 1.2 + d.ph);
+          ctx.strokeStyle = '#8a7a6a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 14, 0, TAU); ctx.stroke();
+          for (let i = 0; i < 3; i++) { ctx.rotate(Math.PI / 3); ctx.fillStyle = '#8a7a6a'; ctx.fillRect(-1, -14, 2, 28); }
+          ctx.restore();
+          px(-1, -78, 2, 70 - Math.abs(Math.sin(clock * 0.6 + d.ph)) * 40, '#3a3a3a');
+        } else if (k === 'mesa') {
+          // Back row: a cliff of soft rock riddled with doors and windows, like Derinkuyu and Cappadocia
+          ctx.globalAlpha = 0.6; const h = 170 * d.h;
+          ctx.fillStyle = '#5a4630'; ctx.beginPath(); ctx.moveTo(-60, 0); ctx.quadraticCurveTo(-50, -h, 0, -h); ctx.quadraticCurveTo(50, -h, 60, 0); ctx.fill();
+          for (let y = -h + 30; y < -10; y += 30) for (let x = -36; x <= 30; x += 22) if ((x + y) % 3) px(x, y, 8, 12, Math.sin(clock + x + y) > 0.6 ? '#ffb23a' : '#2a1e14');
+          ctx.globalAlpha = 1;
+        } else if (k === 'carved') {
+          // A house dug into a mound of soft rock, its door and windows glowing
+          ctx.fillStyle = '#8a6e4a'; ctx.beginPath(); ctx.moveTo(-40, 0); ctx.quadraticCurveTo(-36, -70 * d.size, 0, -74 * d.size); ctx.quadraticCurveTo(36, -70 * d.size, 40, 0); ctx.fill();
+          ctx.fillStyle = '#2a1e14'; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-8, -20); ctx.arc(0, -20, 8, Math.PI, TAU); ctx.lineTo(8, 0); ctx.fill();
+          px(-24, -40, 8, 8, Math.sin(clock * 1.5 + d.ph) > -0.3 ? '#ffb23a' : '#2a1e14'); px(16, -46, 8, 8, '#ffb23a');
+        } else if (k === 'rollstone') {
+          // A round stone door, rolled across to shut the way in (as at Derinkuyu)
+          const roll = Math.sin(clock * 0.3 + d.ph) * 12;
+          px(-34, -46, 68, 46, '#7a6040'); px(-10, -40, 20, 40, '#1a120a');
+          ctx.save(); ctx.translate(roll, -20); ctx.rotate(roll / 20);
+          ctx.fillStyle = '#9a8a6a'; ctx.beginPath(); ctx.arc(0, 0, 20, 0, TAU); ctx.fill(); px(-2, -2, 4, 4, '#5a4a3a');
+          ctx.restore();
+        } else if (k === 'mushfarm') {
+          px(-36, -4, 72, 4, '#4a3a2a');
+          for (let i = 0; i < 6; i++) { const x = -30 + i * 12, h = 8 + ((i * 7) % 5) * 2; px(x, -4 - h, 2, h, '#d9cbb0'); ctx.fillStyle = i % 2 ? '#c0452a' : '#7a3fbf'; ctx.beginPath(); ctx.ellipse(x + 1, -4 - h, 6, 4, 0, Math.PI, TAU); ctx.fill(); }
+        } else if (k === 'conveyor') {
+          px(-50, -24, 100, 6, '#3a3a42'); px(-50, -18, 4, 18, '#3a3a42'); px(46, -18, 4, 18, '#3a3a42');
+          for (let i = 0; i < 4; i++) { const x = -48 + ((clock * 30 + i * 26) % 96); px(x, -36, 12, 12, '#8a6a3a'); px(x, -36, 12, 2, '#a5824a'); }
+        } else if (k === 'factory') {
+          px(-50, -80, 100, 80, '#3a3a42'); ctx.fillStyle = '#4a4a52'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-50 + i * 25, -80); ctx.lineTo(-50 + i * 25, -100); ctx.lineTo(-25 + i * 25, -80); ctx.fill(); }
+          for (let x = -40; x < 40; x += 16) px(x, -60, 10, 14, (Math.floor(clock * 2 + x) % 3) ? '#ff8a3a' : '#5a3a20');
+          px(-8, -30, 16, 30, '#1a1a20');
+        } else if (k === 'chimney') {
+          ctx.globalAlpha = 0.55; const h = 230 * d.h;
+          px(-12, -h, 24, h, '#1e2028'); for (let i = 0; i < 4; i++) { const t = (clock * 0.25 + i / 4 + d.ph) % 1; ctx.fillStyle = `rgba(120,120,130,${0.5 * (1 - t)})`; ctx.beginPath(); ctx.arc(Math.sin(t * 3) * 10, -h - t * 120, 10 + t * 24, 0, TAU); ctx.fill(); }
+          ctx.globalAlpha = 1;
+        } else if (k === 'volcano') {
+          ctx.globalAlpha = 0.6; const h = 180 * d.h;
+          ctx.fillStyle = '#3a1a10'; ctx.beginPath(); ctx.moveTo(-90, 0); ctx.lineTo(-14, -h); ctx.lineTo(14, -h); ctx.lineTo(90, 0); ctx.fill();
+          ctx.fillStyle = '#ff6a1a'; ctx.beginPath(); ctx.moveTo(-6, -h); ctx.lineTo(6, -h); ctx.lineTo(20 + Math.sin(clock) * 4, -h * 0.4); ctx.lineTo(12, -h * 0.4); ctx.fill();
+          ctx.globalAlpha = 1;
+        } else if (k === 'dugout') {
+          // A Coober Pedy dugout: a door in a mound, with air pipes poking out of the top
+          ctx.fillStyle = '#c9864a'; ctx.beginPath(); ctx.moveTo(-46, 0); ctx.quadraticCurveTo(-40, -60, 0, -62); ctx.quadraticCurveTo(40, -60, 46, 0); ctx.fill();
+          px(-9, -28, 18, 28, '#4a2a1a'); px(-7, -26, 14, 24, '#6a3a20'); px(14, -34, 10, 8, '#8fd0ff');
+          px(-26, -78, 5, 22, '#9aa3b5'); px(20, -72, 5, 16, '#9aa3b5');
+        } else if (k === 'opals') {
+          px(-20, -10, 40, 10, '#a5713f');
+          for (let i = 0; i < 5; i++) { const c = ['#6dd3ff', '#ff6ad5', '#8fff6a', '#ffd23f', '#b58cff'][(i + Math.floor(clock * 3)) % 5]; px(-16 + i * 8, -16 + (i % 2) * 3, 5, 5, c); }
+        } else if (k === 'skyscraper') {
+          ctx.globalAlpha = 0.55; const h = 260 * d.h;
+          px(-26, -h, 52, h, '#141a22'); for (let y = -h + 10; y < -10; y += 14) for (let x = -20; x < 20; x += 12) if (((x + y) / 2 + Math.floor(d.ph)) % 3) px(x, y, 6, 6, (Math.floor(x * y + d.ph)) % 4 ? 'rgba(140,255,120,0.7)' : 'rgba(255,106,213,0.7)');
+          ctx.globalAlpha = 1;
+        } else if (k === 'lifttower') {
+          px(-16, -200, 32, 200, '#2a323c'); px(-2, -200, 4, 200, '#4a5260');
+          const y = -20 - ((Math.sin(clock * 0.6 + d.ph) + 1) / 2) * 160;
+          px(-12, y - 16, 24, 16, '#ffd23f'); px(-8, y - 12, 16, 8, '#fff3c4');
+        } else if (k === 'kiosk') {
+          px(-26, -36, 52, 36, '#232b33'); px(-26, -40, 52, 6, Math.sin(clock * 5 + d.ph) > 0 ? '#ff6ad5' : '#8fff6a');
+          ctx.font = '5px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#8fff6a'; ctx.fillText('FLIES 2 FOR 1', 0, -22); ctx.textAlign = 'start';
+        } else if (k === 'monorail') {
+          px(-400, 0, 800, 4, '#4a5260');
+          const x = ((clock * 120 + d.ph * 100) % 1000) - 500;
+          px(x - 50, -20, 100, 20, '#c9ced9'); for (let i = 0; i < 6; i++) px(x - 44 + i * 16, -16, 10, 8, '#8fff6a'); px(x + 46, -18, 6, 16, '#e0433b');
+        } else if (k === 'bunker') {
+          // A Cold War shelter: a concrete door in the rock, a sign, a light
+          px(-40, -60, 80, 60, '#6a6a6a'); px(-16, -44, 32, 44, '#3a3a3a'); px(-14, -42, 28, 40, '#4a4a4a');
+          ctx.fillStyle = '#8a8a8a'; ctx.beginPath(); ctx.arc(8, -22, 4, 0, TAU); ctx.fill();
+          px(-36, -56, 14, 8, Math.sin(clock * 2 + d.ph) > 0 ? '#ff5a4a' : '#5a2a2a');
+        } else if (k === 'lantern') {
+          px(-1, -50, 2, 50, '#3a3a3a'); ctx.fillStyle = `rgba(255,190,90,${0.7 + 0.3 * Math.sin(clock * 6 + d.ph)})`; ctx.beginPath(); ctx.arc(0, -54, 6, 0, TAU); ctx.fill();
+        } else if (k === 'tunnelsign') {
+          px(-30, -46, 60, 22, '#2a6a3a'); px(-1, -24, 2, 24, '#5a5a5a');
+          ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#eef1ff'; ctx.fillText('EXIT ↑', 0, -32); ctx.textAlign = 'start';
+        } else if (k === 'tunnelmouth') {
+          ctx.globalAlpha = 0.6; ctx.fillStyle = '#2a2018'; ctx.beginPath(); ctx.moveTo(-50, 0); ctx.lineTo(-50, -60); ctx.arc(0, -60, 50, Math.PI, TAU); ctx.lineTo(50, 0); ctx.fill();
+          ctx.fillStyle = '#0a0806'; ctx.beginPath(); ctx.moveTo(-30, 0); ctx.lineTo(-30, -50); ctx.arc(0, -50, 30, Math.PI, TAU); ctx.lineTo(30, 0); ctx.fill(); ctx.globalAlpha = 1;
+        } else if (k === 'crates') {
+          px(-24, -20, 20, 20, '#8a6a3a'); px(-2, -20, 20, 20, '#7a5a2a'); px(-14, -38, 20, 18, '#9a7a4a');
+        } else if (k === 'mist') {
+          // A cloud, drifting inside the cave (Hang Son Doong has its own)
+          ctx.fillStyle = 'rgba(230,240,230,0.1)';
+          const x = Math.sin(clock * 0.1 + d.ph) * 80;
+          for (const [ox, r] of [[-d.w * 0.3, 30], [0, 42], [d.w * 0.3, 32]]) { ctx.beginPath(); ctx.arc(x + ox, 0, r, 0, TAU); ctx.fill(); }
+        } else if (d.walker) drawWalker(d);
+        else if (k === 'lavarock') {
           ctx.fillStyle = '#3a1a10'; ctx.beginPath(); ctx.moveTo(-30, 0); ctx.lineTo(-8, -50); ctx.lineTo(10, -40); ctx.lineTo(30, 0); ctx.fill();
           px(-4, -46, 6, 46, '#ff8a3a'); px(-2, -46, 2, 46, '#ffd23f');
         } else if (k === 'waterfall') {
@@ -2539,6 +2791,67 @@
     }
     ctx.restore();
   }
+  // People and creatures walking about on the cavern floors
+  function drawWalker(d) {
+    const k = d.kind, f = d.dir || 1, step = Math.sin(clock * 6 + d.ph), legA = step * 3;
+    ctx.save();
+    const hp = d.hopT ? clock - d.hopT : 9;
+    if (hp > 0 && hp < 0.6) { ctx.translate(0, -Math.sin((Math.PI * hp) / 0.6) * 22); if (hp < 0.3) { ctx.font = '8px "Press Start 2P", monospace'; ctx.fillStyle = '#ffffff'; ctx.fillText('!', -2, k === 'dino' || k === 'mastodon' ? -110 : -64); } }
+    ctx.scale(f, 1);
+    if (k === 'dino') {
+      ctx.fillStyle = '#5a7a4a'; ctx.beginPath(); ctx.ellipse(0, -30, 40, 20, 0, 0, TAU); ctx.fill();
+      ctx.save(); ctx.translate(30, -40); ctx.rotate(-0.25 + Math.sin(clock * 0.8 + d.ph) * 0.12); ctx.fillRect(-4, -50, 9, 52); ctx.beginPath(); ctx.ellipse(4, -52, 12, 7, 0, 0, TAU); ctx.fill(); px(9, -55, 2, 2, '#1b1530'); ctx.restore();
+      ctx.beginPath(); ctx.moveTo(-36, -34); ctx.lineTo(-80, -14 + Math.sin(clock * 2) * 4); ctx.lineTo(-36, -24); ctx.fill();
+      px(-26 + legA, -14, 9, 14, '#4a6a3a'); px(14 - legA, -14, 9, 14, '#4a6a3a');
+    } else if (k === 'mastodon') {
+      ctx.fillStyle = '#6a4a30'; ctx.beginPath(); ctx.ellipse(0, -34, 30, 20, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(26, -40, 13, 0, TAU); ctx.fill(); px(34, -36, 4, 20 + Math.sin(clock * 2 + d.ph) * 3, '#6a4a30');
+      ctx.strokeStyle = '#f2e6d0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(40, -22, 10, Math.PI, Math.PI * 1.6); ctx.stroke();
+      px(-20 + legA, -16, 8, 16, '#5a3a20'); px(12 - legA, -16, 8, 16, '#5a3a20'); px(28, -44, 2, 2, '#1b1530');
+    } else if (k === 'shepherd') {
+      // Verne's giant shepherd, minding the mastodons
+      px(-6 + legA, -40, 5, 40, '#5a3a20'); px(2 - legA, -40, 5, 40, '#5a3a20'); px(-9, -86, 18, 48, '#7a6a4a');
+      ctx.fillStyle = '#c9a27a'; ctx.beginPath(); ctx.arc(0, -94, 9, 0, TAU); ctx.fill(); px(-10, -104, 20, 6, '#3a2a1a');
+      px(12, -110, 3, 110, '#8a6a3a'); px(9, -112, 9, 4, '#8a6a3a');
+    } else if (k === 'sagoth') {
+      ctx.fillStyle = '#3a2e2a'; ctx.beginPath(); ctx.ellipse(0, -30, 14, 20, 0, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(4, -54, 9, 0, TAU); ctx.fill();
+      px(-14, -40, 5, 24 + legA, '#3a2e2a'); px(10, -40, 5, 24 - legA, '#3a2e2a'); px(-8 + legA, -12, 6, 12, '#3a2e2a'); px(2 - legA, -12, 6, 12, '#3a2e2a'); px(7, -56, 2, 2, '#ffd23f');
+    } else if (k === 'agarthan') {
+      // A robed Agarthan, with a glowing staff
+      ctx.fillStyle = '#e8e0d0'; ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-6, -36); ctx.lineTo(6, -36); ctx.lineTo(10, 0); ctx.fill();
+      ctx.fillStyle = '#e0b090'; ctx.beginPath(); ctx.arc(0, -42, 6, 0, TAU); ctx.fill(); px(-7, -48, 14, 3, '#ffd23f');
+      px(10, -50, 2, 50, '#b88a2a'); ctx.fillStyle = `rgba(180,255,255,${0.6 + 0.4 * Math.sin(clock * 5 + d.ph)})`; ctx.beginPath(); ctx.arc(11, -52, 4, 0, TAU); ctx.fill();
+    } else if (k === 'miner' || k === 'opalminer' || k === 'shelterer' || k === 'villager') {
+      const coat = k === 'miner' ? '#5a6a7a' : k === 'opalminer' ? '#a5713f' : k === 'shelterer' ? '#4a5a3a' : '#8a5a4a';
+      px(-4 + legA * 0.6, -14, 4, 14, '#2a2230'); px(1 - legA * 0.6, -14, 4, 14, '#2a2230');
+      px(-6, -32, 12, 18, coat); ctx.fillStyle = '#e0b090'; ctx.beginPath(); ctx.arc(0, -37, 5, 0, TAU); ctx.fill();
+      if (k === 'miner' || k === 'opalminer') { px(-6, -44, 12, 4, '#ffd23f'); px(5, -43, 3, 3, '#fff3b0'); const g = ctx.createLinearGradient(6, 0, 70, 0); g.addColorStop(0, 'rgba(255,240,180,0.35)'); g.addColorStop(1, 'rgba(255,240,180,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(7, -42); ctx.lineTo(70, -52); ctx.lineTo(70, -28); ctx.fill(); }
+      if (k === 'villager') px(6, -34, 2, 34, '#6b4a2a');
+      if (k === 'shelterer') px(-10, -30, 4, 10, '#c9a27a');
+    } else if (k === 'goat') {
+      px(-12, -18, 22, 10, '#e8e0d0'); px(8, -24, 8, 8, '#e8e0d0'); px(12, -28, 2, 5, '#8a7a6a');
+      px(-10 + legA * 0.5, -8, 3, 8, '#8a7a6a'); px(5 - legA * 0.5, -8, 3, 8, '#8a7a6a');
+    } else if (k === 'morlock') {
+      // A Morlock: pale, hunched, huge red eyes, a lantern swinging
+      ctx.fillStyle = '#d8d0d8'; ctx.beginPath(); ctx.ellipse(0, -24, 10, 16, 0.3, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(8, -40, 8, 0, TAU); ctx.fill();
+      px(8, -43, 4, 4, '#ff3a2a'); px(12, -43, 2, 4, '#ff3a2a');
+      px(-6 + legA, -10, 4, 10, '#c9c0c9'); px(2 - legA, -10, 4, 10, '#c9c0c9');
+      ctx.save(); ctx.translate(12, -26); ctx.rotate(Math.sin(clock * 3 + d.ph) * 0.4); px(-1, 0, 2, 12, '#5a5a5a'); ctx.fillStyle = 'rgba(255,190,90,0.9)'; ctx.beginPath(); ctx.arc(0, 15, 4, 0, TAU); ctx.fill(); ctx.restore();
+    } else if (k === 'lizard') {
+      px(-5 + legA * 0.6, -14, 4, 14, '#1b1530'); px(1 - legA * 0.6, -14, 4, 14, '#1b1530');
+      px(-7, -36, 14, 22, '#1b1530'); px(-2, -36, 4, 10, '#ffffff'); px(-1, -34, 2, 8, '#e0433b');
+      ctx.fillStyle = '#5aa04a'; ctx.beginPath(); ctx.ellipse(3, -44, 9, 8, 0, 0, TAU); ctx.fill(); px(8, -46, 7, 4, '#5aa04a');
+      px(5, -47, 3, 3, '#ffd23f'); px(6, -46, 1, 2, '#1b1530');
+      const tongue = Math.sin(clock * 4 + d.ph) > 0.85; if (tongue) px(15, -44, 6, 1, '#ff5a7a');
+      px(-12, -18, 6, 3, '#5aa04a'); // tail peeking out of the suit
+    } else if (k === 'minecart') {
+      px(-26, -6, 52, 3, '#5a4a3a');
+      px(-20, -26, 40, 18, '#6a5a4a'); px(-18, -30, 36, 6, '#c9864a');
+      for (let i = 0; i < 3; i++) px(-14 + i * 10, -34, 6, 5, ['#6dd3ff', '#ff6ad5', '#ffd23f'][(i + Math.floor(clock * 2)) % 3]);
+      ctx.fillStyle = '#2a2a30'; for (const x of [-12, 12]) { ctx.beginPath(); ctx.arc(x, -6, 5, 0, TAU); ctx.fill(); }
+    }
+    ctx.restore();
+  }
   // Movers: bat swarms and the Iron Mole drills
   function drawHollowMovers() {
     for (const q of world.movers || []) {
@@ -2636,14 +2949,19 @@
         player.walkT += dt * (Math.abs(player.vx) / 22);
         if (Math.floor(player.walkT) !== before && Math.floor(player.walkT) % 2 === 0) {
           sfx.step();
-          burst(-theta, R0, level === 5 ? '#8d8a86' : level === 4 ? '#f2d98a' : level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 2, 50);
+          burst(-theta, level === 6 ? player.r : R0, level === 6 ? '#b8a080' : level === 5 ? '#8d8a86' : level === 4 ? '#f2d98a' : level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 2, 50);
         }
       }
 
+      // Hollow Earth: walk into a cavern floor's gap and you drop through it
+      if (level === 6 && player.onGround && player.r > R0 + 1) {
+        const sh = world.shells.find((q) => Math.abs(q.R - player.r) < 2);
+        if (!sh || shellGap(sh)) { player.onGround = false; player.vr = -80; player.apexR = player.r; player.lastPlat = null; pop('DOWN YOU GO!', '#ffab3d', player.r + 80); sfx.fall(); }
+      }
       // Walk up to a trampoline (or launch pad) and you hop straight on
-      if (player.onGround && player.r <= R0 + 1) {
+      if (player.onGround && (player.r <= R0 + 1 || level === 6)) {
         for (const q of world.plats) {
-          if (q.tier !== 0 || ghost(q) || q.broken) continue;
+          if ((level === 6 ? !(q.R > player.r + 20 && q.R < player.r + 150) : q.tier !== 0) || ghost(q) || q.broken) continue;
           if (Math.abs(wrap(q.a + theta) * q.R) < q.w / 2 - 6) { jumpBuffer = 0.1; theta = -q.a; player.vx = 0; player.hopLock = 3; break; }
         }
       }
@@ -2653,7 +2971,7 @@
         player.apexR = player.r; player.lastPlat = null; player.lastH = 0;
         player.squash = -0.6;
         sfx.hop();
-        burst(-theta, R0, level === 5 ? '#8d8a86' : level === 4 ? '#f2d98a' : level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 5, 80);
+        burst(-theta, level === 6 ? player.r : R0, level === 6 ? '#b8a080' : level === 5 ? '#8d8a86' : level === 4 ? '#f2d98a' : level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 5, 80);
       }
       if (player.inside) {
         player.r = player.lastPlat.R + 14; player.vr = 0; player.vx = 0;
@@ -2699,6 +3017,8 @@
             if (ghost(p) || p.broken) continue;
             if (prev >= p.R && player.r <= p.R && Math.abs(wrap(p.a + theta) * p.R) <= p.w / 2 + 8) { land(p); landed = true; break; }
           }
+          // Hollow Earth: each cavern's floor catches you, unless you're over its gap
+          if (!landed && level === 6) for (const sh of world.shells) if (prev >= sh.R && player.r <= sh.R && !shellGap(sh)) { landShell(sh); break; }
           // Missed Lumen as he drove past: he'll be round again
           if (!landed && level === 2 && clock > radioAt) {
             for (const p of world.plats) {
@@ -5998,7 +6318,7 @@
     drawCraters();
     if (level === 3) drawCaves();
     if (level === 4) drawShadows();
-    const platA = state === 'descend' ? clamp((cam.zoom - 0.3) / 0.4, 0, 1) : 1;
+    const platA = state === 'descend' ? clamp((cam.zoom - 0.55) / 0.35, 0, 1) : 1;
     for (const p of world.plats) {
       if (p.broken || platA <= 0) continue;
       ctx.globalAlpha = ghost(p) ? 0.18 * platA : platA;
@@ -6147,7 +6467,7 @@
     } else if (state === 'descend') {
       intro.dT += dt;
       const p = zoomK();
-      const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+      const e = 1 - Math.pow(1 - p, 2.2);
       cam.zoom = zoomFrom() * Math.pow(1 / zoomFrom(), e);
       cam.r = R0; cam.anchor = 0.46;
       player.walkT += dt * 5; // already strolling
@@ -6283,62 +6603,136 @@
   }
 
   // ---- The intro's journey -----------------------------------------------------------
-  // It opens at dawn on Earth's horizon: the Sun just rising, with Mercury and
-  // Venus close by it, as they really are at dawn. Tap and the view rises
-  // gently off the horizon until Earth is a globe, with the Moon and Mars
-  // around it; then it zooms straight down into the game world.
-  const TOUR = 4.4;      // seconds: the rise, then a moment to look round
+  // It opens skimming the Sun: its surface is the horizon, boiling with
+  // granules, dark sunspots and loops of glowing gas. Tap and you lift off
+  // and fly out towards Earth (a blue dot dead ahead), past Mercury and
+  // Venus, past the Moon and satellites, and straight down into the Earth.
+  const TOUR = 6.6;      // seconds of flight before the zoom to the ground
   const zoomFrom = () => (Math.min(W, H) * 0.2) / R0;
-  const smooth = (k) => k * k * k * (k * (k * 6 - 15) + 10); // smootherstep: no jolt at either end
+  const smooth = (k) => k * k * k * (k * (k * 6 - 15) + 10);
+  // Things you fly past: when you pass them (s), where (as a share of the
+  // screen, off to the side), and their size
+  const FLYBY = [
+    { kind: 'mercury', t: 2.3, x: -0.13, y: 0.03, r: 34, label: 'MERCURY' },
+    { kind: 'venus', t: 3.6, x: 0.13, y: -0.04, r: 52, label: 'VENUS' },
+    { kind: 'iss', t: 5.4, x: 0.1, y: -0.1, r: 26, label: 'SPACE STATION' },
+    { kind: 'moon', t: 5.9, x: -0.12, y: -0.06, r: 36, label: 'THE MOON' },
+    { kind: 'sat', t: 6.5, x: 0.12, y: 0.08, r: 12 },
+    { kind: 'sat', t: 7.2, x: -0.11, y: 0.1, r: 12 },
+    { kind: 'sat', t: 7.8, x: 0.09, y: -0.12, r: 10 },
+  ];
+  const EARTH_T = TOUR + 1.2; // Earth's "passing" time, after the hand-over
+  function flyDepth(t, tp) { return Math.max(0.04, (tp - t) * 0.9 + 0.28); }
+  function drawSatellite(kind, x, y, r) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(kind === 'iss' ? 0.2 : clock * 0.6);
+    const s = r / 26;
+    if (kind === 'iss') {
+      px(-40 * s, -2 * s, 80 * s, 4 * s, '#c9ced9');
+      for (const ox of [-36, -24, 20, 32]) { px(ox * s, -22 * s, 10 * s, 18 * s, '#2b4fb8'); px(ox * s, 4 * s, 10 * s, 18 * s, '#2b4fb8'); }
+      px(-10 * s, -6 * s, 20 * s, 12 * s, '#e8e8f0'); px(-4 * s, -9 * s, 8 * s, 18 * s, '#d6dce8');
+    } else {
+      px(-6 * s, -6 * s, 12 * s, 12 * s, '#d9a63a'); px(-26 * s, -3 * s, 18 * s, 6 * s, '#2b4fb8'); px(8 * s, -3 * s, 18 * s, 6 * s, '#2b4fb8');
+      if (Math.sin(clock * 6 + x) > 0.6) px(-1 * s, -9 * s, 2 * s + 1, 2 * s + 1, '#ff5a4a');
+    }
+    ctx.restore();
+  }
+  // The Sun's surface as a horizon: a vast curved limb, bright in the middle,
+  // darker and redder to the edge, with granulation, sunspots, spicules and
+  // prominences looping above it
+  function drawSunHorizon(top, alpha) {
+    if (alpha <= 0 || top > H + 200) return;
+    const Rs = Math.max(W, H) * 1.8, scx = W / 2, scy = top + Rs;
+    ctx.save(); ctx.globalAlpha = alpha;
+    const corona = ctx.createRadialGradient(scx, scy, Rs * 0.98, scx, scy, Rs * 1.22);
+    corona.addColorStop(0, 'rgba(255,220,150,0.65)'); corona.addColorStop(0.3, 'rgba(255,160,80,0.25)'); corona.addColorStop(1, 'rgba(255,120,60,0)');
+    ctx.fillStyle = corona; ctx.fillRect(0, 0, W, H);
+    // Prominences: loops of glowing gas, rising and falling
+    for (let i = 0; i < 5; i++) {
+      const x = W * (0.12 + i * 0.2) + Math.sin(i * 7) * 30, w = 50 + (i % 3) * 30, h = 50 + 30 * Math.sin(clock * 0.6 + i * 1.7) + (i % 2) * 40;
+      const yb = top + Math.pow((x - scx) / Rs, 2) * Rs * 0.5;
+      ctx.strokeStyle = `rgba(255,${110 + (i % 2) * 40},60,0.75)`; ctx.lineWidth = 6 + (i % 2) * 3;
+      ctx.beginPath(); ctx.moveTo(x - w / 2, yb + 6); ctx.bezierCurveTo(x - w / 2, yb - h * 1.3, x + w / 2, yb - h * 1.3, x + w / 2, yb + 6); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,230,160,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+    }
+    const body = ctx.createRadialGradient(scx, scy, Rs * 0.9, scx, scy, Rs);
+    body.addColorStop(0, '#fff7d6'); body.addColorStop(0.7, '#ffd36a'); body.addColorStop(1, '#ff8a2a');
+    ctx.fillStyle = body; ctx.beginPath(); ctx.arc(scx, scy, Rs, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(scx, scy, Rs, 0, TAU); ctx.clip();
+    // Granulation: a boiling patchwork of hot cells, each changing as it churns
+    for (let gy = top - 10; gy < H + 10; gy += 14) {
+      const depth = (gy - top) / Math.max(1, H - top);
+      for (let gx = -10; gx < W + 10; gx += 16) {
+        const n = Math.sin(gx * 0.37 + gy * 0.61 + clock * 1.3) * Math.sin(gx * 0.11 - gy * 0.27 - clock * 0.9);
+        if (n > -0.2 && n < 0.15) continue;
+        ctx.fillStyle = n > 0.15 ? `rgba(255,255,230,${0.22 + 0.1 * depth})` : 'rgba(200,90,20,0.22)';
+        ctx.beginPath(); ctx.ellipse(gx + ((gy / 14) % 2) * 8 + n * 3, gy + 5, 5 + Math.abs(n) * 3, 4 + Math.abs(n) * 2, n, 0, TAU); ctx.fill();
+      }
+    }
+    // Sunspots: dark centres with lighter edges, each bigger than the Earth
+    for (const [fx2, fy, rr] of [[0.3, 0.25, 22], [0.36, 0.3, 10], [0.72, 0.45, 16]]) {
+      const x = W * fx2, y = top + (H - top) * fy;
+      ctx.fillStyle = 'rgba(150,70,20,0.8)'; ctx.beginPath(); ctx.ellipse(x, y, rr * 1.6, rr * 0.7, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#3a1608'; ctx.beginPath(); ctx.ellipse(x, y, rr * 0.8, rr * 0.35, 0, 0, TAU); ctx.fill();
+    }
+    // Limb darkening right at the horizon, and spicules flickering on it
+    const limb = ctx.createLinearGradient(0, top, 0, top + 60);
+    limb.addColorStop(0, 'rgba(200,60,10,0.6)'); limb.addColorStop(1, 'rgba(200,60,10,0)');
+    ctx.fillStyle = limb; ctx.fillRect(0, top - 10, W, 70);
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = alpha;
+    for (let x = 0; x < W; x += 9) {
+      const yb = top + Math.pow((x - scx) / Rs, 2) * Rs * 0.5, h = 4 + 6 * Math.abs(Math.sin(x * 0.7 + clock * 3));
+      px(x, yb - h, 2, h, 'rgba(255,170,80,0.7)');
+    }
+    ctx.restore();
+  }
+  function drawFlyby(f, t) {
+    const d = flyDepth(t, f.t), sc = 0.28 / d;
+    const x = W / 2 + f.x * W * sc * 3.4, y = H * 0.48 + f.y * H * sc * 3.4, r = f.r * sc;
+    if (r < 0.6 || x < -r * 3 || x > W + r * 3 || y < -r * 3 || y > H + r * 3) return;
+    const a = clamp((t - (f.t - 3.2)) * 1.2, 0, 1) * (state === 'splash' ? 0 : clamp(t / 1.2, 0, 1));
+    if (a <= 0) return;
+    ctx.globalAlpha = a;
+    if (f.kind === 'iss' || f.kind === 'sat') drawSatellite(f.kind, x, y, r);
+    else drawPlanet(f.kind, x, y, r);
+    if (f.label && r > 6 && r < 260) {
+      ctx.globalAlpha = a * clamp((r - 6) / 10, 0, 1);
+      ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#1b1530'; ctx.fillText(f.label, x + 1, y - r - 9); ctx.fillStyle = '#eef1ff'; ctx.fillText(f.label, x, y - r - 10);
+      ctx.textAlign = 'start';
+    }
+    ctx.globalAlpha = 1;
+  }
   function tourEarth(t) {
-    const e = smooth(clamp(t / 3, 0, 1));
-    const r0 = Math.max(W, H) * 0.95, r1 = R0 * zoomFrom();
-    const r = Math.exp(lerp(Math.log(r0), Math.log(r1), e));
-    const top = lerp(H * 0.8, H * 0.46, e); // the top of the Earth: the horizon at first
-    return { x: W / 2, y: top + r, r, e };
+    const target = R0 * zoomFrom(), rad = target * flyDepth(TOUR, EARTH_T) / 0.28;
+    const r = rad * 0.28 / flyDepth(t, EARTH_T);
+    const k = smooth(clamp((t - (TOUR - 2.2)) / 2.2, 0, 1));
+    return { x: W / 2, y: lerp(H * 0.48, H * 0.46 + target, k), r };
   }
   function drawTourScene(t, titleAlpha) {
-    const E = tourEarth(t), e = E.e;
     const bg = ctx.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, '#02030a'); bg.addColorStop(1, '#0b1030');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    // Stars, streaming out a little as you pick up speed
+    const sp = state === 'tour' ? clamp(t / 2, 0, 1) : 0;
     for (const st of world.sky) {
+      const dx = st.x - 0.5, dy = st.y - 0.48, k = 1 + sp * ((clock * 0.15 + st.tw) % 1) * 0.6;
+      const x = W / 2 + dx * W * k, y = H * 0.48 + dy * H * k;
       ctx.globalAlpha = 0.5 + 0.5 * Math.sin(clock * 2 + st.tw);
-      px(st.x * W, st.y * H * (1 - e * 0.1), st.s, st.s, '#ffffff');
+      px(x, y, st.s, st.s * (1 + sp * 2), '#ffffff');
     }
     ctx.globalAlpha = 1;
-    // The Sun, rising off the horizon as the view lifts, with its glow
-    const sx = lerp(W * 0.68, W * 0.8, e), sy = lerp(H * 0.8, H * 0.34, e);
-    const glow = ctx.createRadialGradient(sx, sy, 10, sx, sy, Math.max(W, H) * 0.5);
-    glow.addColorStop(0, `rgba(255,200,120,${0.55 - e * 0.25})`); glow.addColorStop(0.3, `rgba(255,150,80,${0.2 - e * 0.1})`); glow.addColorStop(1, 'rgba(255,120,60,0)');
-    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#fff6d0'; ctx.beginPath(); ctx.arc(sx, sy, 26, 0, TAU); ctx.fill();
-    // The first planets: Mercury and Venus close to the Sun, Mars out on the
-    // other side, and the Moon beside the Earth
-    const bodies = [
-      ['mercury', sx - 70, sy + 22, 3.5, 'MERCURY'], ['venus', sx - 150, sy + 52, 6.5, 'VENUS'],
-      ['mars', lerp(W * 0.2, W * 0.14, e), lerp(H * 0.62, H * 0.24, e), 5.5, 'MARS'], ['moon', lerp(W * 0.3, W * 0.28, e), lerp(H * 0.7, H * 0.52, e), 9, 'THE MOON'],
-    ];
-    const lab = clamp((t - 1.6) * 1.5, 0, 1) * (state === 'tour' ? 1 : 0);
-    for (const [type, x, y, r, name] of bodies) {
-      drawPlanet(type, x, y, r);
-      if (lab > 0) {
-        ctx.globalAlpha = lab; ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
-        ctx.fillStyle = '#1b1530'; ctx.fillText(name, x + 1, y - r - 9); ctx.fillStyle = '#eef1ff'; ctx.fillText(name, x, y - r - 10);
-        ctx.textAlign = 'start'; ctx.globalAlpha = 1;
-      }
-    }
-    if (lab > 0) {
-      ctx.globalAlpha = lab; ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
-      ctx.fillStyle = '#fff3c4'; ctx.fillText('THE SUN', sx, sy - 40); ctx.textAlign = 'start'; ctx.globalAlpha = 1;
-    }
-    // Earth over everything behind it, its horizon lit orange near the Sun
-    drawGlobe(E.x, E.y, E.r, clock * 0.05 + 0.4, 1, lerp(-0.55, 0.4, e));
-    if (e < 0.6) {
-      const hz = ctx.createRadialGradient(sx, E.y - E.r, 4, sx, E.y - E.r, W * 0.6);
-      hz.addColorStop(0, `rgba(255,170,90,${0.5 * (1 - e / 0.6)})`); hz.addColorStop(1, 'rgba(255,170,90,0)');
-      ctx.fillStyle = hz; ctx.beginPath(); ctx.arc(E.x, E.y, E.r + 30, 0, TAU); ctx.arc(E.x, E.y, E.r - 4, 0, TAU, true); ctx.fill('evenodd');
-    }
+    // Lifting off the Sun: the horizon sinks away below
+    const lift = smooth(clamp(t / 2.4, 0, 1));
+    drawSunHorizon(lerp(H * 0.7, H * 1.25, lift), 1);
+    if (lift > 0.2) { const g = ctx.createLinearGradient(0, H * 0.7, 0, H); g.addColorStop(0, 'rgba(255,170,90,0)'); g.addColorStop(1, `rgba(255,170,90,${0.25 * lift})`); ctx.fillStyle = g; ctx.fillRect(0, H * 0.7, W, H * 0.3); }
+    // Earth, a blue dot ahead that grows all the way
+    const E = tourEarth(t);
+    const later = FLYBY.filter((f) => flyDepth(t, f.t) > flyDepth(t, EARTH_T));
+    for (const f of later) drawFlyby(f, t);
+    if (state !== 'splash') drawGlobe(E.x, E.y, E.r, clock * 0.05 + 0.4, clamp(t / 1.2, 0, 1), 0.3);
+    if (E.r > 4 && E.r < 60 && state === 'tour') { ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,210,255,0.9)'; ctx.fillText('EARTH', E.x, E.y - E.r - 10); ctx.textAlign = 'start'; }
+    for (const f of FLYBY) if (!later.includes(f)) drawFlyby(f, t);
     if (titleAlpha > 0) {
       ctx.save(); ctx.translate(0, -(1 - titleAlpha) * H * 0.4);
       drawComet(titleAlpha);
@@ -6364,9 +6758,11 @@
   const zoomK = () => clamp(intro.dT / DESCEND, 0, 1);
   function drawIntroOverlay() {
     const z = cam.zoom, a = 1 - clamp((z - 0.3) / 0.3, 0, 1);
-    if (a <= 0) return;
     const r = R0 * z;
-    drawGlobe(W / 2, H * 0.46 + r, r, clock * 0.12, a);
+    if (a > 0) drawGlobe(W / 2, H * 0.46 + r, r, clock * 0.05 + 0.4, a, 0.3);
+    // The last satellites and the Moon, still flying past as you drop in
+    const t = TOUR + intro.dT;
+    for (const f of FLYBY) if (f.t > TOUR - 1) drawFlyby(f, t);
   }
   // Space, over the sky but under the world, until you're close in
   function drawIntroSpace() {
