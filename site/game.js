@@ -2667,12 +2667,15 @@
   const hash3 = (a, b, c) => { const h = Math.sin(a * 12.9898 + b * 78.233 + c * 37.719) * 43758.5453; return h - Math.floor(h); };
   function drawCavernParallax(z, Rin, Rout) {
     const Z = HOLLOW[z], key = Z.key, anchorY = cy - cam.r, glow = ZONE_GLOW[z];
-    for (const [L, pf] of [[0, 0.35], [1, 0.62]]) {
+    // Four layers, from the far wall to the near one, each sliding past at its
+    // own speed: further back is smaller, closer together, darker and hazier
+    for (const [L, pf] of [[0, 0.2], [1, 0.36], [2, 0.54], [3, 0.72]]) {
+      const nk = L / 3, A = lerp(0.5, 0.88, nk);
       const yF = anchorY + (cam.r - Rin) * pf, yC = anchorY + (cam.r - Rout) * pf;
       if (yF < -60 && yC < -60) continue;
-      const Rm = (Rin + Rout) / 2, step = (L ? 150 : 110) / (Rm * pf), span = (W * 0.75) / (Rm * pf);
-      const dark = hexOf(mix(Z.col, '#000000', L ? 0.25 : 0.5)), mid = hexOf(mix(Z.col, '#000000', L ? 0.1 : 0.35));
-      ctx.globalAlpha = L ? 0.85 : 0.7;
+      const Rm = (Rin + Rout) / 2, step = lerp(90, 160, nk) / (Rm * pf), span = (W * 0.75) / (Rm * pf);
+      const dark = hexOf(mix(hexOf(mix(Z.col, '#000000', lerp(0.6, 0.22, nk))), glow, lerp(0.12, 0, nk))), mid = hexOf(mix(hexOf(mix(Z.col, '#000000', lerp(0.45, 0.06, nk))), glow, lerp(0.14, 0, nk)));
+      ctx.globalAlpha = A;
       // The cavern roof: a jagged mass of rock with stalactites
       ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-20, yC - 400);
       for (let x = -20; x <= W + 40; x += 30) ctx.lineTo(x, yC + 14 + 18 * Math.sin((x + theta * Rm * pf) * 0.05 + z + L) + 10 * Math.sin((x + theta * Rm * pf) * 0.13));
@@ -2680,17 +2683,17 @@
       const i0 = Math.floor((-theta - span) / step), i1 = Math.ceil((-theta + span) / step);
       for (let i = i0; i <= i1; i++) {
         const x = W / 2 + wrap(i * step + theta) * Rm * pf, h1 = hash3(i, z, L), h2 = hash3(i + 7, z, L), h3 = hash3(i, z + 3, L + 5);
-        const H1 = (L ? 70 : 110) + h1 * (L ? 110 : 160), w = (L ? 30 : 40) + h2 * 40;
+        const H1 = lerp(120, 70, nk) + h1 * lerp(170, 110, nk), w = lerp(26, 34, nk) + h2 * lerp(28, 44, nk);
         ctx.fillStyle = dark;
         // From the roof: stalactites, roots, vines, cables
         if (key === 'fungus' || key === 'shaft' || key === 'pellucidar') { ctx.fillStyle = key === 'pellucidar' ? '#1e3a18' : '#3a2a1a'; for (let k = 0; k < 3; k++) ctx.fillRect(x + (k - 1) * 9, yC + 10, 2, 30 + hash3(i, k, L) * 80); }
-        else if (key === 'city') { ctx.strokeStyle = h3 > 0.5 ? glow : '#8fff6a'; ctx.globalAlpha = 0.4; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 60, yC + 20); ctx.quadraticCurveTo(x, yC + 60 + h1 * 40, x + 60, yC + 20); ctx.stroke(); ctx.globalAlpha = L ? 0.85 : 0.7; }
+        else if (key === 'city') { ctx.strokeStyle = h3 > 0.5 ? glow : '#8fff6a'; ctx.globalAlpha = 0.4; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 60, yC + 20); ctx.quadraticCurveTo(x, yC + 60 + h1 * 40, x + 60, yC + 20); ctx.stroke(); ctx.globalAlpha = A; }
         else if (key === 'morlock') { ctx.fillRect(x - 70, yC + 30 + h1 * 30, 140, 6); px(x, yC + 10, 2, 40 + h2 * 40, dark); }
         else { ctx.beginPath(); ctx.moveTo(x - 8, yC + 10); ctx.lineTo(x + 8, yC + 10); ctx.lineTo(x, yC + 40 + h1 * 60); ctx.fill(); if (key === 'crystal' || key === 'agartha') px(x - 1, yC + 14, 2, 20 + h1 * 30, glow); if (key === 'lava' && Math.sin(clock * 3 + i) > 0.6) px(x - 1, yC + 40 + h1 * 60 + ((clock * 60 + i * 13) % 80), 2, 4, '#ff8a3a'); }
         // From the floor: each cavern's own far-off shapes
         ctx.fillStyle = mid;
         if (key === 'pellucidar') {
-          ctx.fillRect(x - 4, yF - H1, 8, H1); for (const [ox, oy, r] of [[0, 0, 26], [-18, 14, 18], [18, 12, 20]]) { ctx.beginPath(); ctx.arc(x + ox, yF - H1 + oy, r * (L ? 1 : 1.3), 0, TAU); ctx.fill(); }
+          ctx.fillRect(x - 4, yF - H1, 8, H1); for (const [ox, oy, r] of [[0, 0, 26], [-18, 14, 18], [18, 12, 20]]) { ctx.beginPath(); ctx.arc(x + ox, yF - H1 + oy, r * lerp(1.35, 1, nk), 0, TAU); ctx.fill(); }
         } else if (key === 'sea') {
           ctx.beginPath(); ctx.moveTo(x - w, yF); ctx.lineTo(x - w * 0.6, yF - H1); ctx.lineTo(x + w * 0.4, yF - H1 * 0.9); ctx.lineTo(x + w, yF); ctx.fill();
           if (h3 > 0.55) { ctx.fillStyle = 'rgba(160,215,255,0.5)'; ctx.fillRect(x - 3, yC + 30, 6, yF - yC - 30); for (let k = 0; k < 3; k++) px(x - 3, yC + 30 + ((clock * 120 + k * 60 + i * 30) % Math.max(1, yF - yC - 30)), 6, 10, 'rgba(230,245,255,0.7)'); }
@@ -2699,7 +2702,7 @@
           for (let y = yF - H1 + 12; y < yF - 6; y += 16) px(x - 3, y, 6, 6, (Math.floor(clock * 2 + i + y) % 4) ? glow : '#fff3c4');
         } else if (key === 'crystal') {
           ctx.beginPath(); ctx.moveTo(x - w * 0.5, yF); ctx.lineTo(x - w * 0.15, yF - H1); ctx.lineTo(x + w * 0.1, yF - H1 * 1.08); ctx.lineTo(x + w * 0.5, yF); ctx.fill();
-          ctx.globalAlpha *= 0.6; px(x - w * 0.1, yF - H1 * 0.95, 3, H1 * 0.8, glow); ctx.globalAlpha = L ? 0.85 : 0.7;
+          ctx.globalAlpha *= 0.6; px(x - w * 0.1, yF - H1 * 0.95, 3, H1 * 0.8, glow); ctx.globalAlpha = A;
         } else if (key === 'fungus') {
           ctx.fillRect(x - w * 0.12, yF - H1, w * 0.24, H1); ctx.beginPath(); ctx.ellipse(x, yF - H1, w * 0.9, H1 * 0.2, 0, Math.PI, TAU); ctx.fill();
           for (const k of [-0.5, 0, 0.5]) px(x + k * w * 0.8 - 2, yF - H1 - 4, 4, 4, glow);
