@@ -111,22 +111,28 @@
     { km: 2000000, type: 'asteroid', layer: 'Leaving Mars', g: 0.45, visitor: 'atlas3', note: "Mars trojans: a few asteroids share Mars's orbit, 60° ahead of it and behind. The biggest is called Eureka." },
     { km: 20000000, type: 'rocket', layer: 'Leaving Mars', g: 0.45, fact: { kind: 'probe', text: 'Dawn (2007 to 2018) was the first spacecraft to orbit two worlds past the Moon: Vesta, then Ceres. It still circles Ceres, switched off.' } },
     { km: 50000000, type: 'haven', layer: "Jupiter's pull", g: 0.4 },
-    { km: 80000000, type: 'miner', layer: 'Inner belt', g: 0.35, note: 'In films, asteroid fields are packed. The real belt is mostly empty space, asteroids about a million km apart. This bit is the film version.' },
-    { km: 95000000, type: 'asteroid', layer: 'Inner belt', g: 0.35, laser: 1 },
-    { km: 110000000, type: 'hauler', layer: 'Inner belt', g: 0.35, ice: { title: 'ICE HAULER', fact: "Ice is the belt's real treasure: melt it to drink, split it into air to breathe and rocket fuel. Sci-fi belters haul it about in great blocks." } },
-    { km: 125000000, type: 'asteroid', layer: 'Kirkwood gap', g: 0.33, note: "Kirkwood gaps: lanes in the belt that Jupiter's pull has swept almost empty. Almost.", fact: { kind: 'probe', text: 'NASA\'s Psyche probe, launched in 2023, reaches 16 Psyche in 2029: an asteroid that may be the bare metal core of a baby planet.' } },
-    { km: 145000000, type: 'miner', layer: 'Main belt', g: 0.3, laser: 1, note: 'Asteroid mining: one metal-rich asteroid could hold more iron and nickel than humans have ever dug up. Watch out for the mining lasers.' },
-    { km: 165000000, type: 'outpost', layer: 'Main belt', g: 0.3, note: 'A belter outpost: spin the ring and you get a little gravity back. Science fiction loves building cities out here.' },
-    { km: 180000000, type: 'asteroid', layer: 'Main belt', g: 0.3, laser: 1 },
+    { km: 70000000, type: 'miner', layer: 'Inner belt', g: 0.35, note: 'In films, asteroid fields are packed. The real belt is mostly empty space, asteroids about a million km apart. This bit is the film version.' },
+    { km: 78000000, type: 'asteroid', layer: 'Inner belt', g: 0.35, laser: 1 },
+    { km: 86000000, type: 'asteroid', layer: 'Inner belt', g: 0.35 },
+    { km: 94000000, type: 'hauler', layer: 'Inner belt', g: 0.35, ice: { title: 'ICE HAULER', fact: "Ice is the belt's real treasure: melt it to drink, split it into air to breathe and rocket fuel. Sci-fi belters haul it about in great blocks." } },
+    { km: 104000000, type: 'asteroid', layer: 'Kirkwood gap', g: 0.33, note: "Kirkwood gaps: lanes in the belt that Jupiter's pull has swept almost empty. Almost.", fact: { kind: 'probe', text: 'NASA\'s Psyche probe, launched in 2023, reaches 16 Psyche in 2029: an asteroid that may be the bare metal core of a baby planet.' } },
+    { km: 112000000, type: 'asteroid', layer: 'Kirkwood gap', g: 0.33 },
+    { km: 122000000, type: 'miner', layer: 'Main belt', g: 0.3, laser: 1, note: 'Asteroid mining: one metal-rich asteroid could hold more iron and nickel than humans have ever dug up. Watch out for the mining lasers.' },
+    { km: 132000000, type: 'asteroid', layer: 'Main belt', g: 0.3 },
+    { km: 142000000, type: 'outpost', layer: 'Main belt', g: 0.3, note: 'A belter outpost: spin the ring and you get a little gravity back. Science fiction loves building cities out here.' },
+    { km: 152000000, type: 'asteroid', layer: 'Main belt', g: 0.3, laser: 1 },
+    { km: 164000000, type: 'miner', layer: 'Outer belt', g: 0.3, note: 'The outer belt: darker asteroids, rich in carbon, and some of them full of water ice.' },
+    { km: 174000000, type: 'asteroid', layer: 'Outer belt', g: 0.3, laser: 1 },
+    { km: 182000000, type: 'asteroid', layer: 'Outer belt', g: 0.3 },
     { km: 190000000, type: 'ceres', layer: 'Dwarf planets' },
   ];
   // The four biggest worlds in the belt. Only Ceres is officially a dwarf planet;
   // Hygiea may qualify, and Vesta and Pallas are giant asteroids.
   const BELT_WORLDS = {
-    ceres: { name: 'Ceres', pad: '#ffd23f', kind: 'THE DWARF PLANET', padA: 0.55, half: 250, rogue: 0.6, gaps: 0.4, lasers: false, way: 'A wide, calm passage', r: 96, body: '#8d8a86', dark: '#6c6966', note: 'Ceres, 940 km across: the only dwarf planet in the belt. The bright spots in Occator crater are salt left by salty water seeping up from below.' },
-    vesta: { name: 'Vesta', pad: '#ff8a3a', kind: 'THE BRIGHTEST ASTEROID', padA: 0.55 + Math.PI / 2, half: 175, rogue: 1, gaps: 0.6, lasers: true, way: 'A narrow passage full of mining lasers', r: 66, body: '#a39a8a', dark: '#7d7466', note: 'Vesta, 525 km across, the brightest asteroid. Its Rheasilvia crater has a central peak about twice as tall as Everest.' },
-    pallas: { name: 'Pallas', pad: '#6dd3ff', kind: 'THE TILTED ONE', padA: 0.55 - Math.PI / 2, half: 210, rogue: 1, gaps: 0.6, lasers: false, tilt: 70, way: 'A passage that slants, like Pallas\'s tilted path', r: 64, body: '#7f8a94', dark: '#5f6971', note: 'Pallas, 512 km across, travels on a steeply tilted path, and its surface is pitted all over like a golf ball.' },
-    hygiea: { name: 'Hygiea', pad: '#b58cff', kind: 'THE ROUNDEST', padA: 0.55 + Math.PI, half: 200, rogue: 1.6, gaps: 0.95, lasers: true, dark: true, way: 'A dark passage, full of gaps and rogue asteroids', r: 58, body: '#5d5a5e', dark: '#444146', note: 'Hygiea, about 430 km across, is almost perfectly round. If it gets the title, it will be the smallest dwarf planet.' },
+    ceres: { name: 'Ceres', pad: '#ffd23f', kind: 'THE DWARF PLANET', padA: 0.55, half: 330, loose: 2, pops: 2, rogue: 0.6, gaps: 0.4, lasers: false, way: 'A wide, calm passage', r: 96, body: '#8d8a86', dark: '#6c6966', note: 'Ceres, 940 km across: the only dwarf planet in the belt. The bright spots in Occator crater are salt left by salty water seeping up from below.' },
+    vesta: { name: 'Vesta', pad: '#ff8a3a', kind: 'THE BRIGHTEST ASTEROID', padA: 0.55 + Math.PI / 2, half: 250, loose: 3, pops: 1, rogue: 1, gaps: 0.6, lasers: true, way: 'A narrow passage full of mining lasers', r: 66, body: '#a39a8a', dark: '#7d7466', note: 'Vesta, 525 km across, the brightest asteroid. Its Rheasilvia crater has a central peak about twice as tall as Everest.' },
+    pallas: { name: 'Pallas', pad: '#6dd3ff', kind: 'THE TILTED ONE', padA: 0.55 - Math.PI / 2, half: 290, loose: 3, pops: 1, rogue: 1, gaps: 0.6, lasers: false, tilt: 70, way: 'A passage that slants, like Pallas\'s tilted path', r: 64, body: '#7f8a94', dark: '#5f6971', note: 'Pallas, 512 km across, travels on a steeply tilted path, and its surface is pitted all over like a golf ball.' },
+    hygiea: { name: 'Hygiea', pad: '#b58cff', kind: 'THE ROUNDEST', padA: 0.55 + Math.PI, half: 280, loose: 4, pops: 1, rogue: 1.6, gaps: 0.95, lasers: true, dark: true, way: 'A dark passage, full of gaps and rogue asteroids', r: 58, body: '#5d5a5e', dark: '#444146', note: 'Hygiea, about 430 km across, is almost perfectly round. If it gets the title, it will be the smallest dwarf planet.' },
   };
   let level = 1;      // 1: Earth to the Moon. 2: the Moon to Mars or Venus. 3: Mars to the belt
   let route = null;   // the way you're going, picked by the launch pad you use: level 2 'mars' or 'venus', level 3 one of the belt worlds
@@ -443,7 +449,7 @@
 
   function buildWorld3(seed) {
     const rnd = mulberry32(seed);
-    const plats = [], stars = [], beams = [], dust = [], rocks = [], back = [], gaps = [], lanes = {};
+    const plats = [], stars = [], beams = [], dust = [], rocks = [], back = [], gaps = [], pops = [], lanes = {};
     const T = L3_TIERS;
     const SWAY = new Set(['rocket', 'asteroid', 'phobos', 'deimos', 'cloudm', 'miner']);
     const mk = (rt, tier, a, type = T[tier].type) => {
@@ -502,12 +508,34 @@
           const c = lerp(L.a0, L.a1, (R - L.R0) / (L.R1 - L.R0));
           for (const side of [-1, 1]) {
             if (inGap(R, side)) continue;
-            const jit = (rnd() - 0.5) * 14, r = 18 + rnd() * 12;
-            rocks.push({ route: rt, a: c + (side * (W.half + r * 0.6 + jit)) / R, R: R + (rnd() - 0.5) * 10, r, spin: rnd() * TAU, ph: rnd() * TAU, flash: 0, cool: 0, claim: rnd() < 0.08, wall: true, dark: W.dark });
+            const jit = (rnd() - 0.5) * 14, r = rnd() < 0.15 ? 34 + rnd() * 18 : 14 + rnd() * 16;
+            rocks.push({ route: rt, a: c + (side * (W.half + 18 - r * 0.4 + jit)) / R, R: R + (rnd() - 0.5) * 10, r, spin: rnd() * TAU, ph: rnd() * TAU, flash: 0, cool: 0, claim: rnd() < 0.08, wall: true, dark: W.dark });
             back.push({ route: rt, a: c + (side * (W.half + 52 + rnd() * 30)) / R, R: R + (rnd() - 0.5) * 30, r: 16 + rnd() * 16, spin: rnd() * TAU });
           }
         }
       }
+      // Loose asteroids of all sizes scattered through the passage, from small
+      // rocks to big boulders, to pinball off; and glowing pop bumpers out in
+      // the open that kick you off faster
+      lane.forEach((L, i) => {
+        if (i < 1 || i >= lane.length - 1) return;
+        const placed = [];
+        for (let j = 0; j < W.loose; j++) {
+          for (let tries = 0; tries < 12; tries++) {
+            const r = rnd() < 0.3 ? 34 + rnd() * 26 : 12 + rnd() * 16;
+            const R = lerp(L.R0 + r + 20, L.R1 - r - 50, rnd()), c = lerp(L.a0, L.a1, (R - L.R0) / (L.R1 - L.R0));
+            const x = (rnd() - 0.5) * 2 * (W.half - r - 20);
+            if (placed.some((q) => Math.hypot(q.x - x, q.R - R) < q.r + r + 70)) continue;
+            placed.push({ x, R, r });
+            rocks.push({ route: rt, a: c + x / R, R, r, spin: rnd() * TAU, ph: rnd() * TAU, flash: 0, cool: 0, claim: r > 40 && rnd() < 0.4, wall: true, dark: W.dark });
+            break;
+          }
+        }
+        for (let j = 0; j < W.pops; j++) {
+          const R = lerp(L.R0, L.R1, j % 2 ? 0.78 : 0.24), c = lerp(L.a0, L.a1, (R - L.R0) / (L.R1 - L.R0));
+          pops.push({ route: rt, a: c + ((rnd() < 0.5 ? -1 : 1) * W.half * (0.35 + rnd() * 0.35)) / R, R, r: 20, flash: 0, cool: 0, spin: rnd() * TAU });
+        }
+      });
       // The far end, just past its world: a wall of bumpers right across
       const edgeR = tierR(TOP) + 230, ec = centre(TOP);
       for (let x = -W.half - 120; x <= W.half + 120; x += 34) {
@@ -572,7 +600,7 @@
     ];
     const sky = [];
     for (let i = 0; i < 240; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.12 ? 2 : 1, tw: rnd() * TAU });
-    return { seed, plats, stars, decor, crust, swirls, sky, ranges: [], scape, issPlat: null, beams, dust, rocks, back, far, motes, lanes, gaps };
+    return { seed, plats, stars, decor, crust, swirls, sky, ranges: [], scape, issPlat: null, beams, dust, rocks, back, far, motes, lanes, gaps, pops };
   }
 
   // ---- State ----------------------------------------------------------------
@@ -1123,13 +1151,32 @@
     let vx = player.vx, vr = player.vr;
     const into = vx * nx + vr * ny;
     if (into > 0) { vx -= 2 * into * nx; vr -= 2 * into * ny; }
-    const away = -(vx * nx + vr * ny), min = 120; // elastic: same speed out as in
+    const away = -(vx * nx + vr * ny), min = 120;
     if (away < min) { vx -= nx * (min - away); vr -= ny * (min - away); }
-    player.vx = vx; player.vr = vr;
+    // Like a pinball: you come off at the speed you hit, and never slower
+    // than a good lively bounce
+    const sp = Math.hypot(vx, vr), want = Math.max(sp, BOUNCE_MIN);
+    player.vx = (vx / sp) * want; player.vr = (vr / sp) * want;
     addScore(10);
     sfx.boing(TOP, 1.8);
     burst(-theta, player.r + 24, '#ff6ad5', 6, 160);
     addShake(2);
+  }
+  // A pop bumper: kicks you straight off, faster than you came in
+  const BOUNCE_MIN = 380;
+  function bumpPop(q, nx, ny, overlap) {
+    q.cool = 0.2; q.flash = 1;
+    player.r -= ny * overlap;
+    theta += (nx * overlap) / player.r;
+    const out = clamp(Math.hypot(player.vx, player.vr) * 1.25, 560, 1000);
+    player.vx = -nx * out; player.vr = -ny * out;
+    addScore(250, -theta, player.r + 40);
+    pop('POP!', '#ffd23f', player.r + 100);
+    sfx.boing(TOP, 2.4); sfx.geom(mult);
+    ring(q.a, q.R, '#ffd23f', 1);
+    burst(-theta, player.r + 24, '#ffd23f', 14, 280);
+    addShake(4);
+    buzz(18);
   }
   // A rogue asteroid tumbling across the passage. The force field soaks up the
   // hit and bounces you off it (one charge each); without, it knocks you back
@@ -1220,6 +1267,7 @@
     };
     // Lost outside the passage, you can drift back in through the walls
     if (player.lost !== true) for (const q of world.rocks || []) if (q.route === route) collide(q, bumpWall);
+    for (const q of world.pops || []) if (q.route === route) collide(q, bumpPop);
     // Rogue asteroids: now and then one tumbles across the passage, more often
     // the deeper into the belt you are
     if (level === 3) {
@@ -3131,6 +3179,22 @@
         ctx.beginPath(); ctx.arc(0, 0, q.r + 4 + q.flash * 5, 0, TAU); ctx.stroke();
         lump(q, q.flash > 0.5 ? '#ffd6f2' : q.dark ? '#4a4450' : '#6f6670', q.dark ? '#332f38' : '#4f4752', q.dark ? '#6d6577' : '#998fa0');
         if (q.claim) { px(-1, -q.r - 14, 2, 14, '#c9ced9'); px(1, -q.r - 14, 9, 6, '#ffd23f'); } // someone's mining claim
+      }, 60);
+    }
+    // Pop bumpers: red rim, yellow cap, a star on top; they flash when hit
+    for (const q of world.pops || []) {
+      faint(q);
+      at(q.a + theta, q.R, () => {
+        upright();
+        const f = q.flash;
+        if (f > 0) { ctx.fillStyle = `rgba(255,210,63,${0.5 * f})`; ctx.beginPath(); ctx.arc(0, 0, q.r + 14 * f + 6, 0, TAU); ctx.fill(); }
+        ctx.fillStyle = '#7d1f26'; ctx.beginPath(); ctx.arc(2, 3, q.r + 4, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#e0433b'; ctx.beginPath(); ctx.arc(0, 0, q.r + 4, 0, TAU); ctx.fill();
+        ctx.fillStyle = f > 0.5 ? '#ffffff' : '#ffd23f'; ctx.beginPath(); ctx.arc(0, 0, q.r - 3, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#e0433b';
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) { const ang = q.spin + clock * 0.6 + (i * Math.PI) / 5, rr = i % 2 ? 4 : 10; ctx.lineTo(Math.cos(ang) * rr, Math.sin(ang) * rr); }
+        ctx.closePath(); ctx.fill();
       }, 60);
     }
     ctx.globalAlpha = 1;
