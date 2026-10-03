@@ -138,16 +138,19 @@ start level 2 from the title screen once you've landed there once.
 ## Level 3: Mars to the asteroid belt
 
 Land on Mars in level 2 and you can carry straight on (score and all), or start
-level 3 from the title screen once you've reached Mars once.
+level 3 from the title screen. There's also a "Straight to the asteroid belt"
+button that drops you onto the safe rock at the turn.
 
 - **Mars.** Shown in cross-section with its thin crust, thick mantle and big
   liquid iron core, under a butterscotch sky (Mars has a thin carbon dioxide
   atmosphere). Behind the base stand the great shield volcanoes, labelled:
   Olympus Mons, the three Tharsis Montes and Elysium Mons, plus the rift of
   Valles Marineris. Phobos races across the sky the "wrong" way; Deimos drifts.
-  Earth hangs in the sky as a blue evening star with the Moon beside it, and
-  every so often a convoy of flying saucers (big-brained Martians under glass
-  domes) lifts off and flies across the sky towards it.
+  Earth hangs in the sky as a blue evening star with the Moon beside it.
+- **The saucer field.** Big-brained Martians in glass bubble helmets, with
+  bug eyes, toothy grins and ray guns, hop one by one into their flying
+  saucers, lift off together and fly across the sky in convoy towards Earth.
+  Then they're back on the field, ready to go again.
 - **Four trampolines.** The launch field has one for each world at the end of
   the belt, colour-coded with a signpost: Ceres, Vesta, Pallas and Hygiea. The
   one you bounce from is your target: the arrow leads you to it at the end,
@@ -169,17 +172,20 @@ level 3 from the title screen once you've reached Mars once.
   holding it at the turn as level.
 - **The being of light.** Waiting at the safe rock, it hums five notes and gives
   you a force field. It appears again at the belter outpost to top you up.
-- **The passage.** Past the safe rock you bounce along a passage through the
-  belt, walled with asteroids at the top and bottom of the screen: hit a wall
-  and it bounces you back in, like the sides of a pinball table. Asteroids
-  drift past in the background, and now and then a rogue one (glowing orange)
-  tumbles across the passage. Dodge it: the force field takes five hits
+- **The passage.** Past the safe rock the belt is zero gravity, a bit like a
+  pinball table: nothing pulls you back to Mars, you keep your momentum and
+  drift slowly forward. The passage runs straight, walled with asteroids at
+  the top and bottom of the screen that bounce you back in. Its platforms are
+  speed boosters on alternate sides: steer into one and it flings you on. A
+  wall of bumpers just past the four worlds bounces you back if you overshoot.
+  Asteroids drift past in the background, and now and then a rogue one
+  (glowing orange) tumbles across the passage. Dodge it: the force field takes five hits
   (geoms charge it back up), and without it you're knocked back towards Mars.
   The turn is the last checkpoint: get knocked back past it and you fall to
   Mars (in Uber Tramp, any miss does).
 - **Gaps.** Most stretches of the passage have a gap in one wall, marked with
   flashing lights. Slip out of one and you're lost in space, drifting back
-  towards Mars as a fireball. You can still steer: back into the passage, or
+  towards Mars as a fireball (outside the passage the pull is back). You can still steer: back into the passage, or
   into the green tractor beam the being shines out from the safe rock (the
   arrow points to it), which catches you at the start of the belt. Miss both
   and you fall back to Mars. It's never game over: your score, force field and
@@ -189,7 +195,7 @@ level 3 from the title screen once you've reached Mars once.
   flags, mining lasers fired by drones (dodge them), an ice hauler to land on
   for an ice shield, a belter outpost with a spinning ring, and a Kirkwood gap.
 - **Four worlds to finish.** The passage opens out to Ceres, Vesta, Pallas and
-  Hygiea. Only Ceres is officially a dwarf planet in the belt (Hygiea may join
+  Hygiea; fly into one to land on it. Only Ceres is officially a dwarf planet in the belt (Hygiea may join
   it); Vesta and Pallas are the next biggest. Each has its own fact, and the
   title screen counts how many of the four you've visited.
 
