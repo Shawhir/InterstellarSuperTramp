@@ -141,6 +141,11 @@ level 3 from the title screen once you've reached Mars once.
   atmosphere). Behind the base stand the great shield volcanoes, labelled:
   Olympus Mons, the three Tharsis Montes and Elysium Mons, plus the rift of
   Valles Marineris. Phobos races across the sky the "wrong" way; Deimos drifts.
+  Earth hangs in the sky as a blue evening star with the Moon beside it.
+- **Four trampolines.** The launch field has one for each world at the end of
+  the belt, colour-coded with a signpost: Ceres, Vesta, Pallas and Hygiea. The
+  one you bounce from is your target: the arrow leads you to it at the end,
+  and landing on it scores an ON TARGET bonus (any of the four still counts).
 - **Robots on Mars.** Perseverance and Curiosity drive about, Ingenuity hovers,
   and InSight, Zhurong, Opportunity, Spirit (stuck in the sand), Sojourner and
   Viking 1 are where they stopped. Walk past one to hear its story. There's
@@ -152,24 +157,28 @@ level 3 from the title screen once you've reached Mars once.
   Dawn probe, with 3I/ATLAS flying by.
 - **The turn.** Halfway out, Jupiter's pull swings the view a quarter turn: from
   there it's a sideways bouncer, heading right, with Mars behind you on the
-  left. Steer with ↑ ↓ (or W S); on a phone the touch arrows turn into ▲ ▼,
-  and tilt steering switches to tipping the phone forward (up) and back (down),
-  counting the way you're holding it at the turn as level.
-- **The being of light.** Waiting at the turn, it hums five notes and gives you
-  a force field. With the field on, the drifting asteroids are pinball bumpers
-  you bounce off; each bounce uses one of five charges, and geoms charge it
-  back up. It appears again at the belter outpost to top you up. Without a
-  field, an asteroid knocks you back towards Mars. The turn is the last
-  checkpoint: get knocked back past it and you fall to Mars (in Uber Tramp,
-  any miss does).
-- **The belt.** Gravity is weak, so it's floaty, and it speeds up as you go.
-  Sci-fi nods along the way: mining rigs with claim flags, mining lasers fired
-  by drones (dodge them), an ice hauler to hitch a ride on (with an ice
-  shield), a belter outpost with a spinning ring, and a Kirkwood gap.
-- **Four worlds to finish.** Land on Ceres, Vesta, Pallas or Hygiea. Only Ceres
-  is officially a dwarf planet in the belt (Hygiea may join it); Vesta and
-  Pallas are the next biggest. Each has its own fact, and the title screen
-  counts how many of the four you've visited.
+  left. You land on a safe rock, with nothing in the way. Steer with ↑ ↓ (or
+  W S); on a phone the touch arrows turn into ▲ ▼, and tilt steering switches
+  to tipping the phone forward (up) and back (down), counting the way you're
+  holding it at the turn as level.
+- **The being of light.** Waiting at the safe rock, it hums five notes and gives
+  you a force field. It appears again at the belter outpost to top you up.
+- **The passage.** Past the safe rock you bounce along a passage through the
+  belt, walled with asteroids at the top and bottom of the screen: hit a wall
+  and it bounces you back in, like the sides of a pinball table. Asteroids
+  drift past in the background, and now and then a rogue one (glowing orange)
+  tumbles across the passage. Dodge it: the force field takes five hits
+  (geoms charge it back up), and without it you're knocked back towards Mars.
+  The turn is the last checkpoint: get knocked back past it and you fall to
+  Mars (in Uber Tramp, any miss does).
+- **The belt.** Gravity is weak, so it's floaty, and it speeds up as you go,
+  with more rogue asteroids. Sci-fi nods along the way: mining rigs and claim
+  flags, mining lasers fired by drones (dodge them), an ice hauler to land on
+  for an ice shield, a belter outpost with a spinning ring, and a Kirkwood gap.
+- **Four worlds to finish.** The passage opens out to Ceres, Vesta, Pallas and
+  Hygiea. Only Ceres is officially a dwarf planet in the belt (Hygiea may join
+  it); Vesta and Pallas are the next biggest. Each has its own fact, and the
+  title screen counts how many of the four you've visited.
 
 A run straight from Earth to the belt goes on the scoreboard as one run.
 
