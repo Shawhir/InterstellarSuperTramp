@@ -899,7 +899,7 @@
     world = buildWorld(seed);
     Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1, apexR: R0, lastPlat: null, lastH: 0, heat: 0, suit: level >= 2, field: 0, lost: false, adrift: 0, carried: false, spin: 0, inside: false, g: gravAt(0), shield: 0, hurt: 0, grit: 0 });
     theta = 0; lastTier = -1; bestTier = -1; playTime = 0; particles = [];
-    fx = { geoms: [], flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2, meteors: [], meteorT: 4, visitor: null, dedication: 0, crossers: [], crossT: 3 };
+    fx = freshFx();
     checkpoint = 0; falls = 0; heightRecordShown = false;
     score = 0; mult = 1; fx.geoms = [];
     updateScoreHud();
@@ -2096,29 +2096,54 @@
   }
   // ---- Climbing out to the next world ------------------------------------------
   // From the last platform you bounce up after the world that's slid out of
-  // sight above you, and keep going: its pull has you now. The view turns
-  // right over (you stay upright; the old world swings overhead), and then
-  // you're falling feet first onto the next level's ground.
+  // sight above you, and keep going: its pull has you now. The next level's
+  // own world really is up there, upside down, getting closer. The view turns
+  // right over (you stay upright; home swings round overhead, the sky becomes
+  // the new world's sky) and by the end you're simply falling towards the
+  // next level's ground, which is where the game carries on: nothing swaps.
   const climbOut = () => (level === 1 || level === 2 || level === 6) && nextLevel() > 0;
-  const CLIMB_TURN = [0.45, 1.75], CLIMB_SWAP = 1.8, DROP_H = 420;
+  const CLIMB_TURN = [0.35, 1.85], CLIMB_T = 1.9, DROP_H = 300, CLIMB_VE = 320, CLIMB_BUMP = 1100;
   const climbTurn = () => (fx.climb ? Math.PI * smooth(clamp((fx.climb.t - CLIMB_TURN[0]) / (CLIMB_TURN[1] - CLIMB_TURN[0]), 0, 1)) : 0);
+  // How far you've flown after t seconds: off the bounce, faster and faster,
+  // then easing as the new world's gravity takes over
+  const climbDist = (C, t) => C.v0 * t + ((CLIMB_VE - C.v0) * t * t) / (2 * CLIMB_T) + ((CLIMB_BUMP * CLIMB_T) / Math.PI) * (1 - Math.cos((Math.PI * t) / CLIMB_T));
+  const freshFx = () => ({ geoms: [], flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2, meteors: [], meteorT: 4, visitor: null, dedication: 0, crossers: [], crossT: 3 });
+  // Everything the drawing reads about "which world", so a second one can be drawn
+  const grabState = () => ({ level, route, aimFor, landedOn, world, theta, TIERS, TOP, CHECKPOINTS, fx, particles, flipK, checkpoint, cam, lastTier, bestTier, pr: player.r, pvr: player.vr, pg: player.onGround, ps: player.spin });
+  function putState(S) {
+    ({ level, route, aimFor, landedOn, world, theta, TIERS, TOP, CHECKPOINTS, fx, particles, flipK, checkpoint, cam, lastTier, bestTier } = S);
+    player.r = S.pr; player.vr = S.pvr; player.onGround = S.pg; player.spin = S.ps;
+  }
+  function inState(G, fn) { const S = grabState(); putState(G); try { fn(); } finally { G.cam = cam; putState(S); } }
+  let ghostDraw = false, noSky = false;
   function startClimb() {
-    fx.climb = { t: 0, next: nextLevel(), time: playTime, vr: Math.max(player.vr, 500) };
+    const C = fx.climb = { t: 0, next: nextLevel(), time: playTime, r0: player.r, v0: Math.max(player.vr, 400) };
     lastTier = TOP; bestTier = TOP;
     player.heat = 0; fx.flames = []; player.hopLock = 0;
+    // Build the next level's world now: it's up there, waiting
+    const S = grabState();
+    level = C.next; route = null; aimFor = null; landedOn = null; useTiers();
+    theta = 0; flipK = 0; checkpoint = 0; lastTier = -1; bestTier = -1; particles = []; fx = freshFx();
+    world = buildWorld(Math.floor(Math.random() * 1e9));
+    cam = { r: R0 + DROP_H + climbDist(C, CLIMB_T), anchor: 0.5, zoom: 1 };
+    player.r = cam.r; player.vr = 0; player.onGround = false; player.spin = 0;
+    C.G = grabState();
+    putState(S);
+    fx.climb = C;
     banner(level === 6 ? 'DAYLIGHT!' : `${destName().replace('the ', '').toUpperCase()}'S PULL`, level === 6 ? 'UP AND OUT' : 'UP AND OVER');
     sfx.whoosh(); addShake(4);
   }
   function updateClimb(dt) {
     const C = fx.climb;
-    C.t += dt;
+    C.t = Math.min(C.t + dt, CLIMB_T);
     if (state === 'play') playTime += dt;
-    // Nothing pulls you back now: you speed on up towards it
-    C.vr = Math.min(C.vr + 700 * dt, 1500);
-    player.vr = C.vr; player.r += C.vr * dt; player.onGround = false;
+    const d = climbDist(C, C.t);
+    player.vr = (climbDist(C, C.t + 0.01) - d) / 0.01;
+    player.r = C.r0 + d; player.onGround = false;
     player.spin = -climbTurn(); // stays upright on screen as the world turns
-    cam.r += (player.r - cam.r) * Math.min(1, dt * 8);
-    cam.anchor = lerp(cam.anchor || 0.46, 0.5, Math.min(1, dt * 6));
+    cam.r = player.r; cam.anchor = lerp(cam.anchor || 0.46, 0.5, Math.min(1, dt * 8));
+    // Where you are as seen from the new world: high above its ground, coming down
+    C.G.pr = R0 + DROP_H + climbDist(C, CLIMB_T) - d; C.G.cam.r = C.G.pr; C.G.cam.anchor = cam.anchor;
     for (const q of particles) { q.R += q.vr * dt; q.a += (q.vt * dt) / q.R; q.vr -= 380 * dt; q.life -= dt; }
     particles = particles.filter((q) => q.life > 0);
     for (const q of fx.pops) q.t += dt;
@@ -2126,32 +2151,46 @@
     if (fx.banner) { fx.banner.t += dt; if (fx.banner.t > 2.6) fx.banner = null; }
     shake = Math.max(0, shake - dt * 30);
     if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0.4) hud.toast.style.opacity = '0'; if (toastTimer <= 0) hud.toast.hidden = true; }
-    if (C.t >= CLIMB_SWAP) climbSwap();
+    if (C.t >= CLIMB_T) climbArrive();
   }
-  // Drawn turned over about the tramp
+  // Both worlds, turned over about the tramp: the old one below (then above),
+  // the new one above (then below)
   function drawClimb() {
-    const turn = climbTurn(), c = Math.abs(Math.cos(turn)), sn = Math.abs(Math.sin(turn));
+    const C = fx.climb, turn = climbTurn(), c = Math.abs(Math.cos(turn)), sn = Math.abs(Math.sin(turn));
+    const skyK = smooth(clamp((C.t - 0.3) / (CLIMB_T - 0.35), 0, 1));
     // Zoomed in just enough as it turns that no corners ever show
-    const z = Math.max((W * c + H * sn) / W, (W * sn + H * c) / H);
+    const z = Math.max((W * c + H * sn) / W, (W * sn + H * c) / H) * (1 + (sn * 80) / Math.min(W, H));
+    // Everything turns about the middle of the tramp, who stays put and upright
+    const px0 = W / 2, py0 = H * (cam.anchor || 0.5) - 24;
+    const flip = () => { ctx.translate(px0, py0); ctx.rotate(Math.PI); ctx.translate(-px0, -py0); };
     ctx.save();
-    ctx.translate(W / 2, H / 2); ctx.rotate(turn); ctx.scale(z, z); ctx.translate(-W / 2, -H / 2);
-    const was = snapping; snapping = true; renderWorld(); snapping = was;
+    ctx.translate(px0, py0); ctx.rotate(turn); ctx.scale(z, z); ctx.translate(-px0, -py0);
+    if (skyK < 1) drawSky();
+    const was = snapping; snapping = true; noSky = true;
+    inState(C.G, () => {
+      ctx.save(); flip();
+      if (skyK > 0) { ctx.save(); ctx.globalAlpha = skyK; noSky = false; drawSky(); noSky = true; ctx.restore(); }
+      ghostDraw = true; renderWorld(); ghostDraw = false;
+      ctx.restore();
+    });
+    renderWorld();
+    snapping = was; noSky = false;
     ctx.restore();
   }
-  // The turn's done: from here on it's the next level, with you high above its ground
-  function climbSwap() {
-    const C = fx.climb, from = level;
-    landSnap = landSnap || document.createElement('canvas');
-    landSnap.width = canvas.width; landSnap.height = canvas.height;
-    fx.banner = null; snapping = true; drawClimb(); snapping = false;
-    const sc = landSnap.getContext('2d');
-    sc.globalCompositeOperation = 'copy'; sc.drawImage(canvas, 0, 0); sc.globalCompositeOperation = 'source-over';
+  // The turn's done and you're falling towards the new world's ground: from
+  // here on it's simply that level, already exactly as it was drawn
+  function climbArrive() {
+    const C = fx.climb, from = level, suit = player.suit;
     playTime = C.time + C.t;
     const bonus = win(true);
     startGame(C.next, { score, mult, ...lastWin });
-    player.r = R0 + DROP_H; player.vr = -120; player.onGround = false; player.apexR = player.r; player.spin = 0;
-    cam.r = player.r; cam.anchor = 0.5; cam.zoom = 1;
-    fx.drop = true; fx.land = { t: -0.15 };
+    const keep = fx; putState(C.G); fx = keep; // (startGame's banner and toast, the world as drawn)
+    theta = 0; lastTier = -1; bestTier = -1;
+    player.r = R0 + DROP_H; player.vr = -CLIMB_VE; player.onGround = false; player.apexR = player.r; player.spin = 0;
+    if (C.next === 2) player.suit = suit; // (no quick change on the way down to the Moon)
+    cam.r = player.r; cam.zoom = 1;
+    updateStarsHud();
+    fx.drop = true;
     pop(`LEVEL ${from} DONE! +${fmtScore(bonus)}`, '#ffd23f', player.r + 110);
     sfx.tier();
   }
@@ -6738,7 +6777,7 @@
     const anchorY = H * (cam.anchor || 0.46);
     cx = Math.round(W / 2);
     cy = anchorY + cam.r;
-    drawSky();
+    if (!noSky) drawSky();
     if (state === 'descend') drawIntroSpace();
     ctx.save();
     if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
@@ -6806,7 +6845,7 @@
       const ph = g.a + theta;
       drawSprite('jump', cx + g.r * Math.sin(ph), cy - g.r * Math.cos(ph), g.flip, 1, 1, g.life * 2, PAL, g.spin);
     }
-    if (!hidden) {
+    if (!hidden && !ghostDraw) {
       drawGuide(feetX, feetY);
       drawFire(feetX, feetY);
       drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx, 1, player.heat > 0.55 ? HOT : player.suit ? SUIT : PAL, player.spin || 0);
@@ -6829,6 +6868,7 @@
     drawParticles();
     drawFx();
     ctx.restore();
+    if (ghostDraw) return; // the far world: no overlays
     if (fk > 0) {
       // Speed lines run along the direction of travel, so sideways once turned
       ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(flipA); ctx.translate(-W / 2, -H / 2);
