@@ -68,10 +68,13 @@ says so if that happens.
   Moon, and daylight from the hollow Earth): the world you're heading for
   grows in the sky as you climb, then slides up out of sight above you. Your
   bounce off the last platform carries you on up after it, faster and faster,
-  as its gravity takes over. The view turns right over (you stay upright; home
-  swings round overhead), and you fall feet first onto the next level's
-  ground and carry straight on playing, with that world's own gravity, the
-  score carried on and the whole trip counted as one run.
+  as its gravity takes over. The next level's own world really is up there,
+  upside down and getting closer, drawn alongside the one you're leaving. The
+  view turns right over about you (you stay upright; home swings round
+  overhead and the sky becomes the new world's sky), and you're falling feet
+  first towards the next level's ground. Nothing swaps or fades: the game
+  simply carries on there, with that world's own gravity, the score carried
+  on and the whole trip counted as one run.
 - Reaching a belt world on level 3, the destination swells to the size of the
   next level's world as you touch down, and you play on there. Mercury and
   Europa are the ends of the line, with a results screen: at Mercury the view
