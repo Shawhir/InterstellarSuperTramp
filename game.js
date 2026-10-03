@@ -108,10 +108,10 @@
     { km: 8, type: 'cloudm', layer: 'Martian sky', g: 0.5, note: "Mars has air, just thin: about 1% of Earth's, mostly carbon dioxide. Enough for wispy clouds of water ice." },
     { km: 40, type: 'cloudm', layer: 'Martian sky', g: 0.5, dust: 1, note: 'Dust storms on Mars can wrap the whole planet. One ended the Opportunity rover in 2018.' },
     { km: 6000, type: 'phobos', layer: 'Mars orbit', g: 0.5, note: 'Phobos ("fear"), 22 km across, races round Mars three times a day, so it rises in the west and sets in the east.' },
-    { km: 14000, type: 'rocket', layer: 'Mars orbit', g: 0.5 },
+    { km: 14000, type: 'ufo', layer: 'Mars orbit', g: 0.5 },
     { km: 23460, type: 'deimos', layer: 'Mars orbit', g: 0.5, note: 'Deimos ("dread"), just 12 km across. Asaph Hall found both moons in 1877 and named them after the sons of Ares, god of war.' },
     { km: 2000000, type: 'asteroid', layer: 'Leaving Mars', g: 0.45, visitor: 'atlas3', note: "Mars trojans: a few asteroids share Mars's orbit, 60° ahead of it and behind. The biggest is called Eureka." },
-    { km: 20000000, type: 'rocket', layer: 'Leaving Mars', g: 0.45, fact: { kind: 'probe', text: 'Dawn (2007 to 2018) was the first spacecraft to orbit two worlds past the Moon: Vesta, then Ceres. It still circles Ceres, switched off.' } },
+    { km: 20000000, type: 'ufo', layer: 'Leaving Mars', g: 0.45, fact: { kind: 'probe', text: 'Dawn (2007 to 2018) was the first spacecraft to orbit two worlds past the Moon: Vesta, then Ceres. It still circles Ceres, switched off.' } },
     { km: 50000000, type: 'haven', layer: "Jupiter's pull", g: 0.4 },
     { km: 70000000, type: 'miner', layer: 'Inner belt', g: 0.35, note: 'In films, asteroid fields are packed. The real belt is mostly empty space, asteroids about a million km apart. This bit is the film version.' },
     { km: 78000000, type: 'asteroid', layer: 'Inner belt', g: 0.35, laser: 1 },
@@ -161,7 +161,7 @@
   }
   const gravAt = (k) => (level >= 2 ? TIERS[Math.max(0, Math.min(TOP, k))].g || 0.6 : 1);
   const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220,
-    pad: 80, haven: 180, rubble: 104, rocket: 116, kamo: 84, car: 150, comet: 140, phobos: 110, deimos: 80, cloudv: 140, mars: 220, venus: 220,
+    pad: 80, haven: 180, rubble: 104, ufo: 112, refinery: 230, rocket: 116, kamo: 84, car: 150, comet: 140, phobos: 110, deimos: 80, cloudv: 140, mars: 220, venus: 220,
     cloudm: 140, miner: 120, hauler: 160, outpost: 150, ceres: 160, vesta: 110, pallas: 106, hygiea: 96 };
   const MOON_R = 110; // the landing Moon's radius; its top is the last bouncy surface
   const tierR = (k) => R0 + 30 + k * TIER_GAP;
@@ -457,7 +457,7 @@
     const rnd = mulberry32(seed);
     const plats = [], stars = [], beams = [], dust = [], rocks = [], back = [], gaps = [], pops = [], lanes = {}, maze = {};
     const T = L3_TIERS;
-    const SWAY = new Set(['rocket', 'asteroid', 'phobos', 'deimos', 'cloudm', 'miner']);
+    const SWAY = new Set(['rocket', 'ufo', 'asteroid', 'phobos', 'deimos', 'cloudm', 'miner']);
     const mk = (rt, tier, a, type = T[tier].type) => {
       const g = T[tier].g || 0.6;
       const p = { tier, a, a0: a, type, route: rt, g, R: tierR(tier), w: WIDTH[type], bounce: speedFor(tier) * Math.sqrt(2 * G * g * (TIER_GAP + OVERSHOOT)), squash: 0, jig: 9, hit: 0, sway: 0, freq: 0, phase: 0, spin: rnd() * TAU, dir: rnd() < 0.5 ? -1 : 1 };
@@ -483,7 +483,7 @@
         if (k === TOP) {
           // Its world sits inside the asteroid ring, a little way round from
           // the top of this route's climb
-          const d = mk(rt, k, beltA + (W.tilt ? -0.4 : 0.4), rt);
+          const d = mk(rt, k, beltA + (W.tilt ? -0.75 : 0.75), rt);
           d.R = tierR(TOP - 4); d.main = true; d.dest = true; d.world = W;
           break;
         }
@@ -493,11 +493,11 @@
         const mp = mk(rt, k, a);
         mp.main = true;
         stars.push({ a: prevA + (a - prevA) * 0.62, R: R + 50, taken: false, route: rt });
-        if (t.type === 'rocket') for (let i = 0; i < 3; i++) stars.push({ a: a + 24 / R, R: R + 80 + i * 36, taken: false, ring: true, route: rt });
+        if (t.type === 'ufo') for (let i = 0; i < 3; i++) stars.push({ a: a + 24 / R, R: R + 80 + i * 36, taken: false, ring: true, route: rt });
         if (t.fact) stars.push({ a: a - 110 / R, R: R + 150, taken: false, big: true, fact: t.fact, route: rt });
         if (t.laser && W.lasers) for (const side of [-1, 1]) beams.push({ a: a + (side * (120 + rnd() * 70)) / R, tier: k, period: 3 + rnd() * 1.2, phase: rnd() * 4, route: rt, kind: 'laser' });
         if (t.dust) dust.push({ a: a + (150 + rnd() * 80) / R, R: R + 125, phase: rnd() * TAU, route: rt }, { a: a - (210 + rnd() * 90) / R, R: R + 140, phase: rnd() * TAU, route: rt });
-        const spare = t.type === 'cloudm' ? 'cloudm' : t.type === 'phobos' || t.type === 'deimos' ? 'rocket' : 'asteroid';
+        const spare = t.type === 'cloudm' ? 'cloudm' : t.type === 'phobos' || t.type === 'deimos' || t.type === 'ufo' ? 'ufo' : 'asteroid';
         for (let i = 0; i < (k === FLIP ? 0 : k < 5 ? 2 : 1); i++) {
           const ea = a + ((340 + rnd() * 380) * (i % 2 ? -1 : 1)) / R;
           mk(rt, k, ea, spare);
@@ -519,27 +519,61 @@
       const rock = plats.find((q) => q.tier === FLIP && q.route === Object.keys(BELT_WORLDS).find((k) => BELT_WORLDS[k] === W));
       if (rock) caves.push({ a: rock.a + (rnd() < 0.5 ? -1 : 1) * 0.12, R: tierR(FLIP + 4) + 60, ph: rnd() * 9, seen: false });
     }
+    // Each route passes a mining refinery low in the belt
+    const keep = [];
+    for (const rt of Object.keys(BELT_WORLDS)) {
+      const rock = plats.find((q) => q.tier === FLIP && q.route === rt);
+      if (!rock) continue;
+      const f = mk(null, FLIP + 2, rock.a + 0.12, 'refinery');
+      f.main = true; f.turn = 0;
+      keep.push({ a: f.a, R: f.R - 20, r: 170 });
+    }
     const clear = (a, R, pad) => worlds.every((w) => Math.hypot(wrap(a - w.a) * R, R - (w.R - w.world.r)) > w.world.r + pad)
-      && caves.every((c) => Math.hypot(wrap(a - c.a) * R, R - c.R) > 130 + pad);
+      && caves.every((c) => Math.hypot(wrap(a - c.a) * R, R - c.R) > 130 + pad)
+      && keep.every((c) => Math.hypot(wrap(a - c.a) * R, R - c.R) > c.r + pad);
+    const drones = [];
+    let lastRock = null;
     for (let k = FLIP + 1; k < TOP; k++) {
-      const R0k = tierR(k), t = T[k];
-      for (let a = rnd() * 0.1; a < TAU; a += (170 + rnd() * 170) / R0k) {
-        const R = R0k + (rnd() - 0.5) * 90;
+      const R0k = tierR(k), t = T[k], u = (k - FLIP) / (TOP - FLIP); // 0 low in the belt, 1 at the top
+      // The journey through the belt: each region has its own look. The inner
+      // belt is pale stony rock and the mining zone; the Kirkwood gap is
+      // sparse; the main belt is a mix with shiny metal asteroids; the outer
+      // belt is dark carbon-rich rock and ice. Higher up, more drift and crumble.
+      const region = t.layer, gap = region === 'Kirkwood gap';
+      for (let a = rnd() * 0.1; a < TAU; a += ((125 + rnd() * 125) * (gap ? 2 : 1)) / R0k) {
+        const R = R0k + (rnd() - 0.5) * 120;
         if (!clear(a, R, 60)) continue;
-        const special = t.type !== 'asteroid' && rnd() < 0.07;
+        const mining = region === 'Inner belt' || region === 'Main belt';
+        const special = (t.type !== 'asteroid' && rnd() < 0.07) || (mining && rnd() < 0.06);
         const rubble = !special && rnd() < 0.012;
-        const p = mk(null, k, a, special ? t.type : rubble ? 'rubble' : 'asteroid');
+        const p = mk(null, k, a, special ? (t.type !== 'asteroid' ? t.type : 'miner') : rubble ? 'rubble' : 'asteroid');
         p.R = R; p.main = true;
+        if (!special && !rubble) {
+          const r3 = rnd();
+          p.col = region === 'Outer belt' ? (r3 < 0.25 ? ['#cfe6f2', '#9fbccc', '#ffffff'] : ['#3e3a42', '#2a272e', '#5e5864'])
+            : region === 'Main belt' && r3 < 0.2 ? ['#9aa3b5', '#6d7586', '#e6ecf5']
+            : region === 'Inner belt' ? ['#9a8a78', '#77685a', '#c4b49e'] : null;
+          if (p.col && p.col[0] === '#9aa3b5') p.metal = true;
+          if (p.col && p.col[0] === '#cfe6f2') p.ice = true;
+          // Mining: drones ferrying ore between asteroids, and drill drones
+          if (mining && lastRock && Math.abs(wrap(lastRock.a - a)) * R < 400 && rnd() < 0.05) drones.push({ p1: lastRock, p2: p, ph: rnd() * TAU, speed: 0.25 + rnd() * 0.2 });
+          else if (mining && rnd() < 0.035) drones.push({ drill: p, ph: rnd() * TAU });
+          lastRock = p;
+        }
         if (rubble) { p.turn = (rnd() < 0.5 ? -1 : 1) * (1.6 + rnd()); p.shedT = rnd() * 4; }
-        else if (!special) { p.w = 55 + rnd() * 75; p.turn = (rnd() < 0.5 ? -1 : 1) * (0.3 + rnd() * 1.2); }
+        else if (!special) {
+          p.w = 55 + rnd() * 75; p.turn = (rnd() < 0.5 ? -1 : 1) * (0.3 + rnd() * 1.2);
+          if (rnd() < 0.15 + u * 0.25) { p.sway = (40 + rnd() * 70) / R; p.freq = 0.35 + rnd() * 0.5; p.phase = rnd() * TAU; }
+          if (rnd() < 0.08 + u * 0.14) p.crumble = true;
+        }
         // Now and then an asteroid with a little moon going round it
         if (!special && !rubble && rnd() < 0.012) rocks.push({ route: null, moonOf: p, rad: 95, w: (rnd() < 0.5 ? -1 : 1) * (1.3 + rnd() * 0.6), ph: rnd() * TAU, a, R, r: 22, spin: rnd() * TAU, turn: 0.4, flash: 0, cool: 0, wall: true });
         const r2 = rnd();
-        if (r2 < 0.2) {
+        if (r2 < 0.2 + u * 0.15) {
           // A neon pinball bumper floating above
           const br = R + 110 + rnd() * 60, ba = a + ((rnd() - 0.5) * 160) / br;
           if (clear(ba, br, 50)) rocks.push({ route: null, a: ba, R: br, r: 22 + rnd() * 16, spin: rnd() * TAU, turn: (rnd() < 0.5 ? -1 : 1) * (0.5 + rnd()), ph: rnd() * TAU, flash: 0, cool: 0, wall: true, pinball: true });
-        } else if (r2 < 0.3) {
+        } else if (r2 < 0.3 + u * 0.15) {
           const pr = R + 125 + rnd() * 40, pa = a + ((rnd() - 0.5) * 140) / pr;
           if (clear(pa, pr, 40)) pops.push({ route: null, a: pa, R: pr, r: 18, flash: 0, cool: 0, spin: rnd() * TAU });
         }
@@ -547,6 +581,18 @@
         if (t.fact && !t.factPlaced && rnd() < 0.03) { t.factPlaced = seed; stars.push({ a, R: R + 150, taken: false, big: true, fact: t.fact }); }
       }
     }
+    // Snakes and ladders: mining grabber robots up in the belt that drag you
+    // back down to the refinery, and ore lifts lower down that carry you up
+    const grabbers = [], lifts = [];
+    const freeSpot = (k0, k1) => {
+      for (let tries = 0; tries < 40; tries++) {
+        const a = rnd() * TAU, R = tierR(k0 + Math.floor(rnd() * (k1 - k0))) + 120 + rnd() * 40;
+        if (clear(a, R, 60)) return { a, R };
+      }
+      return null;
+    };
+    for (let i = 0; i < 18; i++) { const at0 = freeSpot(FLIP + 6, TOP - 1); if (at0) grabbers.push({ ...at0, a0: at0.a, ph: rnd() * TAU }); }
+    for (let i = 0; i < 14; i++) { const at0 = freeSpot(FLIP + 2, TOP - 6); if (at0) lifts.push({ ...at0, ph: rnd() * TAU }); }
     stars.forEach((st, i) => { st.id = i; });
     // Asteroids far off in the background, in three layers of distance (just
     // scenery): the further, the smaller, dimmer and slower. Each has its own
@@ -598,7 +644,7 @@
     ];
     const sky = [];
     for (let i = 0; i < 240; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.12 ? 2 : 1, tw: rnd() * TAU });
-    return { seed, plats, stars, decor, crust, swirls, sky, ranges: [], scape, issPlat: null, beams, dust, rocks, back, far, motes, lanes, gaps, pops, maze, caves };
+    return { seed, plats, stars, decor, crust, swirls, sky, ranges: [], scape, issPlat: null, beams, dust, rocks, back, far, motes, lanes, gaps, pops, maze, caves, drones, grabbers, lifts };
   }
 
   // ---- State ----------------------------------------------------------------
@@ -662,7 +708,7 @@
 
   function reset(seed) {
     world = buildWorld(seed);
-    Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1, apexR: R0, lastPlat: null, lastH: 0, heat: 0, suit: level >= 2, field: 0, lost: false, adrift: 0, spin: 0, inside: false, g: gravAt(0), shield: 0, hurt: 0, grit: 0 });
+    Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1, apexR: R0, lastPlat: null, lastH: 0, heat: 0, suit: level >= 2, field: 0, lost: false, adrift: 0, carried: false, spin: 0, inside: false, g: gravAt(0), shield: 0, hurt: 0, grit: 0 });
     theta = 0; lastTier = -1; bestTier = -1; playTime = 0; particles = [];
     fx = { geoms: [], flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2, meteors: [], meteorT: 4, visitor: null, dedication: 0, crossers: [], crossT: 3 };
     checkpoint = 0; falls = 0; heightRecordShown = false;
@@ -773,6 +819,7 @@
     for (const p of world.plats) {
       if (p.tier !== tier) continue;
       if (route && p.route && p.route !== route) continue;
+      if (p.broken) continue;
       const d = wrap(p.a + theta) * p.R;
       if (Math.abs(d) < Math.abs(bestD)) { best = p; bestD = d; }
     }
@@ -825,6 +872,10 @@
     player.squash = 1;
     fx.whistled = false;
     player.lost = false; player.adrift = 0; fx.improbable = null;
+    if (p.crumble && !p.breakAt) {
+      p.breakAt = clock + 0.3;
+      if (!fx.crumbleTold) { fx.crumbleTold = true; toast('Cracked asteroids are loose rubble: bounce off one and it falls apart behind you. No going back down that way!', 5); }
+    }
     if (p.dest) {
       if (p.world) landedOn = p.world;
       player.vr = 0; player.onGround = true;
@@ -1142,6 +1193,15 @@
   //  - rubble piles: loose heaps of boulders, spinning fast, that throw off
   //    pebbles (NASA's OSIRIS-REx saw Bennu doing it)
   function updateBeltHazards(dt) {
+    for (const p of world.plats) {
+      if (!p.crumble || !p.breakAt) continue;
+      if (!p.broken && clock > p.breakAt) {
+        p.broken = true; p.backAt = clock + 8;
+        burst(p.a, p.R + 10, '#8a8290', 16, 200); burst(p.a, p.R + 10, '#5d5563', 10, 140);
+        for (let i = 0; i < 6; i++) fx.puffs.push({ a: p.a, R: p.R + 10, vt: (Math.random() - 0.5) * 160, vr: (Math.random() - 0.5) * 120, r: 5 + Math.random() * 6, t: 0, life: 0.8, dust: true });
+        sfx.thud();
+      } else if (p.broken && clock > p.backAt) { p.broken = false; p.breakAt = 0; }
+    }
     const near = (a, R, d) => Math.abs(wrap(a + theta)) * player.r < d && Math.abs(R - player.r) < d;
     for (const q of world.rocks || []) {
       if (!q.moonOf) continue;
@@ -1229,7 +1289,7 @@
     if (c.t > 4.5) fx.crash = null;
   }
   function updateAdrift(dt) {
-    if (level !== 3 || player.onGround || state !== 'play') return;
+    if (level !== 3 || player.onGround || player.carried || state !== 'play') return;
     if (player.adrift) {
       player.adrift += dt;
       // Drift back in before the ship arrives and you're fine
@@ -1439,7 +1499,7 @@
     player.hurt = Math.max(0, (player.hurt || 0) - dt);
     const k = clamp(Math.floor(tierFloat(player.r)), 0, TOP);
     const T = TIERS[k];
-    const air = !player.onGround && !player.inside;
+    const air = !player.onGround && !player.inside && !player.carried;
     const collide = (q, hit) => {
       q.flash = Math.max(0, q.flash - dt * 2.5);
       q.cool = Math.max(0, q.cool - dt);
@@ -1472,10 +1532,13 @@
       updateAdrift(dt);
       updateCrash(dt);
       updateBeltHazards(dt);
+      updateCaves();
+      updateCarry(dt);
+      for (const g of world.grabbers || []) g.a = g.a0 + (Math.sin(clock * 0.4 + g.ph) * 90) / g.R;
       for (const c of world.caves || []) {
         if (!c.seen && Math.abs(wrap(c.a + theta)) * player.r < W * 0.5 && Math.abs(c.R - player.r) < H * 0.5) {
-          c.seen = true;
-          toast('A battered light freighter just shot out of a cave in that asteroid… chased by a giant space slug! It wasn\'t a cave.', 5.5);
+          c.seen = true; c.t0 = clock;
+          toast('A battered light freighter just shot out of a cave in that asteroid… chased by a giant space slug! It wasn\'t a cave. The ship got away. Will you?', 6);
         }
       }
       if (fx.improbable) fx.improbable.t += dt;
@@ -1561,7 +1624,7 @@
     } else if (state === 'play') {
       playTime += dt;
       const kdir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-      const dir = player.inside ? 0 : kdir !== 0 ? kdir : tilt.on ? (level === 3 && flipK > 0.5 ? tilt.fb : tilt.axis) : 0;
+      const dir = player.inside || player.carried ? 0 : kdir !== 0 ? kdir : tilt.on ? (level === 3 && flipK > 0.5 ? tilt.fb : tilt.axis) : 0;
       if (Math.abs(dir) > 0.1) player.facing = Math.sign(dir);
       const sp = player.speed;
       const maxV = player.onGround ? WALK : AIR * Math.sqrt(sp);
@@ -1593,7 +1656,7 @@
       const iss = world.issPlat;
       if (iss && !player.suit && !player.inside && iss.ride.state === 'near'
         && Math.abs(wrap(iss.a + theta) * iss.R) < iss.w / 2 + 6 && Math.abs(player.r - (iss.R + 10)) < 34) dock(iss);
-      if (!player.onGround && !player.inside) {
+      if (!player.onGround && !player.inside && !player.carried) {
         const prev = player.r;
         player.apexR = Math.max(player.apexR || player.r, player.r);
         if (beltFlight()) {
@@ -1625,7 +1688,7 @@
         if (player.vr < 0) {
           let landed = false;
           for (const p of world.plats) {
-            if (ghost(p)) continue;
+            if (ghost(p) || p.broken) continue;
             if (prev >= p.R && player.r <= p.R && Math.abs(wrap(p.a + theta) * p.R) <= p.w / 2 + 8) { land(p); landed = true; break; }
           }
           // Missed Lumen as he drove past: he'll be round again
@@ -3247,6 +3310,39 @@
       ctx.strokeStyle = 'rgba(240,250,255,0.85)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(-w / 2, 6); ctx.bezierCurveTo(-w / 4, -2, w / 4, 14, w / 2, 4); ctx.stroke();
     },
+    ufo(p, w) {
+      // A flying saucer, Martian at the controls: you bounce on its glass dome
+      const bob = Math.sin(clock * 3 + p.spin) * 2;
+      ctx.translate(0, bob);
+      ctx.fillStyle = 'rgba(191,232,255,0.45)'; ctx.beginPath(); ctx.arc(0, 18, 22, Math.PI, TAU); ctx.fill();
+      martianHead(0, 10, 1.3);
+      ctx.strokeStyle = 'rgba(230,245,255,0.9)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 18, 22, Math.PI, TAU); ctx.stroke();
+      const g = ctx.createLinearGradient(0, 14, 0, 34);
+      g.addColorStop(0, '#e6e9f0'); g.addColorStop(1, '#8a90a0');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 22, w / 2, 10, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#6d7383'; ctx.beginPath(); ctx.ellipse(0, 28, w * 0.32, 6, 0, 0, Math.PI); ctx.fill();
+      for (let i = -4; i <= 4; i++) { ctx.fillStyle = Math.sin(clock * 9 + i + p.spin) > 0 ? '#ffd23f' : '#ff5a4a'; ctx.fillRect(i * (w / 10) - 2, 21, 4, 3); }
+      ctx.globalAlpha = 0.35 + 0.15 * Math.sin(clock * 6); ctx.fillStyle = '#b8ff9a';
+      ctx.beginPath(); ctx.moveTo(-14, 32); ctx.lineTo(14, 32); ctx.lineTo(22, 52); ctx.lineTo(-22, 52); ctx.fill(); ctx.globalAlpha = 1;
+    },
+    refinery(p, w) {
+      // A mining refinery: a deck to land on, ore silos, a conveyor carrying
+      // ore up from the rock below, a crane arm, steam and warning lights
+      rock(w, '#5d5666', '#3e3a44', '#7d7585', p);
+      px(-w / 2, -6, w, 8, '#c9ced9'); px(-w / 2, -6, w, 2, '#eef1f7');
+      for (const x of [-w / 2 + 6, w / 2 - 34]) { px(x, -58, 28, 52, '#8a90a0'); px(x, -58, 28, 6, '#d9a93b'); ctx.fillStyle = '#8a90a0'; ctx.beginPath(); ctx.ellipse(x + 14, -58, 14, 6, 0, Math.PI, TAU); ctx.fill(); }
+      ctx.strokeStyle = '#d9a93b'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(-20, -6); ctx.lineTo(10, -70); ctx.lineTo(60, -76); ctx.stroke();
+      px(58, -76, 3, 22, '#9aa3b5'); px(52, -56, 14, 8, '#7d1f26');
+      // the conveyor, ore moving along it
+      px(-w / 2 + 34, -24, w - 70, 5, '#3b3b4f');
+      for (let i = 0; i < 8; i++) { const x = -w / 2 + 34 + (((clock * 40 + i * 22) % (w - 76))); px(x, -29, 6, 5, i % 2 ? '#b08a4a' : '#8a6a3a'); }
+      for (let i = 0; i < 3; i++) { const k = (clock * 0.4 + i / 3) % 1; ctx.fillStyle = `rgba(230,230,240,${0.4 * (1 - k)})`; ctx.beginPath(); ctx.arc(-w / 2 + 20 + Math.sin(k * 6) * 4, -64 - k * 50, 6 + k * 10, 0, TAU); ctx.fill(); }
+      for (const x of [-w / 2 + 2, w / 2 - 6]) if (Math.sin(clock * 4 + x) > 0) px(x, -10, 4, 4, '#ffab3d');
+      ctx.save(); upright(); ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = '#1b1530'; ctx.fillText('BELT MINING CO.', 1, 13); ctx.fillStyle = '#ffd23f'; ctx.fillText('BELT MINING CO.', 0, 12);
+      ctx.textAlign = 'start'; ctx.restore();
+    },
     rubble(p, w) {
       // A rubble pile: a loose heap of boulders, spinning fast
       ctx.translate(0, 20); ctx.rotate(p.spin + clock * (p.turn || 2)); ctx.translate(0, -20);
@@ -3539,6 +3635,66 @@
     ctx.fillStyle = d.world.pad; ctx.fillText(d.world.name.toUpperCase(), x, y + 20);
     ctx.textAlign = 'start';
   }
+  // Mining drones: little craft with a blinking light, carrying ore from one
+  // asteroid to the next; drill drones hover over a rock, cutting into it
+  function drawDrones() {
+    for (const d of world.drones || []) {
+      if (d.drill) {
+        const h = d.drill;
+        at(h.a + theta, h.R, () => {
+          const y = -52 + Math.sin(clock * 2 + d.ph) * 4;
+          px(-8, y - 6, 16, 8, '#c9ced9'); px(-8, y - 6, 16, 2, '#eef1f7'); px(-11, y - 9, 22, 2, 'rgba(60,60,72,0.8)');
+          if (Math.sin(clock * 6 + d.ph) > 0) px(-1, y - 8, 2, 2, '#ff5a4a');
+          const on = Math.sin(clock * 1.3 + d.ph) > -0.3;
+          if (on) {
+            px(-1, y + 2, 3, -y - 2, 'rgba(255,90,74,0.85)'); px(-3, y + 2, 7, -y - 2, 'rgba(255,90,74,0.25)');
+            for (let i = 0; i < 4; i++) px(Math.sin(clock * 30 + i * 2) * 10, -3 - Math.abs(Math.cos(clock * 25 + i)) * 8, 2, 2, '#ffd23f');
+          }
+        }, 80);
+        continue;
+      }
+      const k = (Math.sin(clock * d.speed + d.ph) + 1) / 2, a = lerp(d.p1.a, d.p1.a + wrap(d.p2.a - d.p1.a), k), R = lerp(d.p1.R, d.p2.R, k) + 60 + Math.sin(k * Math.PI) * 40;
+      at(a + theta, R, () => {
+        px(-7, -5, 14, 8, '#d9a93b'); px(-7, -5, 14, 2, '#f5d27a'); px(-10, -8, 20, 2, 'rgba(60,60,72,0.8)');
+        if (Math.cos(clock * d.speed + d.ph) > 0) { px(-1, 3, 2, 8, '#9aa3b5'); px(-5, 11, 10, 7, '#8a6a3a'); } // a lump of ore on its hook
+        if (Math.sin(clock * 5 + d.ph) > 0) px(-1, -7, 2, 2, '#52e07a');
+      }, 40);
+    }
+  }
+  // A grabber robot: boxy, a red eye, two claw arms; and an ore lift: a
+  // glowing pod with green arrows pointing up
+  function drawGrabber(open) {
+    px(-14, -12, 28, 22, '#5d5563'); px(-14, -12, 28, 4, '#8a8290'); px(-10, -4, 20, 4, '#2a2230');
+    px(-6 + Math.sin(clock * 3) * 4, -4, 6, 4, '#ff5a4a');
+    ctx.strokeStyle = '#9aa3b5'; ctx.lineWidth = 3;
+    for (const s2 of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(s2 * 12, 8); ctx.lineTo(s2 * 18, 20); ctx.lineTo(s2 * (open ? 22 : 10), 30); ctx.stroke();
+    }
+    px(-2, -20, 4, 8, '#9aa3b5'); if (Math.sin(clock * 6) > 0) px(-2, -22, 4, 3, '#ff5a4a');
+  }
+  function drawSnakesLadders() {
+    for (const g of world.grabbers || []) {
+      if (fx.carry && fx.carry.from === g) continue;
+      at(g.a + theta, g.R, () => { ctx.translate(0, Math.sin(clock * 2 + g.ph) * 5); drawGrabber(true); }, 60);
+    }
+    for (const l of world.lifts || []) {
+      if (fx.carry && fx.carry.from === l) continue;
+      at(l.a + theta, l.R, () => {
+        const g = ctx.createRadialGradient(0, 0, 6, 0, 0, 40);
+        g.addColorStop(0, 'rgba(82,224,122,0.45)'); g.addColorStop(1, 'rgba(82,224,122,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 40, 0, TAU); ctx.fill();
+        px(-12, -16, 24, 30, '#c9ced9'); px(-12, -16, 24, 4, '#eef1f7'); px(-8, -10, 16, 18, '#1f3a2a');
+        for (let i = 0; i < 2; i++) { const y = 4 - (((clock * 30) + i * 9) % 18); ctx.fillStyle = '#52e07a'; ctx.beginPath(); ctx.moveTo(0, y - 4); ctx.lineTo(-5, y + 2); ctx.lineTo(5, y + 2); ctx.fill(); }
+        ctx.save(); upright(); ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#52e07a'; ctx.fillText('LIFT', 0, -24); ctx.textAlign = 'start'; ctx.restore();
+      }, 60);
+    }
+    // Whatever's carrying you, drawn with you
+    const c = fx.carry;
+    if (c) at(0, player.r + 24, () => {
+      if (c.kind === 'down') { ctx.translate(0, -44); drawGrabber(false); }
+      else { ctx.globalAlpha = 0.6; px(-16, -30, 32, 64, '#52e07a'); ctx.globalAlpha = 1; }
+    }, 60);
+  }
   function drawPebbles() {
     for (const q of fx.pebbles || []) at(q.a + theta, q.R, () => { px(-3, -3, 6, 5, '#9a92a2'); px(-3, -3, 3, 2, '#d0c8d8'); }, 10);
   }
@@ -3587,11 +3743,91 @@
     ctx.globalAlpha = 1;
   }
   // The cave asteroid, the light freighter bolting out of it, and the giant
-  // space slug lunging after it. A loop every nine seconds.
+  // space slug. The first time you come by, the freighter shoots out of the
+  // cave with the slug lunging after it, and gets clean away with a jump to
+  // lightspeed. After that the slug lurks, and lunges at you if you come too
+  // close: get bitten and it takes a big chunk of your score.
+  const SLUG_MOUTH = [30, -82];
+  function slugOut(c) {
+    if (c.t0 != null && !c.escaped) {
+      const t = clock - c.t0;
+      return t < 0.6 ? 0 : t < 1.4 ? (t - 0.6) / 0.8 : t < 3 ? 1 : t < 3.8 ? 1 - (t - 3) / 0.8 : 0;
+    }
+    if (c.lungeAt == null) return 0;
+    const t = clock - c.lungeAt;
+    return t < 0.45 ? t / 0.45 : t < 1.6 ? 1 : t < 2.4 ? 1 - (t - 1.6) / 0.8 : 0;
+  }
+  const slugMaw = (c, out) => [SLUG_MOUTH[0] + Math.sin(2.4 + clock * 2) * 14, SLUG_MOUTH[1] - 150 * out - 8];
+  // Being carried: by a grabber robot down to the refinery, or by an ore lift
+  // up four layers. You can't steer, and when it lets go you drop onto it.
+  function startCarry(kind, target, from) {
+    player.carried = true; player.vr = 0; player.vx = 0; player.heat = 0;
+    fx.carry = { kind, target, a0: -theta, R0: player.r, t: 0, dur: kind === 'down' ? 2.6 : 1.8, from };
+    if (kind === 'down') {
+      loseMult(); pop('GRABBED!', '#ff5a4a', player.r + 130); sfx.airlock(); addShake(6);
+      toast('A mining robot grabbed you, and it\'s hauling you all the way back down to the refinery. Snakes and ladders!', 4.5);
+    } else {
+      addScore(250); pop('LIFT!', '#52e07a', player.r + 130); sfx.tier();
+      if (!fx.liftTold) { fx.liftTold = true; toast('An ore lift: hop in and it carries you up four layers. Snakes and ladders!', 4); }
+    }
+  }
+  function updateCarry(dt) {
+    const c = fx.carry;
+    if (!c) {
+      if (level !== 3 || state !== 'play' || player.onGround) return;
+      const touching = (q) => Math.hypot(wrap(q.a + theta) * player.r, q.R - (player.r + 24)) < 34;
+      for (const g of world.grabbers || []) if (touching(g)) {
+        const ref = world.plats.filter((q) => q.type === 'refinery').sort((p, q) => Math.abs(wrap(p.a + theta)) - Math.abs(wrap(q.a + theta)))[0];
+        if (ref) { g.busy = clock; startCarry('down', ref, g); }
+        return;
+      }
+      for (const l of world.lifts || []) if (touching(l)) {
+        const k = Math.min(TOP - 1, Math.floor(tierFloat(l.R)) + 4);
+        let best = null, bd = Infinity;
+        for (const q of world.plats) { if (q.tier !== k || q.dest || q.broken) continue; const d = Math.abs(wrap(q.a - l.a)); if (d < bd) { bd = d; best = q; } }
+        if (best) { startCarry('up', best, l); return; }
+      }
+      return;
+    }
+    c.t += dt;
+    const k = clamp(c.t / c.dur, 0, 1), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    theta = -(c.a0 + wrap(c.target.a - c.a0) * e);
+    player.r = lerp(c.R0, c.target.R + 60, e);
+    player.vr = 0; player.vx = 0;
+    if (k >= 1) {
+      player.carried = false; fx.carry = null;
+      player.vr = -60; player.apexR = player.r; player.lastPlat = null; player.lastH = 0;
+      lastTier = c.target.tier - 1;
+    }
+  }
+  function updateCaves() {
+    for (const c of world.caves || []) {
+      if (c.t0 == null) continue;
+      if (!c.escaped && clock - c.t0 > 4.2) c.escaped = true;
+      // The mouth, in the world
+      const mR = c.R - SLUG_MOUTH[1], mA = c.a + SLUG_MOUTH[0] / c.R;
+      const dMouth = Math.hypot(wrap(mA + theta) * player.r, mR - (player.r + 24));
+      if (c.escaped && dMouth < 340 && (c.lungeAt == null || clock - c.lungeAt > 4)) { c.lungeAt = clock; sfx.boom(0.3); }
+      const out = slugOut(c);
+      if (out > 0.55 && state === 'play' && (c.bitAt == null || clock - c.bitAt > 3)) {
+        const [x, y] = slugMaw(c, out);
+        const a = c.a + x / c.R, R = c.R - y;
+        const dx = wrap(a + theta) * R, dy = R - (player.r + 24), d = Math.hypot(dx, dy);
+        if (d < 58) {
+          c.bitAt = clock;
+          const steal = Math.max(500, Math.round(score * 0.2));
+          score = Math.max(0, score - steal); updateScoreHud(true);
+          pop(`CHOMP! -${fmtScore(steal)}`, '#ff5a4a', player.r + 130);
+          loseMult(); addShake(12); buzz([60, 40, 60]); sfx.thud();
+          player.vx = -(dx / (d || 1)) * 500; player.vr = -(dy / (d || 1)) * 500;
+          if (!fx.slugTold) { fx.slugTold = true; toast('The space slug took a big bite out of your score! Keep your distance from that cave.', 4.5); }
+        }
+      }
+    }
+  }
   function drawCaves() {
     for (const c of world.caves || []) {
       at(c.a + theta, c.R, () => {
-        const t = (clock + c.ph) % 9;
         // The asteroid: big, cratered, with the cave mouth up on one side
         ctx.fillStyle = '#4a4450';
         ctx.beginPath();
@@ -3600,37 +3836,45 @@
         ctx.fillStyle = '#5d5666'; ctx.beginPath(); ctx.arc(-34, -30, 70, 0, TAU); ctx.fill();
         ctx.fillStyle = '#3a3540';
         for (const [x, y, r] of [[40, 40, 18], [-50, 50, 12], [-20, -70, 10], [70, -10, 9]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
-        const mx = 30, my = -82;
+        const [mx, my] = SLUG_MOUTH;
         ctx.fillStyle = '#0b0a10'; ctx.beginPath(); ctx.ellipse(mx, my, 30, 16, -0.3, 0, TAU); ctx.fill();
-        // The slug: lunges out of the cave mouth, jaws open, then sinks back
-        const out = t < 1 ? 0 : t < 2.2 ? (t - 1) / 1.2 : t < 3.4 ? 1 : t < 4.6 ? 1 - (t - 3.4) / 1.2 : 0;
+        // Two glowing eyes in the dark of the cave, while it waits
+        if (c.escaped && slugOut(c) === 0 && Math.sin(clock * 0.7 + c.ph) > -0.6) { px(mx - 10, my - 3, 4, 3, '#ffd23f'); px(mx + 4, my - 4, 4, 3, '#ffd23f'); }
+        const out = slugOut(c);
         if (out > 0) {
           const segs = 9, len = 150 * out;
-          let x = mx, y = my;
           for (let i = 0; i <= segs; i++) {
             const u = i / segs, sx = mx + Math.sin(u * 2.4 + clock * 2) * 14 * u, sy = my - len * u;
-            x = sx; y = sy;
             ctx.fillStyle = i % 2 ? '#8a7a72' : '#9c8c82';
             ctx.beginPath(); ctx.arc(sx, sy, 24 - u * 4, 0, TAU); ctx.fill();
           }
-          // The maw: a gaping ring of teeth
-          const jaw = 0.6 + 0.4 * Math.sin(clock * 9);
-          ctx.fillStyle = '#2a1018'; ctx.beginPath(); ctx.ellipse(x, y - 8, 20, 12 * jaw + 4, 0, 0, TAU); ctx.fill();
+          const [x, y] = slugMaw(c, out), jaw = 0.6 + 0.4 * Math.sin(clock * 9);
+          ctx.fillStyle = '#2a1018'; ctx.beginPath(); ctx.ellipse(x, y, 20, 12 * jaw + 4, 0, 0, TAU); ctx.fill();
           ctx.fillStyle = '#f2ead8';
-          for (let i = 0; i < 10; i++) { const ang = (i * TAU) / 10; ctx.beginPath(); ctx.moveTo(x + Math.cos(ang) * 20, y - 8 + Math.sin(ang) * (12 * jaw + 4)); ctx.lineTo(x + Math.cos(ang) * 13, y - 8 + Math.sin(ang) * (8 * jaw + 2)); ctx.lineTo(x + Math.cos(ang + 0.3) * 20, y - 8 + Math.sin(ang + 0.3) * (12 * jaw + 4)); ctx.fill(); }
+          for (let i = 0; i < 10; i++) { const ang = (i * TAU) / 10; ctx.beginPath(); ctx.moveTo(x + Math.cos(ang) * 20, y + Math.sin(ang) * (12 * jaw + 4)); ctx.lineTo(x + Math.cos(ang) * 13, y + Math.sin(ang) * (8 * jaw + 2)); ctx.lineTo(x + Math.cos(ang + 0.3) * 20, y + Math.sin(ang + 0.3) * (12 * jaw + 4)); ctx.fill(); }
         }
-        // The freighter: bolts out of the cave just ahead of the slug and away
-        if (t > 0.6 && t < 4) {
-          const k = (t - 0.6) / 3.4, fx0 = mx + k * 260, fy = my - 40 - k * 220 + Math.sin(k * 9) * 8;
-          ctx.save(); ctx.translate(fx0, fy); ctx.rotate(-0.7);
-          ctx.fillStyle = 'rgba(140,200,255,0.7)'; ctx.fillRect(-34, -6, 10, 12); // engine glow
-          ctx.fillStyle = '#c9ced9'; ctx.beginPath(); ctx.ellipse(0, 0, 24, 20, 0, 0, TAU); ctx.fill();
-          ctx.fillStyle = '#c9ced9'; ctx.fillRect(16, -12, 18, 7); ctx.fillRect(16, 5, 18, 7); // the two front prongs
-          ctx.fillStyle = '#9aa3b5'; ctx.beginPath(); ctx.arc(0, 0, 7, 0, TAU); ctx.fill();
-          ctx.fillStyle = '#c9ced9'; ctx.fillRect(4, 14, 18, 7); ctx.fillStyle = '#8fd0ff'; ctx.fillRect(18, 15, 4, 5); // offset cockpit
-          ctx.restore();
+        // The freighter: bolts out of the cave and away, then jumps to lightspeed
+        if (c.t0 != null && !c.escaped) {
+          const t = clock - c.t0;
+          if (t > 0.2 && t < 3.6) {
+            const k = clamp((t - 0.2) / 3, 0, 1), fx0 = mx + k * 300, fy = my - 40 - k * 260 + Math.sin(k * 9) * 8;
+            ctx.save(); ctx.translate(fx0, fy); ctx.rotate(-0.7);
+            if (t > 3.1) {
+              // The jump: the ship stretches into streaks of light
+              const s2 = (t - 3.1) / 0.5;
+              ctx.fillStyle = `rgba(220,240,255,${1 - s2})`; ctx.fillRect(-20, -3, 60 + s2 * 900, 6);
+              ctx.fillStyle = `rgba(160,210,255,${0.6 * (1 - s2)})`; ctx.fillRect(-20, -10, 40 + s2 * 700, 3); ctx.fillRect(-20, 8, 40 + s2 * 700, 3);
+            } else {
+              ctx.fillStyle = 'rgba(140,200,255,0.7)'; ctx.fillRect(-34, -6, 10, 12);
+              ctx.fillStyle = '#c9ced9'; ctx.beginPath(); ctx.ellipse(0, 0, 24, 20, 0, 0, TAU); ctx.fill();
+              ctx.fillRect(16, -12, 18, 7); ctx.fillRect(16, 5, 18, 7);
+              ctx.fillStyle = '#9aa3b5'; ctx.beginPath(); ctx.arc(0, 0, 7, 0, TAU); ctx.fill();
+              ctx.fillStyle = '#c9ced9'; ctx.fillRect(4, 14, 18, 7); ctx.fillStyle = '#8fd0ff'; ctx.fillRect(18, 15, 4, 5);
+            }
+            ctx.restore();
+          }
         }
-      }, 320);
+      }, 340);
     }
   }
   function drawImprobable() {
@@ -3785,11 +4029,22 @@
         // Belt asteroids spin about their middle; elsewhere they just rock
         if (p.turn) { ctx.translate(0, 18); ctx.rotate(p.spin + clock * p.turn); ctx.translate(0, -18); }
         else ctx.rotate(Math.sin(clock * 0.5 + p.spin) * 0.05);
-        ctx.fillStyle = '#7b7280';
+        const [cb, cd, cl] = p.col || ['#7b7280', '#5d5563', '#a79fae'];
+        ctx.fillStyle = cb;
         ctx.beginPath();
         ctx.moveTo(-w / 2, 12); ctx.lineTo(-w / 3, 0); ctx.lineTo(w / 4, -2); ctx.lineTo(w / 2, 10);
         ctx.lineTo(w / 3, 34); ctx.lineTo(-w / 5, 40); ctx.closePath(); ctx.fill();
-        px(-12, 10, 10, 8, '#5d5563'); px(10, 18, 8, 6, '#5d5563'); px(-w / 3, 0, w * 0.55, 3, '#a79fae');
+        px(-12, 10, 10, 8, cd); px(10, 18, 8, 6, cd); px(-w / 3, 0, w * 0.55, 3, cl);
+        // Metal asteroids glint as they turn; icy ones shine
+        if (p.metal && Math.sin(clock * 2 + p.spin * 5) > 0.92) { px(w / 6, 6, 3, 10, '#ffffff'); px(w / 6 - 4, 10, 11, 3, '#ffffff'); }
+        if (p.ice) { ctx.fillStyle = 'rgba(200,240,255,0.35)'; ctx.beginPath(); ctx.arc(0, 18, w * 0.45, 0, TAU); ctx.fill(); }
+        if (p.crumble) {
+          // Cracked right through: it won't hold together for long
+          const shake = p.breakAt ? (Math.random() - 0.5) * 3 : 0;
+          ctx.strokeStyle = '#ffab3d'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(-w / 4 + shake, 2); ctx.lineTo(-w / 10, 14); ctx.lineTo(-w / 6, 24); ctx.lineTo(0, 36);
+          ctx.moveTo(w / 5, 4); ctx.lineTo(w / 8, 16); ctx.lineTo(w / 4, 26); ctx.stroke();
+        }
       } else if (L2_PLATS[p.type]) {
         L2_PLATS[p.type](p, w, sq);
       } else if (p.dest) {
@@ -4029,13 +4284,14 @@
     drawCraters();
     if (level === 3) drawCaves();
     for (const p of world.plats) {
+      if (p.broken) continue;
       if (ghost(p)) ctx.globalAlpha = 0.18;
       if (p.ride) drawRide(p);
       drawPlatform(p);
       ctx.globalAlpha = 1;
     }
     if (level >= 2) drawHazards();
-    if (level === 3) { drawBeings(); drawCrash(); drawPebbles(); }
+    if (level === 3) { drawBeings(); drawCrash(); drawPebbles(); drawDrones(); drawSnakesLadders(); }
     for (const p of world.plats) {
       if (mode !== 'checkpoint' || !p.main || !CHECKPOINTS.has(p.tier)) continue;
       if (level >= 2 && p.route !== (route || (level === 3 ? p.route : 'mars'))) continue;
