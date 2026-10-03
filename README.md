@@ -147,10 +147,11 @@ button that drops you onto the safe rock at the start of the belt.
   Olympus Mons, the three Tharsis Montes and Elysium Mons, plus the rift of
   Valles Marineris. Phobos races across the sky the "wrong" way; Deimos drifts.
   Earth hangs in the sky as a blue evening star with the Moon beside it.
-- **The saucer field.** Big-brained Martians in glass bubble helmets, with
-  bug eyes, toothy grins and ray guns, hop one by one into their flying
-  saucers, lift off together and fly across the sky in convoy towards Earth.
-  Then they're back on the field, ready to go again.
+- **The saucer field.** Nine flying saucers, and big-brained Martians in glass
+  bubble helmets, with bug eyes, toothy grins and ray guns. When you first
+  come near (or after a while) they hop one by one into their saucers, lift
+  off together and fly off in convoy towards Earth, getting smaller until
+  they sink behind the far horizon. Once per trip.
 - **Four trampolines, four routes.** A colour-coded trampoline sits a quarter
   of the way round Mars from the next, one for each big world in the belt:
   Ceres, Vesta, Pallas and Hygiea. The one you bounce from picks your route
@@ -159,9 +160,8 @@ button that drops you onto the safe rock at the start of the belt.
   calm to Ceres, narrow with mining lasers to Vesta, slanting to Pallas (the
   tilted one), and dark, gappy and full of rogue asteroids to Hygiea.
 - **Robots on Mars.** Perseverance and Curiosity drive about, Ingenuity hovers,
-  and InSight, Zhurong, Opportunity, Spirit (stuck in the sand), Sojourner and
-  Viking 1 are where they stopped. Walk past one to hear its story. There's
-  also the Face on Mars, and a greenhouse full of potatoes.
+  and Zhurong sits where it went to sleep. Walk past one to hear its story.
+  There's also the Face on Mars, and a greenhouse full of potatoes.
 - **The air.** Mars's first bouncy layers are thin water-ice clouds and a dust
   storm. Fall back towards it and you come in as a fireball and hit the
   ground in a red KABOOM.
@@ -171,18 +171,22 @@ button that drops you onto the safe rock at the start of the belt.
   where a being of light hums five notes and gives you a force field (it takes
   five hits from rogue asteroids; geoms charge it back up). It appears again
   at the belter outpost to top you up.
-- **The asteroid belt.** From the safe rock on, gravity fades layer by layer,
-  so it gets floatier all the way up. The belt is a long maze: each layer is a
-  row of asteroids of all sizes to bounce up on, with bumper asteroids
-  floating above some of them that knock you sideways or back down, pinball
-  style, so you find your way up through the gaps. Glowing pop bumpers kick
-  you off faster for points. Now and then a rogue asteroid tumbles across, and
-  asteroids drift past in the background (and the odd huge one right in
-  front of you). Checkpoints carry on through the belt; in Uber Tramp any miss
-  is back to Mars (as a fireball, never game over).
-- **The routes differ.** Ceres has the widest maze (five across), Vesta the
-  narrowest and most blocked, with mining lasers, Pallas leans over like its
-  tilted path, and Hygiea is dark with more rogue asteroids.
+- **The asteroid belt.** From the safe rock on there's hardly any gravity, and
+  it fades further the higher you go: nothing pulls you back to Mars. The belt
+  is a long, wide maze of spinning asteroids. Each layer is a floor of
+  asteroids, much wider than the screen, under a ceiling of bumper rocks with
+  one opening, and the openings are far apart: bounce along each floor to its
+  opening, then up and across the next (the arrow points the way).
+- **Wrong turns.** Go out past the side of the maze and you float off into
+  space. Steer back in quickly, or wait for a passing ship on an Infinite
+  Improbability Drive to pick you up: in Checkpoint mode it drops you back on
+  the floor you left, in Uber Tramp back on Mars (never game over).
+- **In the maze** glowing pop bumpers kick you off faster for points, now and
+  then a rogue asteroid tumbles across, and asteroids drift past in the
+  background (and the odd huge one right in front of you).
+- **The routes differ.** Ceres has the widest maze (eleven across), Vesta the
+  narrowest (eight), with mining lasers, Pallas leans over like its tilted
+  path, and Hygiea is dark with more rogue asteroids.
 - **Sci-fi nods along the way:** mining rigs and claim flags, mining lasers
   fired by drones, an ice hauler to land on for an ice shield, a belter
   outpost with a spinning ring, and a Kirkwood gap.
