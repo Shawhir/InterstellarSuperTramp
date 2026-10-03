@@ -171,27 +171,30 @@ button that drops you onto the safe rock at the start of the belt.
   where a being of light hums five notes and gives you a force field (it takes
   five hits from rogue asteroids; geoms charge it back up). It appears again
   at the belter outpost to top you up.
-- **The asteroid belt.** From the safe rock on there's hardly any gravity, and
-  it fades further the higher you go: nothing pulls you back to Mars. The belt
-  is a long, wide maze of spinning asteroids. Each layer is a floor of
-  asteroids, much wider than the screen, under a ceiling of bumper rocks with
-  one opening, and the openings are far apart: bounce along each floor to its
-  opening, then up and across the next (the arrow points the way).
-- **Wrong turns.** Go out past the side of the maze and you float off into
-  space. Steer back in quickly, or wait for a passing ship on an Infinite
-  Improbability Drive to pick you up: in Checkpoint mode it drops you back on
-  the floor you left, in Uber Tramp back on Mars (never game over).
-- **In the maze** glowing pop bumpers kick you off faster for points, now and
-  then a rogue asteroid tumbles across, and asteroids drift past in the
-  background (and the odd huge one right in front of you).
-- **The routes differ.** Ceres has the widest maze (eleven across), Vesta the
-  narrowest (eight), with mining lasers, Pallas leans over like its tilted
-  path, and Hygiea is dark with more rogue asteroids.
+- **The asteroid belt.** Above the safe rocks the belt is a ring right round
+  Mars. There's hardly any gravity, and it fades further the higher you go:
+  nothing pulls you back to Mars. Asteroids of all sizes, all spinning, are
+  scattered at random through its whole depth (no walls: find your own way
+  up), and the four worlds sit among them, a little way round from the top of
+  each route's climb. An arrow at the edge of the screen points round to your
+  world; touch any of the four to land.
+- **Pinball.** Some asteroids are neon bumpers (glowing rims, chasing lights)
+  that fling you off faster than you came in, and there are red and yellow
+  pop bumpers too.
+- **Too far.** Float out past the top of the ring and you drift off into
+  space, until a passing ship on an Infinite Improbability Drive picks you up:
+  in Checkpoint mode it drops you back where you were, in Uber Tramp back on
+  Mars (never game over).
+- **Hazards, now and then.** A rogue asteroid tumbles across, and every so
+  often two asteroids collide nearby (a warning first): the blast of debris
+  shoves you the other way. Real asteroid families are the pieces of old
+  collisions.
+- **A light freighter and a space slug.** Partway up each route is a huge
+  asteroid with a cave in it. Every so often a battered light freighter bolts
+  out of the cave, with a giant space slug lunging out after it.
 - **Sci-fi nods along the way:** mining rigs and claim flags, mining lasers
   fired by drones, an ice hauler to land on for an ice shield, a belter
   outpost with a spinning ring, and a Kirkwood gap.
-- **Four worlds to finish.** Each maze has its world at the top in the
-  middle: touch it to land.
 - **Ambience.** In the belt the music changes to its own pulsing groove with
   pinball bleeps, and asteroids drift past in three layers of distance,
   lit by the Sun and glinting now and then, with dust in between. Only Ceres is officially a dwarf planet in the belt (Hygiea may join
