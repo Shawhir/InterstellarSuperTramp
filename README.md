@@ -226,6 +226,32 @@ button that drops you onto the safe rock at the start of the belt.
 
 A run straight from Earth to the belt goes on the scoreboard as one run.
 
+## Level 4: Venus to Mercury
+
+Land on Venus at the end of level 2 and you can carry straight on (score
+and all) towards the Sun, or start here from the title screen.
+
+- **Cloud city.** You start on the cloud tops of Venus, 50 km up, among
+  floating domes, balloons, solar panels and an airship named for NASA's
+  HAVOC study. Below, Venus is shown in cross-section: the clouds, the
+  scorching 465°C air, the crust with its lava, the mantle and the iron core.
+- **Solar flares are the main obstacle.** Every 7 to 17 seconds, and more
+  often the closer you get to the Sun, a flare is announced with a countdown.
+  While it counts down, blue strips show the shadow each platform casts away
+  from the Sun. Be in one when it hits (or standing on something) and you get
+  SHELTERED, worth 500. Caught in the open and you're FRIED: the multiplier
+  resets and the blast knocks you back down.
+- **Coronal mass ejections.** Every fourth storm past halfway is a CME: a
+  longer countdown and a swelling wall of plasma. Shelter is worth 2,000, but
+  if it catches you, it hurls you a long way down.
+- **Sunshades.** White-topped sunshades, like Parker Solar Probe's heat
+  shield, give the widest shade. Radiation beams and the solar wind return
+  from level 2.
+- **The Sun grows** as you climb, with prominences on its edge that writhe
+  harder before a flare. Mercury, grey with its Caloris Basin, glides in as
+  the landing. Facts along the way cover Parker Solar Probe, BepiColombo,
+  MESSENGER's polar ice, and the extremes of Mercury's days and nights.
+
 ## Online scoreboard
 
 The scoreboard lists the highest scores reaching the Moon for each mode (ties go to the faster run), best run per name.

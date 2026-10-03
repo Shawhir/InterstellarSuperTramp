@@ -143,12 +143,33 @@
     pallas: { name: 'Pallas', pad: '#6dd3ff', kind: 'THE TILTED ONE', padA: 0.55 - Math.PI / 2, half: 290, cols: 10, rogue: 1, gaps: 0.6, lasers: false, tilt: 70, way: 'A passage that slants, like Pallas\'s tilted path', r: 64, body: '#7f8a94', dark: '#5f6971', note: 'Pallas, 512 km across, travels on a steeply tilted path, and its surface is pitted all over like a golf ball.' },
     hygiea: { name: 'Hygiea', pad: '#b58cff', kind: 'THE ROUNDEST', padA: 0.55 + Math.PI, half: 280, cols: 9, rogue: 1.6, gaps: 0.95, lasers: true, dark: true, way: 'A dark passage, full of gaps and rogue asteroids', r: 58, body: '#5d5a5e', dark: '#444146', note: 'Hygiea, about 430 km across, is almost perfectly round. If it gets the title, it will be the smallest dwarf planet.' },
   };
-  let level = 1;      // 1: Earth to the Moon. 2: the Moon to Mars or Venus. 3: Mars to the belt
+  // ---- Level 4: Venus to Mercury ------------------------------------------------
+  // From the floating city in Venus's clouds, sunward to Mercury. The Sun grows
+  // huge above you, and solar flares are the main danger: when one's coming,
+  // every platform casts a shadow away from the Sun. Get in one, or get fried.
+  // Now and then a coronal mass ejection: a far bigger blast.
+  const L4_TIERS = [
+    { km: 0, type: 'pad', layer: 'Cloud city', g: 0.8 },
+    { km: 20, type: 'cloudv', layer: 'Venus clouds', g: 0.8, note: "Venus's clouds are droplets of sulfuric acid, wrapped so thickly round the planet that its surface is always hidden." },
+    { km: 45, type: 'cloudv', layer: 'Venus clouds', g: 0.8, note: 'Venus spins so slowly that one day there, sunrise to sunrise, lasts 117 Earth days.' },
+    { km: 1000, type: 'rocket', layer: 'Leaving Venus', g: 0.7, note: 'Venus has no moon at all. Neither does Mercury.' },
+    { km: 2000000, type: 'shade', layer: 'Sunward', g: 0.6, note: 'Heading for the Sun. Out here solar flares are fierce: when one is coming, get in the shadow of something. Sunshades like this one are best.' },
+    { km: 8000000, type: 'asteroid', layer: 'Sunward', g: 0.6, wind: 1.3, fact: { kind: 'probe', text: "NASA's Parker Solar Probe swings past Venus again and again to get closer to the Sun. In 2024 it flew 6.1 million km from the Sun's surface at about 690,000 km/h: the fastest thing humans have made." } },
+    { km: 15000000, type: 'shade', layer: 'Solar storm', g: 0.55, rad: 1, note: 'A big solar flare can release as much energy as billions of nuclear bombs, in just a few minutes.' },
+    { km: 22000000, type: 'asteroid', layer: 'Solar storm', g: 0.55, wind: 1.5 },
+    { km: 29000000, type: 'rocket', layer: 'Solar storm', g: 0.55, rad: 1, note: 'A coronal mass ejection hurls billions of tonnes of the Sun\'s plasma out into space. When one is coming, take cover!' },
+    { km: 35000000, type: 'shade', layer: 'Solar storm', g: 0.5, wind: 1.5 },
+    { km: 41000000, type: 'asteroid', layer: 'Mercury approach', g: 0.45, fact: { kind: 'probe', text: 'BepiColombo, a European and Japanese mission, is due to go into orbit round Mercury in late 2026, after flying past Earth once, Venus twice and Mercury six times.' } },
+    { km: 46000000, type: 'shade', layer: 'Mercury approach', g: 0.45, rad: 1, note: "NASA's MESSENGER orbited Mercury from 2011 to 2015 and found water ice hidden in craters at its poles, where sunlight never reaches." },
+    { km: 49000000, type: 'asteroid', layer: 'Mercury approach', g: 0.4 },
+    { km: 50000000, type: 'mercury', layer: 'Mercury' },
+  ];
+  let level = 1;      // 1: Earth to the Moon. 2: the Moon to Mars or Venus. 3: Mars to the belt. 4: Venus to Mercury
   let route = null;   // the way you're going, picked by the launch pad you use: level 2 'mars' or 'venus', level 3 one of the belt worlds
   let landedOn = null; // level 3: the belt world you landed on
   let aimFor = null;   // level 3: the belt world picked by the trampoline you bounced from
   function useTiers() {
-    TIERS = level === 3 ? L3_TIERS : level === 2 ? L2_ROUTES[route || 'mars'] : L1_TIERS;
+    TIERS = level === 4 ? L4_TIERS : level === 3 ? L3_TIERS : level === 2 ? L2_ROUTES[route || 'mars'] : L1_TIERS;
     TOP = TIERS.length - 1;
     CHECKPOINTS = checkpointsFor(TIERS);
   }
@@ -161,7 +182,7 @@
   }
   const gravAt = (k) => (level >= 2 ? TIERS[Math.max(0, Math.min(TOP, k))].g || 0.6 : 1);
   const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220,
-    pad: 80, haven: 180, rubble: 104, ufo: 112, refinery: 230, rocket: 116, kamo: 84, car: 150, comet: 140, phobos: 110, deimos: 80, cloudv: 140, mars: 220, venus: 220,
+    pad: 80, haven: 180, shade: 150, mercury: 220, rubble: 104, ufo: 112, refinery: 230, rocket: 116, kamo: 84, car: 150, comet: 140, phobos: 110, deimos: 80, cloudv: 140, mars: 220, venus: 220,
     cloudm: 140, miner: 120, hauler: 160, outpost: 150, ceres: 160, vesta: 110, pallas: 106, hygiea: 96 };
   const MOON_R = 110; // the landing Moon's radius; its top is the last bouncy surface
   const tierR = (k) => R0 + 30 + k * TIER_GAP;
@@ -183,7 +204,7 @@
   const speedFor = (k) => {
     // Level 2 starts a bit quicker and ends quicker still; low gravity keeps it floaty
     // Level 3 ends hardest of all; the belt's weak gravity keeps it floaty
-    const [a, b] = level === 3 ? [1.15, 2.25] : level === 2 ? [1.12, 2.1] : [HARD_START, HARD_END];
+    const [a, b] = level === 4 ? [1.15, 2.2] : level === 3 ? [1.15, 2.25] : level === 2 ? [1.12, 2.1] : [HARD_START, HARD_END];
     return a * Math.pow(b / a, clamp(k, 0, TOP - 1) / (TOP - 1));
   };
   const bounceFor = (k) => speedFor(k) * Math.sqrt(2 * G * gravAt(k) * (tierR(k + 1) - tierR(k) + OVERSHOOT));
@@ -254,6 +275,7 @@
   let world;
 
   function buildWorld(seed) {
+    if (level === 4) return buildWorld4(seed);
     if (level === 3) return buildWorld3(seed);
     if (level === 2) return buildWorld2(seed);
     const rnd = mulberry32(seed);
@@ -647,6 +669,58 @@
     return { seed, plats, stars, decor, crust, swirls, sky, ranges: [], scape, issPlat: null, beams, dust, rocks, back, far, motes, lanes, gaps, pops, maze, caves, drones, grabbers, lifts };
   }
 
+  function buildWorld4(seed) {
+    const rnd = mulberry32(seed);
+    const plats = [], stars = [], beams = [], dust = [];
+    const T = L4_TIERS;
+    const SWAY = new Set(['rocket', 'asteroid', 'shade', 'cloudv']);
+    const mk = (tier, a, type = T[tier].type) => {
+      const g = T[tier].g || 0.6;
+      const p = { tier, a, a0: a, type, g, R: tierR(tier), w: WIDTH[type], bounce: speedFor(tier) * Math.sqrt(2 * G * g * (TIER_GAP + OVERSHOOT)), squash: 0, jig: 9, hit: 0, sway: 0, freq: 0, phase: 0, spin: rnd() * TAU, dir: rnd() < 0.5 ? -1 : 1 };
+      if (SWAY.has(type) && tier > 0) { p.sway = (25 + rnd() * 35) / p.R; p.freq = 0.3 + rnd() * 0.3; p.phase = rnd() * TAU; }
+      plats.push(p);
+      return p;
+    };
+    mk(0, 0.55).main = true;
+    mk(0, -0.7);
+    let prevA = 0.55;
+    for (let k = 1; k <= TOP; k++) {
+      const R = tierR(k), t = T[k];
+      if (k === TOP) { mk(k, prevA + (170 * (rnd() < 0.5 ? -1 : 1)) / R).dest = true; break; }
+      const a = prevA + ((110 + (rnd() * 200) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.75 ? 1 : -1)) / R;
+      const mp = mk(k, a);
+      mp.main = true;
+      stars.push({ a: prevA + (a - prevA) * 0.62, R: R + 50, taken: false });
+      if (t.type === 'rocket') for (let i = 0; i < 3; i++) stars.push({ a: a + 24 / R, R: R + 80 + i * 36, taken: false, ring: true });
+      if (t.fact) stars.push({ a: a - 110 / R, R: R + 150, taken: false, big: true, fact: t.fact });
+      if (t.rad) for (const side of [-1, 1]) beams.push({ a: a + (side * (120 + rnd() * 70)) / R, tier: k, period: 3.4 + rnd() * 1.4, phase: rnd() * 4, route: null });
+      // Spare platforms off to the side: often sunshades, for cover
+      for (let i = 0; i < (k < 5 ? 2 : 3); i++) {
+        const ea = a + ((260 + rnd() * 420) * (i % 2 ? -1 : 1)) / R;
+        mk(k, ea, k <= 2 ? 'cloudv' : rnd() < 0.45 ? 'shade' : 'asteroid');
+        if (rnd() < 0.5) stars.push({ a: ea, R: R + 150, taken: false });
+      }
+      prevA = a;
+    }
+    stars.forEach((st, i) => { st.id = i; });
+    // On the cloud tops: the floating city, balloons, an airship, solar panels
+    const decor = [];
+    for (let i = 0; i < 26; i++) { const a = rnd() * TAU - Math.PI; if (Math.abs(a) > 0.3) decor.push({ a, kind: 'puff', size: 0.6 + rnd() * 0.9 }); }
+    decor.push(
+      { a: 0.3, kind: 'sign', text: 'MERCURY >', col: '#ffd23f' },
+      { a: -0.2, kind: 'citydome', size: 1.2 }, { a: -0.42, kind: 'citydome', size: 0.8 }, { a: 1.1, kind: 'citydome', size: 1 },
+      { a: 0.85, kind: 'balloon' }, { a: -1.1, kind: 'balloon' }, { a: 1.6, kind: 'airship' },
+      { a: -1.5, kind: 'vpanels' }, { a: 2.2, kind: 'vpanels' }, { a: 2.7, kind: 'citydome', size: 1.1 },
+    );
+    const crust = [];
+    for (let i = 0; i < 60; i++) crust.push({ a: rnd() * TAU, rf: 0.8 + rnd() * 0.06, kind: rnd() < 0.5 ? 'lava' : 'rock', hue: Math.floor(rnd() * 3) });
+    const swirls = [];
+    for (let i = 0; i < 22; i++) swirls.push({ a: rnd() * TAU, rf: 0.9 + rnd() * 0.08, len: 0.2 + rnd() * 0.4 });
+    const sky = [];
+    for (let i = 0; i < 240; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.12 ? 2 : 1, tw: rnd() * TAU });
+    return { seed, plats, stars, decor, crust, swirls, sky, ranges: [], issPlat: null, beams, dust };
+  }
+
   // ---- State ----------------------------------------------------------------
   const player = { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1 };
   let theta = 0;
@@ -764,7 +838,7 @@
   // On level 2 only the stars along your route count (the other route's are out of reach)
   // Once you've picked a route, the other one is a ghost: see-through and not solid
   const ghost = (q) => level >= 2 && route && q.route && q.route !== route && q.tier > 0;
-  const routeStars = () => (level >= 2 ? world.stars.filter((s) => s.route === (route || (level === 3 ? 'ceres' : 'mars')) || (level === 3 && !s.route)) : world.stars);
+  const routeStars = () => (level === 4 ? world.stars : level >= 2 ? world.stars.filter((s) => s.route === (route || (level === 3 ? 'ceres' : 'mars')) || (level === 3 && !s.route)) : world.stars);
   function updateStarsHud(popIt) {
     const list = routeStars();
     const got = list.filter((s) => s.taken).length;
@@ -795,11 +869,11 @@
     const f = (r - tierR(0)) / TIER_GAP;
     return clamp(f, 0, TOP);
   }
-  const destName = () => (level === 3 ? (landedOn ? landedOn.name : 'the asteroid belt') : level === 2 ? (route === 'venus' ? 'Venus' : 'Mars') : 'the Moon');
+  const destName = () => (level === 4 ? 'Mercury' : level === 3 ? (landedOn ? landedOn.name : 'the asteroid belt') : level === 2 ? (route === 'venus' ? 'Venus' : 'Mars') : 'the Moon');
   function layerName() {
-    if (player.onGround) return lastTier === TOP ? `On ${destName()}` : level === 3 ? 'On Mars' : level === 2 ? 'On the Moon' : 'On the ground';
+    if (player.onGround) return lastTier === TOP ? `On ${destName()}` : level === 4 ? 'Above Venus' : level === 3 ? 'On Mars' : level === 2 ? 'On the Moon' : 'On the ground';
     const k = Math.floor(tierFloat(player.r));
-    return k === 0 ? (level === 3 ? 'Jezero base' : level === 2 ? 'Moon base' : 'Troposphere') : TIERS[k].layer;
+    return k === 0 ? (level === 4 ? 'Cloud city' : level === 3 ? 'Jezero base' : level === 2 ? 'Moon base' : 'Troposphere') : TIERS[k].layer;
   }
 
   // ---- Targeting: which bouncy thing should we aim for? ---------------------
@@ -858,7 +932,7 @@
   }
   function land(p) {
     if (p === world.issPlat && !player.suit && p.ride.state === 'near') { dock(p); return; }
-    if (level >= 2 && p.tier === 0 && p.route !== route) chooseRoute(p.route);
+    if ((level === 2 || level === 3) && p.tier === 0 && p.route !== route) chooseRoute(p.route);
     const off = Math.abs(wrap(p.a + theta) * p.R);
     if (player.heat > 0.3) {
       // Put out by the landing: a hiss of steam
@@ -952,7 +1026,7 @@
         fx.flash = 0.35;
       }
       if (TIERS[p.tier].note) toast(TIERS[p.tier].note);
-      else if (p.tier === 0) toast(level === 3 ? "Boing! Mars's gravity is just over a third of Earth's. Follow the arrow up through the clouds." : level === 2 ? 'Boing! Low gravity: you float. Follow the arrow up to the rockets.' : 'Boing! Steer toward the arrow to reach the clouds.');
+      else if (p.tier === 0) toast(level === 4 ? 'Boing! Venus pulls almost as hard as Earth. Head up, sunward: watch for flare warnings and get in the shade.' : level === 3 ? "Boing! Mars's gravity is just over a third of Earth's. Follow the arrow up through the clouds." : level === 2 ? 'Boing! Low gravity: you float. Follow the arrow up to the rockets.' : 'Boing! Steer toward the arrow to reach the clouds.');
       if (TIERS[p.tier].visitor) fx.visitor = { kind: TIERS[p.tier].visitor, t: 0, told: false, dir: Math.random() < 0.5 ? -1 : 1 };
     }
     if (level === 3 && p.main && (p.tier === FLIP || p.type === 'outpost') && player.field < FIELD_MAX) meetBeing(p);
@@ -969,7 +1043,7 @@
   // A fireball hits the ground: boom, big shake, crater.
   function impact(h) {
     buzz([60, 40, 120]);
-    const a = -theta, mars = level === 3, moon = level === 2;
+    const a = -theta, mars = level === 3, moon = level === 2, venus = level === 4;
     sfx.boom(h);
     addShake(14 + h * 16);
     fx.flash = 0.45 + h * 0.3;
@@ -982,7 +1056,7 @@
     for (let i = 0; i < 16; i++) fx.puffs.push({ a, R: R0 + 4, vt: (Math.random() - 0.5) * 320, vr: 40 + Math.random() * 160, r: 8 + Math.random() * 12, t: 0, life: 1 + Math.random() * 0.8, nlc: false, smoke: true });
     fx.craters.push({ a, t: 0, size: 0.8 + h * 0.6, mars, moon });
     pop('KABOOM!', '#ffb23a', R0 + 120);
-    toast(moon ? "KABOOM! (Game physics: the real Moon has no air to burn up in, so things just smash into it. That's why it's covered in craters.) Find a launch pad." : mars ? "Mars has just enough air to set you on fire, and not enough to slow you down. Your score's safe: bounce back up from the launch field!" : 'Crash landing! Find a trampoline to get back up.', mars || moon ? 5.5 : 3.2);
+    toast(venus ? "KABOOM, into the clouds of Venus! Down at the surface it's 465°C, so lucky you landed up here. Bounce back up!" : moon ? "KABOOM! (Game physics: the real Moon has no air to burn up in, so things just smash into it. That's why it's covered in craters.) Find a launch pad." : mars ? "Mars has just enough air to set you on fire, and not enough to slow you down. Your score's safe: bounce back up from the launch field!" : 'Crash landing! Find a trampoline to get back up.', mars || moon ? 5.5 : 3.2);
   }
 
   // A hard landing on the Moon: no air, so no fire. Just a new crater.
@@ -1237,28 +1311,44 @@
   // Solar flares, on the sunward route to Venus where they're fiercest (out
   // in the asteroid belt they're about seven times weaker than at Earth).
   // A warning and countdown, then the blast: be under something when it hits.
+  // Is there something between you and the Sun (straight up, sunward)?
+  const SHADE_LEN = 330;
+  const sheltered = () => {
+    const above = (a, R, half) => Math.abs(wrap(a + theta)) * R < half && R > player.r + 40 && R < player.r + SHADE_LEN;
+    return player.onGround || world.plats.some((p) => !p.dest && !ghost(p) && above(p.a, p.R, p.w / 2 + 10)) || (world.rocks || []).some((q) => above(q.a, q.R, q.r + 10));
+  };
   function updateFlare(dt) {
-    fx.flareT = (fx.flareT ?? 12) - dt;
-    if (!fx.flare && fx.flareT <= 0 && level === 2 && route === 'venus' && lastTier >= 4 && lastTier < TOP && state === 'play') {
-      fx.flareT = 35 + Math.random() * 15;
-      fx.flare = { t: 0, hit: false };
-      banner('SOLAR FLARE!', 'GET UNDER SOMETHING');
-      toast('A solar flare is coming! This close to the Sun they\'re fierce, and there\'s no magnetic field to shield you: get under a rocket or an asteroid before it hits.', 4.5);
+    fx.flareT = (fx.flareT ?? (level === 4 ? 6 : 12)) - dt;
+    const venusRoute = level === 2 && route === 'venus' && lastTier >= 4;
+    const sunward = level === 4 && lastTier >= 3; // level 4: the main obstacle
+    if (!fx.flare && fx.flareT <= 0 && (venusRoute || sunward) && lastTier < TOP && state === 'play') {
+      // On level 4 they come faster the closer you get to the Sun, and every
+      // so often it's a coronal mass ejection: a far bigger blast
+      const near = level === 4 ? clamp((lastTier - 3) / (TOP - 4), 0, 1) : 0;
+      const cme = level === 4 && lastTier >= 6 && (fx.cmeCount = (fx.cmeCount || 0) + 1) % 4 === 0;
+      fx.flareT = level === 4 ? lerp(13, 7, near) + Math.random() * 4 : 35 + Math.random() * 15;
+      fx.flare = { t: 0, hit: false, cme, warn: cme ? 5 : FLARE_WARN };
+      banner(cme ? 'CORONAL MASS EJECTION!' : 'SOLAR FLARE!', 'GET IN THE SHADE');
+      if (cme) toast('A coronal mass ejection: a huge blast of the Sun\'s plasma. Get in the shade of something, fast!', 4.5);
+      else if (!fx.flareTold) { fx.flareTold = true; toast('A solar flare is coming! There\'s no magnetic field out here to shield you. Everything casts a shadow away from the Sun: get in one before it hits.', 5); }
       sfx.tier();
     }
     const f = fx.flare;
     if (!f) return;
     f.t += dt;
-    if (!f.hit && f.t >= FLARE_WARN) {
+    if (!f.hit && f.t >= f.warn) {
       f.hit = true;
-      const above = (a, R, half) => Math.abs(wrap(a + theta)) * R < half && R > player.r + 40 && R < player.r + 330;
-      const covered = player.onGround || world.plats.some((p) => !p.dest && !ghost(p) && above(p.a, p.R, p.w / 2 + 10)) || (world.rocks || []).some((q) => above(q.a, q.R, q.r + 10));
-      fx.flash = 0.7;
-      if (covered) { pop('SHELTERED!', '#52e07a', player.r + 120); addScore(500); sfx.perfect(); }
+      fx.flash = f.cme ? 0.95 : 0.7;
+      if (f.cme) addShake(14);
+      if (sheltered()) { pop('SHELTERED!', '#52e07a', player.r + 120); addScore(f.cme ? 2000 : 500); sfx.perfect(); }
       else if (player.shield > 0) { pop('SHIELDED!', '#8fd0ff', player.r + 120); sfx.perfect(); }
-      else { pop('FRIED!', '#ff5a4a', player.r + 120); loseMult(); sfx.thud(); }
+      else {
+        pop(f.cme ? 'BLASTED!' : 'FRIED!', '#ff5a4a', player.r + 120); loseMult(); sfx.thud(); buzz([40, 30, 80]);
+        // The blast pushes you away from the Sun: back down
+        if (level === 4) { player.vr = Math.min(player.vr, f.cme ? -900 : -420); if (f.cme) player.heat = 0.7; }
+      }
     }
-    if (f.t > FLARE_WARN + 1.6) fx.flare = null;
+    if (f.t > f.warn + 1.6) fx.flare = null;
   }
   function updateCrash(dt) {
     fx.crashT = (fx.crashT ?? 22) - dt;
@@ -1592,7 +1682,7 @@
   // tumbles slowly on the way up, and rights itself on the way down so it
   // still lands feet first. Space starts at the Kármán line on Earth, on the
   // Moon straight away (no air), and above Mars's thin sky.
-  const inSpace = () => (level === 1 ? player.r > tierR(9) : level === 2 ? true : player.r > tierR(3));
+  const inSpace = () => (level === 1 ? player.r > tierR(9) : level === 2 ? true : player.r > tierR(3)); // (levels 3 and 4: above the air)
   function updateTumble(dt) {
     if (player.onGround || player.inside) { player.spin = 0; return; }
     let s = player.spin || 0;
@@ -1637,7 +1727,7 @@
         player.walkT += dt * (Math.abs(player.vx) / 22);
         if (Math.floor(player.walkT) !== before && Math.floor(player.walkT) % 2 === 0) {
           sfx.step();
-          burst(-theta, R0, level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 2, 50);
+          burst(-theta, R0, level === 4 ? '#f2d98a' : level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 2, 50);
         }
       }
 
@@ -1647,7 +1737,7 @@
         player.apexR = player.r; player.lastPlat = null; player.lastH = 0;
         player.squash = -0.6;
         sfx.hop();
-        burst(-theta, R0, level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 5, 80);
+        burst(-theta, R0, level === 4 ? '#f2d98a' : level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 5, 80);
       }
       if (player.inside) {
         player.r = player.lastPlat.R + 14; player.vr = 0; player.vx = 0;
@@ -1709,12 +1799,12 @@
           player.r = R0; player.vr = 0; player.onGround = true; player.squash = 1; player.lost = false;
           if (player.heat > 0.3) impact(player.heat);
           else if (level === 2 && hard) moonCrash();
-          else if (lastTier >= 0) { toast(level === 3 ? 'Back on Mars, score and all. Bounce back up from the launch field!' : level === 2 ? 'Back on the Moon. Find a launch pad!' : 'Back on solid ground. Find a trampoline!'); sfx.thud(); addShake(hard ? 12 : 6); ring(-theta, R0, level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 1.4); }
+          else if (lastTier >= 0) { toast(level === 4 ? 'Back on the clouds of Venus, score and all. Bounce back up!' : level === 3 ? 'Back on Mars, score and all. Bounce back up from the launch field!' : level === 2 ? 'Back on the Moon. Find a launch pad!' : 'Back on solid ground. Find a trampoline!'); sfx.thud(); addShake(hard ? 12 : 6); ring(-theta, R0, level === 4 ? '#f2d98a' : level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 1.4); }
           if (level >= 2) { route = null; aimFor = null; updateStarsHud(); }
           player.heat = 0; fx.flames = [];
           lastTier = -1; fx.streak = 0; fx.whistled = false;
           player.lastPlat = null; player.lastH = 0;
-          burst(-theta, R0, level === 3 ? '#9a3b2a' : level === 2 ? '#8a8896' : '#8a5a3b', hard ? 18 : 8, hard ? 180 : 90);
+          burst(-theta, R0, level === 4 ? '#e6c46a' : level === 3 ? '#9a3b2a' : level === 2 ? '#8a8896' : '#8a5a3b', hard ? 18 : 8, hard ? 180 : 90);
         }
       }
 
@@ -1878,6 +1968,7 @@
   function px(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); }
 
   function drawSky() {
+    if (level === 4) { drawVenusSky(); return; }
     if (level === 3) { drawMarsSky(); return; }
     if (level === 2) { drawSpaceSky(); return; }
     const s = clamp((cam.r - R0) / (tierR(9) - R0), 0, 1);
@@ -1959,6 +2050,7 @@
     earth: { glow: '120,190,255', body: '#2f6fd0', spots: '#4fb34a' },
     mars: { glow: '255,140,100', body: '#c8553a', spots: '#9a3b2a' },
     venus: { glow: '255,230,160', body: '#efd9a0', spots: '#dcc07a' },
+    mercury: { glow: '220,215,210', body: '#a9a39c', spots: '#7f7973' },
   };
   function drawPlanet(type, x, y, r, alpha = 1, moons = 1) {
     const P = PLANET[type] || PLANET.moon;
@@ -1987,6 +2079,13 @@
     } else {
       const spots = type === 'mars' ? [[-0.3, 0.1, 0.3], [0.35, -0.15, 0.2], [0.1, 0.45, 0.22]] : [[-0.3, -0.2, 0.22], [0.35, 0.25, 0.15], [0.05, 0.5, 0.18], [-0.45, 0.35, 0.1], [0.4, -0.4, 0.09]];
       for (const [cxo, cyo, cr] of spots) { ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill(); }
+      if (type === 'mercury') {
+        // Caloris Basin: one of the biggest impact craters in the Solar System
+        ctx.strokeStyle = '#c9c3bb'; ctx.lineWidth = Math.max(1, r * 0.03);
+        ctx.beginPath(); ctx.arc(x + r * 0.3, y - r * 0.35, r * 0.3, 0, TAU); ctx.stroke();
+        ctx.fillStyle = '#d8d2ca';
+        for (const [cxo, cyo, cr] of [[-0.6, 0.0, 0.05], [0.2, 0.7, 0.04], [-0.2, -0.65, 0.045], [0.65, 0.3, 0.035]]) { ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill(); }
+      }
       if (type === 'mars') {
         ctx.fillStyle = '#f4f6fb'; ctx.beginPath(); ctx.ellipse(x, y - r * 0.92, r * 0.42, r * 0.16, 0, 0, TAU); ctx.fill();
         ctx.fillStyle = '#e07a52'; ctx.beginPath(); ctx.arc(x - r * 0.45, y - r * 0.3, r * 0.1, 0, TAU); ctx.fill(); // Olympus Mons
@@ -2045,6 +2144,46 @@
       ctx.fillText('VENUS', W * 0.36, H * 0.2 + 20); ctx.fillText('MARS', W * 0.62, H * 0.22 + 19);
       ctx.textAlign = 'start';
     }
+  }
+
+  // Level 4. Above Venus's clouds the sky is a hazy gold; it turns black as
+  // you climb, and the Sun gets bigger and fiercer all the way to Mercury
+  // (from Mercury it looks about three times as wide as it does from Earth)
+  function drawVenusSky() {
+    const tf = tierFloat(player.r), f = tf / TOP;
+    const air = clamp(1 - tf / 2.8, 0, 1);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, mix('#0b0a10', '#d9a94e', air)); g.addColorStop(1, mix('#22160e', '#f6dfa0', air));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1 - air;
+    for (const st of world.sky) {
+      let x = (st.x * W - theta * 200) % W; if (x < 0) x += W;
+      px(x, st.y * H, st.s, st.s, st.s > 1 ? '#fff3c4' : '#c9d7f0');
+    }
+    ctx.globalAlpha = 1;
+    const f2 = fx.flare, warn = f2 && !f2.hit ? 0.5 + 0.5 * Math.sin(clock * 12) : 0;
+    const sx = W * 0.5, sy = -H * 0.02, sr = 26 + f * 70;
+    const sg = ctx.createRadialGradient(sx, sy, sr * 0.6, sx, sy, sr * 4);
+    sg.addColorStop(0, `rgba(255,236,170,${0.75 + warn * 0.2})`); sg.addColorStop(1, 'rgba(255,200,120,0)');
+    ctx.fillStyle = sg; ctx.fillRect(sx - sr * 4, sy - sr * 4, sr * 8, sr * 8);
+    ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
+    // Loops of glowing plasma on the Sun's edge (prominences), wilder before a flare
+    ctx.strokeStyle = `rgba(255,150,60,${0.5 + warn * 0.4})`; ctx.lineWidth = 3 + warn * 3;
+    for (let i = 0; i < 6; i++) {
+      const ang = Math.PI * (0.15 + i * 0.14), lx = sx + Math.cos(ang) * sr, ly = sy + Math.sin(ang) * sr;
+      const h = sr * (0.18 + 0.08 * Math.sin(clock * 1.3 + i * 2) + warn * 0.2);
+      ctx.beginPath(); ctx.arc(lx + Math.cos(ang) * h * 0.5, ly + Math.sin(ang) * h * 0.5, h * 0.6, ang + Math.PI * 0.9, ang + Math.PI * 2.1); ctx.stroke();
+    }
+    if (tf > 0.5) {
+      // Earth: a blue dot far behind you
+      ctx.globalAlpha = clamp((tf - 0.5) / 1.5, 0, 1);
+      drawPlanet('earth', W * 0.86, H * 0.3, 5);
+      ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(238,241,255,0.75)';
+      ctx.fillText('EARTH', W * 0.86, H * 0.3 + 16); ctx.textAlign = 'start';
+      ctx.globalAlpha = 1;
+    }
+    drawSkyMoon();
   }
 
   // Level 3. Mars's thin air scatters the dust in it, so the daytime sky is a
@@ -3025,6 +3164,92 @@
     ctx.textAlign = 'start';
   }
 
+  // Venus in cross-section, under its cloud tops: the thick, scorching air,
+  // a rocky crust with lava, a mantle, and an iron core about Earth's
+  function drawVenusBody() {
+    if (cy - R0 > view.y1 + 60) return;
+    const disc = (r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill(); };
+    const air = ctx.createRadialGradient(cx, cy, R0 * 0.86, cx, cy, R0);
+    air.addColorStop(0, '#c9541e'); air.addColorStop(0.5, '#e09a3a'); air.addColorStop(1, '#f4d68a');
+    disc(R0, air);
+    const crustG = ctx.createRadialGradient(cx, cy, R0 * 0.78, cx, cy, R0 * 0.86);
+    crustG.addColorStop(0, '#4a2a1e'); crustG.addColorStop(1, '#7a4a30');
+    disc(R0 * 0.86, crustG);
+    const mantle = ctx.createRadialGradient(cx, cy, R0 * 0.45, cx, cy, R0 * 0.78);
+    mantle.addColorStop(0, '#e0782e'); mantle.addColorStop(1, '#8a3a1e');
+    disc(R0 * 0.78, mantle);
+    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, R0 * 0.45);
+    core.addColorStop(0, '#fff0a0'); core.addColorStop(1, '#ffa030');
+    disc(R0 * 0.45, core);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(255,240,190,0.35)';
+    for (const sw of world.swirls) {
+      // The cloud tops race round the planet in about 4 days, far faster than it spins
+      const a = sw.a + theta - Math.PI / 2 + clock * 0.02;
+      ctx.beginPath(); ctx.arc(cx, cy, sw.rf * R0, a, a + sw.len); ctx.stroke();
+    }
+    for (const c of world.crust) {
+      at(c.a + theta, c.rf * R0, () => {
+        if (c.kind === 'lava') { px(-4, -3, 8, 6, '#ff7a2a'); px(-2, -2, 4, 3, '#ffe08a'); }
+        else { px(-5, -3, 10, 6, ['#3a2018', '#5a3424', '#2e1a14'][c.hue]); px(-3, -5, 6, 2, '#7a4a30'); }
+      }, 30);
+    }
+    // The cloud deck you're bouncing on
+    ctx.strokeStyle = '#e8c878'; ctx.lineWidth = 12;
+    ctx.beginPath(); ctx.arc(cx, cy, R0 - 6, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = '#fbeec0'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(cx, cy, R0 - 1, 0, TAU); ctx.stroke();
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    for (const [t, rf] of [['CLOUDS', 0.97], ['465°C AIR', 0.91], ['CRUST', 0.82], ['MANTLE', 0.64], ['IRON CORE', 0.22]]) {
+      const x = cx - Math.sin(0.3) * rf * R0, y = cy - Math.cos(0.3) * rf * R0 + 3;
+      if (y > H + 10) continue;
+      ctx.fillStyle = 'rgba(20,10,20,0.55)'; ctx.fillText(t, x + 1, y + 1);
+      ctx.fillStyle = '#fff4dc'; ctx.fillText(t, x, y);
+    }
+    ctx.textAlign = 'start';
+  }
+  // The cloud city: domes held up by the air (a breathable-air balloon floats
+  // in Venus's thick CO2, an idea NASA studied as HAVOC), balloons, an airship
+  function drawVenusDecor() {
+    for (const d of world.decor) {
+      at(d.a + theta, R0 - 4, () => {
+        if (d.kind === 'puff') {
+          ctx.scale(d.size, d.size);
+          ctx.fillStyle = '#f7e6b0';
+          for (const [x, y, r] of [[-14, -4, 10], [0, -9, 13], [14, -4, 9]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+        } else if (d.kind === 'citydome') {
+          ctx.scale(d.size, d.size);
+          px(-40, -6, 80, 8, '#d6dce8'); px(-34, 2, 68, 5, '#9aa3b5');
+          ctx.fillStyle = 'rgba(191,232,255,0.55)'; ctx.beginPath(); ctx.arc(0, -6, 30, Math.PI, TAU); ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, -6, 30, Math.PI, TAU); ctx.stroke();
+          px(-16, -20, 8, 14, '#eef1f7'); px(-4, -28, 10, 22, '#f2e6d0'); px(10, -16, 9, 10, '#eef1f7');
+          px(-2, -24, 3, 3, '#ffd23f'); px(12, -13, 3, 3, '#ffd23f');
+          px(-1, -50, 2, 14, '#c9ced9'); px(1, -50, 10, 6, '#e0433b');
+        } else if (d.kind === 'balloon') {
+          const bob = Math.sin(clock * 1.2 + d.a * 3) * 4;
+          px(-1, -60 + bob, 2, 54, '#9aa3b5');
+          ctx.fillStyle = '#ff9a3a'; ctx.beginPath(); ctx.arc(0, -78 + bob, 18, 0, TAU); ctx.fill();
+          px(-6, -94 + bob, 5, 8, '#ffd08a');
+          px(-7, -8, 14, 8, '#d6dce8');
+        } else if (d.kind === 'airship') {
+          const y = -110 + Math.sin(clock * 0.8) * 6;
+          ctx.fillStyle = '#e6e4ec'; ctx.beginPath(); ctx.ellipse(0, y, 52, 16, 0, 0, TAU); ctx.fill();
+          px(-50, y - 2, 100, 3, '#c9ced9');
+          ctx.fillStyle = '#9aa3b5'; ctx.beginPath(); ctx.moveTo(-48, y); ctx.lineTo(-62, y - 14); ctx.lineTo(-62, y + 14); ctx.fill();
+          px(-12, y + 14, 24, 7, '#3b3b4f'); px(-8, y + 16, 4, 3, '#8fd0ff'); px(2, y + 16, 4, 3, '#8fd0ff');
+          ctx.font = '5px "Press Start 2P", monospace'; ctx.fillStyle = '#e0433b'; ctx.textAlign = 'center'; ctx.fillText('HAVOC', 0, y + 2); ctx.textAlign = 'start';
+        } else if (d.kind === 'vpanels') {
+          for (const x of [-30, 0, 30]) { px(x - 1, -14, 2, 14, '#9aa3b5'); px(x - 12, -22, 24, 9, PANEL); px(x - 12, -18, 24, 1, '#5a7ae0'); }
+        } else if (d.kind === 'sign') {
+          px(-1, -36, 3, 36, '#9aa3b5');
+          px(-40, -50, 80, 16, '#1b1530'); px(-38, -48, 76, 12, '#3b3b4f');
+          ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = d.col; ctx.fillText(d.text, 0, -39); ctx.textAlign = 'start';
+        }
+      }, 140);
+    }
+  }
+
   // Robots on Mars, old and new. The ones still working drive about.
   const WHITE = '#e8e4dc', GREY = '#9aa3b5', DARK = '#3b3b4f', PANEL = '#2b4fb8';
   function marsLabel(text, y) {
@@ -3175,6 +3400,7 @@
   }
 
   function drawDecor() {
+    if (level === 4) { drawVenusDecor(); return; }
     if (level === 3) { drawMarsDecor(); return; }
     if (level === 2) { drawMoonDecor(); return; }
     for (const d of world.decor) {
@@ -3255,6 +3481,15 @@
       px(-w / 4, 0, w / 2, 3, '#a39282');
     },
     deimos(p, w) { L2_PLATS.phobos(p, w); },
+    shade(p, w) {
+      // A sunshade: white on the sunny side, like Parker Solar Probe's heat
+      // shield, with a little gold-foil craft tucked in its shadow
+      px(-w / 2, 0, w, 6, '#f4f6fb'); px(-w / 2, 6, w, 5, '#2b2b3a'); px(-w / 2 + 4, 11, w - 8, 3, '#c9ced9');
+      px(-w / 2, 0, w, 2, '#ffffff');
+      px(-16, 14, 32, 18, '#d9a63a'); px(-16, 14, 32, 3, '#ffd23f'); px(-10, 20, 4, 8, '#b07a1a'); px(4, 22, 6, 6, '#b07a1a');
+      px(-36, 20, 20, 7, PANEL); px(16, 20, 20, 7, PANEL);
+      px(-1, 32, 2, 10, '#9aa3b5');
+    },
     cloudv(p, w) {
       const puffs = [[-w * 0.32, 18, 17], [-w * 0.1, 12, 22], [w * 0.14, 14, 20], [w * 0.34, 20, 15]];
       ctx.fillStyle = '#cdb06a';
@@ -3703,21 +3938,50 @@
   function drawFlare() {
     const f = fx.flare;
     if (!f) return;
-    if (f.t < FLARE_WARN) {
+    const [sx, sy] = level === 4 ? [W * 0.5, -H * 0.02] : [W * 0.14, H * 0.12];
+    if (f.t < f.warn) {
       const pulse = 0.12 + 0.1 * Math.sin(clock * 10);
-      const g = ctx.createRadialGradient(W * 0.14, H * 0.12, 10, W * 0.14, H * 0.12, Math.max(W, H));
+      const g = ctx.createRadialGradient(sx, sy, 10, sx, sy, Math.max(W, H));
       g.addColorStop(0, `rgba(255,200,80,${pulse + 0.2})`); g.addColorStop(1, 'rgba(255,140,40,0)');
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
       ctx.font = '22px "Press Start 2P", monospace'; ctx.textAlign = 'center';
-      ctx.fillStyle = '#1b1530'; ctx.fillText(String(Math.ceil(FLARE_WARN - f.t)), W / 2 + 2, H * 0.4 + 2);
-      ctx.fillStyle = '#ffd23f'; ctx.fillText(String(Math.ceil(FLARE_WARN - f.t)), W / 2, H * 0.4);
+      if (f.cme) {
+        // The cloud of plasma, swelling out from the Sun towards you
+        const k = f.t / f.warn, rr = k * k * H * 0.75;
+        ctx.strokeStyle = `rgba(255,90,60,${0.35 + 0.3 * k})`; ctx.lineWidth = 10 + k * 20;
+        ctx.beginPath(); ctx.arc(sx, sy, rr, 0, Math.PI); ctx.stroke();
+      }
+      const cy2 = level === 4 ? H * 0.68 : H * 0.4;
+      ctx.fillStyle = '#1b1530'; ctx.fillText(String(Math.ceil(f.warn - f.t)), W / 2 + 2, cy2 + 2);
+      ctx.fillStyle = f.cme ? '#ff5a4a' : '#ffd23f'; ctx.fillText(String(Math.ceil(f.warn - f.t)), W / 2, cy2);
       ctx.textAlign = 'start';
     } else {
-      const k = clamp((f.t - FLARE_WARN) / 1.6, 0, 1);
+      const k = clamp((f.t - f.warn) / 1.6, 0, 1);
       ctx.fillStyle = `rgba(255,236,190,${0.55 * (1 - k)})`; ctx.fillRect(0, 0, W, H);
       ctx.strokeStyle = `rgba(255,200,90,${0.6 * (1 - k)})`; ctx.lineWidth = 6;
-      for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.moveTo(W * 0.14, H * 0.12); ctx.lineTo(W * 0.14 + Math.cos(0.1 + i * 0.17) * W * 1.5, H * 0.12 + Math.sin(0.1 + i * 0.17) * W * 1.5); ctx.stroke(); }
+      for (let i = 0; i < 9; i++) { const ang = level === 4 ? 0.5 + i * 0.27 : 0.1 + i * 0.17; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(ang) * W * 1.5, sy + Math.sin(ang) * W * 1.5); ctx.stroke(); }
     }
+  }
+  // While a flare is on its way, show the shade each thing casts away from
+  // the Sun (straight down, towards Venus), so you can see where to hide
+  function drawShadows() {
+    const f = fx.flare;
+    if (!f || f.hit) return;
+    const a0 = 0.3 + 0.15 * Math.sin(clock * 6);
+    const cast = (a, R, half) => {
+      const s = a + theta;
+      if (Math.abs(wrap(s)) * R > W) return;
+      at(s, R, () => {
+        const len = SHADE_LEN - 40;
+        const g = ctx.createLinearGradient(0, 0, 0, len);
+        g.addColorStop(0, `rgba(110,200,255,${a0})`); g.addColorStop(1, 'rgba(110,200,255,0)');
+        ctx.fillStyle = g; ctx.fillRect(-half, 4, half * 2, len);
+        // Dashed edges, so the safe strip stands out against the glare
+        for (let y = 8; y < len; y += 16) { px(-half, y, 2, 8, `rgba(170,225,255,${a0 * 2 * (1 - y / len)})`); px(half - 2, y, 2, 8, `rgba(170,225,255,${a0 * 2 * (1 - y / len)})`); }
+      }, SHADE_LEN);
+    };
+    for (const p of world.plats) if (!p.dest && !ghost(p) && Math.abs(p.R - player.r) < 600) cast(p.a, p.R, p.w / 2 + 10);
+    for (const q of world.rocks || []) if (Math.abs(q.R - player.r) < 600) cast(q.a, q.R, q.r + 10);
   }
   function drawCrash() {
     const c = fx.crash;
@@ -4225,7 +4489,12 @@
     ctx.fillStyle = 'rgba(238,241,255,0.8)';
     if (level === 1) ctx.fillText('100 km', x - 10, yFor(9) + 4);
     ctx.textAlign = 'start';
-    if (level === 3) {
+    if (level === 4) {
+      // From Venus at the bottom to Mercury at the top
+      ctx.fillStyle = '#efd9a0'; ctx.beginPath(); ctx.arc(x, bottom + 10, 8, 0, TAU); ctx.fill();
+      px(x - 5, bottom + 7, 10, 2, '#dcc07a');
+      ctx.fillStyle = '#a9a39c'; ctx.beginPath(); ctx.arc(x, top - 10, 6, 0, TAU); ctx.fill();
+    } else if (level === 3) {
       // From Mars at the bottom to the four belt worlds at the top; a pink
       // tick marks where the view turns sideways
       ctx.fillStyle = '#c8553a'; ctx.beginPath(); ctx.arc(x, bottom + 10, 8, 0, TAU); ctx.fill();
@@ -4278,11 +4547,13 @@
     view = { x0: cx - cx / z, x1: cx + (W - cx) / z, y0: pivotY - pivotY / z, y1: pivotY + (H - pivotY) / z };
     if (fk > 0) { const half = Math.hypot(W, H) / z; view = { x0: cx - half, x1: cx + half, y0: anchorY - half, y1: anchorY + half }; }
     if (level === 3) drawConvoy(...EARTH_FROM_MARS(), clamp(1 - tierFloat(player.r) / 3.5, 0, 1), 'far');
-    if (level === 3) drawMarsScape(); else if (level === 2) drawPlains(); else drawMountains();
-    if (level === 3) drawMarsBody(); else if (level === 2) drawMoonBody(); else drawEarth();
+    if (level === 3) drawMarsScape(); else if (level === 2) drawPlains(); else if (level === 1) drawMountains();
+    if (level === 3) drawMarsBody(); else if (level === 2) drawMoonBody(); else if (level === 1) drawEarth();
+    if (level === 4) drawVenusBody();
     drawDecor();
     drawCraters();
     if (level === 3) drawCaves();
+    if (level === 4) drawShadows();
     for (const p of world.plats) {
       if (p.broken) continue;
       if (ghost(p)) ctx.globalAlpha = 0.18;
@@ -4294,7 +4565,7 @@
     if (level === 3) { drawBeings(); drawCrash(); drawPebbles(); drawDrones(); drawSnakesLadders(); }
     for (const p of world.plats) {
       if (mode !== 'checkpoint' || !p.main || !CHECKPOINTS.has(p.tier)) continue;
-      if (level >= 2 && p.route !== (route || (level === 3 ? p.route : 'mars'))) continue;
+      if ((level === 2 || level === 3) && p.route !== (route || (level === 3 ? p.route : 'mars'))) continue;
       at(p.a + theta, p.R, () => {
         const col = p.tier <= checkpoint ? '#52e07a' : 'rgba(238,241,255,0.8)';
         const x = -p.w / 2 + 4, wave = Math.sin(clock * 5 + p.tier) * 2;
@@ -4350,7 +4621,7 @@
     } else drawSpeedLines();
     if (level >= 2) { drawWind(); if (fk < 0.05) drawMeteorWarnings(); }
     if (level === 3) { drawForeground(); drawImprobable(); drawWorldPointer(); }
-    if (level === 2) drawFlare();
+    if (level === 2 || level === 4) drawFlare();
     // The saucers fly in front of the scenery, across the top of the sky
     if (level === 3) drawConvoy(...EARTH_FROM_MARS(), clamp(1 - tierFloat(player.r) / 3.5, 0, 1), 'near');
     drawBanner();
@@ -4629,7 +4900,10 @@
     $('title').hidden = true;
     $('won').hidden = true;
     document.body.classList.add('playing');
-    if (level === 3) {
+    if (level === 4) {
+      banner('VENUS', 'NEXT STOP: MERCURY');
+      toast('A floating city in the clouds of Venus, 50 km up, where the air is mild. Mercury is up there, past the Sun\'s fury: when a flare is coming, get in the shade of something!', 7);
+    } else if (level === 3) {
       banner('MARS', 'NEXT STOP: THE ASTEROID BELT');
       toast('Welcome to Mars. Behind you: Olympus Mons, the biggest volcano we know of, two and a half times as tall as Everest. To the right: a trampoline for each world in the belt. Pick one!', 7);
     } else if (level === 2) {
@@ -4643,7 +4917,8 @@
   }
   const L2_TIME_MEDALS = [[60, 'gold'], [90, 'silver'], [140, 'bronze']];
   const L3_TIME_MEDALS = [[90, 'gold'], [130, 'silver'], [190, 'bronze']];
-  const START_BODY = { 1: 'Earth', 2: 'the Moon', 3: 'Mars' };
+  const L4_TIME_MEDALS = [[80, 'gold'], [120, 'silver'], [180, 'bronze']];
+  const START_BODY = { 1: 'Earth', 2: 'the Moon', 3: 'Mars', 4: 'Venus' };
   function win() {
     buzz([30, 60, 30, 60, 90]);
     state = 'won';
@@ -4654,16 +4929,22 @@
     addShake(10);
     for (let i = 0; i < 5; i++) burst(-theta + (i - 2) * 0.004, player.r, ['#ffd23f', '#52e07a', '#e0433b', '#3f6fd8', '#ffffff'][i], 14, 300);
     sfx.win();
-    const timeBonus = Math.max(0, Math.round(([0, 180, 240, 300][level] - playTime) * 100));
-    const bonus = [0, 10000, 15000, 20000][level] + timeBonus;
+    const timeBonus = Math.max(0, Math.round(([0, 180, 240, 300, 300][level] - playTime) * 100));
+    const bonus = [0, 10000, 15000, 20000, 25000][level] + timeBonus;
     addScore(bonus);
     const list = routeStars();
     const got = list.filter((s) => s.taken).length, total = list.length;
-    const medals = level === 3 ? L3_TIME_MEDALS : level === 2 ? L2_TIME_MEDALS : TIME_MEDALS;
+    const medals = level === 4 ? L4_TIME_MEDALS : level === 3 ? L3_TIME_MEDALS : level === 2 ? L2_TIME_MEDALS : TIME_MEDALS;
     const tMedal = (medals.find(([limit]) => playTime <= limit) || [0, 'none'])[1], sMedal = starMedal(got, total);
     const R = rec();
     let newTime, best;
-    if (level === 3) {
+    if (level === 4) {
+      const L = R.l4 = R.l4 || { wins: 0, bestTime: null };
+      newTime = L.bestTime === null || playTime < L.bestTime;
+      L.wins++;
+      if (newTime) L.bestTime = playTime;
+      best = L;
+    } else if (level === 3) {
       const L = R.l3 = R.l3 || { wins: 0, bestTime: null, worlds: {} };
       newTime = L.bestTime === null || playTime < L.bestTime;
       L.wins++;
@@ -4711,16 +4992,19 @@
     $('won-score-new').hidden = !newScore;
     const facts = {
       Mars: 'The real trip takes 6 to 9 months, and Earth and Mars only line up for it every 26 months.',
+      Mercury: "Mercury is the smallest planet and the closest to the Sun. With almost no air to hold heat, its days reach 430°C and its nights drop to -180°C.",
       Venus: 'Venus is the hottest planet: 465°C under clouds of sulfuric acid. Good thing you stopped in the clouds.',
     };
     const seen = level === 3 ? Object.keys(best.worlds).length : 0;
     $('won-stats').textContent = `Includes a ${level >= 2 ? dest : 'Moon'} bonus of ${fmtScore(bonus)} x${mult}. `
       + (level === 3 ? `${landedOn.note} You've landed on ${seen} of the 4 big belt worlds.`
+        : level === 4 ? `${facts.Mercury} You outran the solar storms.`
         : level === 2 ? `${facts[dest]} For David Bowie, who looked up and made the rest of us look too.`
         : R.wins === 1 ? 'Your first trip to the Moon.' : newTime ? 'New best time!' : `Your best time is ${fmtTime(best.bestTime)}.`);
     $('to-l2').hidden = level !== 1;
     $('to-l3').hidden = !(level === 2 && route === 'mars');
-    $('again').textContent = level === 3 ? 'Start on Mars again' : level === 2 ? 'Start at the Moon again' : 'Bounce again';
+    $('to-l4').hidden = !(level === 2 && route === 'venus');
+    $('again').textContent = level === 4 ? 'Start on Venus again' : level === 3 ? 'Start on Mars again' : level === 2 ? 'Start at the Moon again' : 'Bounce again';
     renderBests();
     setTimeout(() => { $('won').hidden = false; }, 900);
   }
@@ -4884,6 +5168,7 @@
       parts.push(`Moon ${R.wins}/${R.runs}`);
       if (R.l2) for (const [k, n] of [['mars', 'Mars'], ['venus', 'Venus']]) if (R.l2[k] && R.l2[k].wins) parts.push(`${n} ✓`);
       if (R.l3 && R.l3.wins) parts.push(`Belt ${Object.keys(R.l3.worlds).length}/4`);
+      if (R.l4 && R.l4.wins) parts.push(`Mercury ${fmtTime(R.l4.bestTime)}`);
       el.innerHTML = parts.join(' · ');
     }
     // Level 2 opens up once you've reached the Moon in either mode
@@ -4900,6 +5185,8 @@
   $('l2-start').addEventListener('click', () => { jingle(); startGame(2); });
   $('to-l3').addEventListener('click', () => { jingle(); startGame(3, { score, mult, ...(lastWin || { time: 0, got: 0, total: 0, falls: 0 }) }); });
   $('l3-start').addEventListener('click', () => { jingle(); startGame(3); });
+  $('to-l4').addEventListener('click', () => { jingle(); startGame(4, { score, mult, ...(lastWin || { time: 0, got: 0, total: 0, falls: 0 }) }); });
+  $('l4-start').addEventListener('click', () => { jingle(); startGame(4); });
   $('belt-start').addEventListener('click', () => { jingle(); startGame(3); toBelt(); });
   // Straight to the asteroid belt: drop onto the safe rock at the turn, where
   // the being of light is waiting with your force field
