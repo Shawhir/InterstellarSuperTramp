@@ -556,7 +556,7 @@
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let shake = 0;
   let fx = { geoms: [], flames: [], craters: [], puffs: [], rings: [], pops: [], trail: [], trailT: 0, banner: null, flash: 0, streak: 0, whistled: false, shooting: [], shootT: 2, meteors: [], meteorT: 4, visitor: null, dedication: 0 };
-  const tilt = { on: false, axis: 0, zero: null, got: false };
+  const tilt = { on: false, axis: 0, zero: null, got: false, fb: 0, zeroFB: null };
   let score = 0;        // points this run, each award multiplied by mult
   let mult = 1;         // Geometry Wars-style multiplier: +1 per geom, back to x1 on a miss
   let checkpoint = 0;   // highest checkpoint layer reached this run
@@ -1147,7 +1147,7 @@
     } else if (state === 'play') {
       playTime += dt;
       const kdir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-      const dir = player.inside ? 0 : kdir !== 0 ? kdir : tilt.on ? tilt.axis : 0;
+      const dir = player.inside ? 0 : kdir !== 0 ? kdir : tilt.on ? (level === 3 && flipK > 0.5 ? tilt.fb : tilt.axis) : 0;
       if (Math.abs(dir) > 0.1) player.facing = Math.sign(dir);
       const sp = player.speed;
       const maxV = player.onGround ? WALK : AIR * Math.sqrt(sp);
@@ -1317,7 +1317,9 @@
     if (flipWant && !fx.flipShown && state === 'play') {
       fx.flipShown = true;
       banner('SIDEWAYS!', "JUPITER'S PULL");
-      toast(touch ? 'Jupiter swings you round: the belt is to the right now. Steer with ▲ ▼.' : 'Jupiter swings you round: the belt is to the right now. Steer with ↑ ↓ (or W S).', 5);
+      toast(!touch ? 'Jupiter swings you round: the belt is to the right now. Steer with ↑ ↓ (or W S).'
+        : tilt.on ? 'Jupiter swings you round: the belt is to the right now. Tip the phone forward to go up, back to go down.'
+        : 'Jupiter swings you round: the belt is to the right now. Steer with ▲ ▼.', 5);
       sfx.whoosh();
     }
     if ((flipK > 0.5) !== document.body.classList.contains('flipped')) setPadFlip(flipK > 0.5);
@@ -3728,17 +3730,32 @@
     if (angle === -90 || angle === 270) return -e.beta;
     return e.gamma;
   }
+  // Forward and back, for level 3 once the view has turned sideways: tip the
+  // top of the screen away from you to go up, towards you to go down, like
+  // rolling a marble across it
+  function tiltReadingFB(e) {
+    const angle = (screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0;
+    if (angle === 90) return e.gamma;
+    if (angle === -90 || angle === 270) return -e.gamma;
+    if (angle === 180) return -e.beta;
+    return e.beta;
+  }
+  const tiltAxis = (d, dead = 3, full = 18) => (Math.abs(d) < dead ? 0 : Math.sign(d) * clamp((Math.abs(d) - dead) / (full - dead), 0, 1));
   function onTilt(e) {
     if (e.gamma == null) return;
     tilt.got = true;
     const v = tiltReading(e);
     if (tilt.zero === null) tilt.zero = v;
-    const d = v - tilt.zero, dead = 3, full = 18;
-    tilt.axis = Math.abs(d) < dead ? 0 : Math.sign(d) * clamp((Math.abs(d) - dead) / (full - dead), 0, 1);
+    tilt.axis = tiltAxis(v - tilt.zero);
+    // The way you're holding the phone when the view turns counts as level
+    const fb = tiltReadingFB(e);
+    if (fb == null) return;
+    if (tilt.zeroFB === null) tilt.zeroFB = fb;
+    tilt.fb = tiltAxis(fb - tilt.zeroFB);
   }
   function stopTilt(msg) {
     window.removeEventListener('deviceorientation', onTilt);
-    tilt.on = false; tilt.axis = 0;
+    tilt.on = false; tilt.axis = 0; tilt.fb = 0;
     setToggle(hud.tilt, 'TILT', false);
     if (msg) toast(msg, 5);
   }
@@ -3755,7 +3772,7 @@
     tilt.on = true; tilt.zero = null; tilt.got = false;
     window.addEventListener('deviceorientation', onTilt);
     setToggle(hud.tilt, 'TILT', true);
-    toast('Tilt on. Hold the phone comfortably, then lean it left or right to steer.', 4);
+    toast(level === 3 && flipK > 0.5 ? 'Tilt on. Hold the phone comfortably, then tip it forward or back to steer.' : 'Tilt on. Hold the phone comfortably, then lean it left or right to steer.', 4);
     setTimeout(() => {
       if (tilt.on && !tilt.got) stopTilt("Tilt isn't available in this view. Open the game from its own web address to use it.");
     }, 1500);
@@ -3772,6 +3789,7 @@
   // The touch arrows turn with the view
   function setPadFlip(on) {
     document.body.classList.toggle('flipped', on);
+    if (on) { tilt.zeroFB = null; tilt.fb = 0; }
     for (const [key, a, b, la, lb] of [['left', '◀', '▲', 'Walk left', 'Steer up'], ['right', '▶', '▼', 'Walk right', 'Steer down']]) {
       const btn = document.querySelector(`.pad [data-key="${key}"]`);
       if (btn) { btn.textContent = on ? b : a; btn.setAttribute('aria-label', on ? lb : la); }

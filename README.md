@@ -152,7 +152,9 @@ level 3 from the title screen once you've reached Mars once.
   Dawn probe, with 3I/ATLAS flying by.
 - **The turn.** Halfway out, Jupiter's pull swings the view a quarter turn: from
   there it's a sideways bouncer, heading right, with Mars behind you on the
-  left. Steer with ↑ ↓ (or W S); on a phone the touch arrows turn into ▲ ▼.
+  left. Steer with ↑ ↓ (or W S); on a phone the touch arrows turn into ▲ ▼,
+  and tilt steering switches to tipping the phone forward (up) and back (down),
+  counting the way you're holding it at the turn as level.
 - **The being of light.** Waiting at the turn, it hums five notes and gives you
   a force field. With the field on, the drifting asteroids are pinball bumpers
   you bounce off; each bounce uses one of five charges, and geoms charge it
