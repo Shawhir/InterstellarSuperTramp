@@ -71,7 +71,9 @@ says so if that happens.
   as its gravity takes over. The next level's own world really is up there,
   upside down and getting closer, drawn alongside the one you're leaving. The
   view turns right over about you (you stay upright; home swings round
-  overhead and the sky becomes the new world's sky; nothing zooms), and you
+  overhead; nothing zooms). The sky turns with it at the same speed: the old
+  sky turns away while the new world's sky turns in, upside down to right way
+  up, with soft edges so no corners show. Then you
   fall feet first from high above the next level's ground. Where the world
   has air (Earth, Mars, Venus) you fall in through it: it glows in a cap
   under your feet and streams away above you, and slows you more and more
@@ -150,10 +152,13 @@ says so if that happens.
 Reach the Moon and you can carry straight on (your score comes with you), or
 start level 2 from the title screen once you've landed there once.
 
-- **The Moon base.** You start below a base drawn in a clean flat vector style,
-  standing as one group on a flat stretch of the distant horizon under a big
-  Earth: a rocket on its pad between two boosters, domes, a dish, a railing,
-  a tall twin tower and a lander hovering overhead. The Moon is shown in cross-section
+- **The Moon base.** You start below a base drawn in a clean flat vector style
+  under a big Earth, split across two parallax layers that slide past each
+  other: further back, a rocket on its pad between two boosters, small domes,
+  a dish and a railing; nearer, the big dome, a tall twin tower and a lander
+  hovering overhead. Behind the Moon's ground are four layers in all: far
+  lunar mountains lit along their tops (like the Apennines, up to 5 km high),
+  a cratered plain, then the two halves of the base. The Moon is shown in cross-section
   like Earth: crust with pale highland rock, polar ice, meteorite iron, orange
   volcanic glass and lava tubes; a cold mantle with moonquake cracks; a partly
   molten layer; and a small iron core. On the surface: Apollo 11's landing

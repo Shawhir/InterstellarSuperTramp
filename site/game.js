@@ -502,6 +502,7 @@
       return out;
     };
     const plains = [
+      { f: 0.16, sink: 0.5, top: 104, col: '#1e2a33', rx: [7, 10], craters: 2, peaks: true },
       { f: 0.3, sink: 0.6, top: 66, col: '#26343e', rx: [9, 14], craters: 5 },
       { f: 0.5, sink: 0.74, top: 42, col: '#2e3e49', rx: [13, 20], craters: 4 },
       { f: 0.72, sink: 0.87, top: 20, col: '#374955', rx: [17, 24], craters: 4 },
@@ -2196,11 +2197,11 @@
   function drawClimb() {
     const C = fx.climb, turn = climbTurn();
     const skyK = smooth(clamp((C.t - 0.3) / (CLIMB_T - 0.35), 0, 1));
-    // The sky stays put and slowly becomes the new world's; the worlds turn
-    // about the middle of the tramp, who stays put and upright
-    if (skyK < 1) drawSky();
-    if (skyK > 0) inState(C.G, () => { ctx.save(); ctx.globalAlpha = skyK; drawSky(); ctx.restore(); });
+    // Everything turns about the middle of the tramp, who stays put and
+    // upright: the worlds, and the sky with them (the old sky turning away,
+    // the new world's turning in, upside down to right way up)
     const px0 = W / 2, py0 = H * (cam.anchor || 0.5) - 24;
+    turnSkies(C, turn, skyK, px0, py0);
     const flip = () => { ctx.translate(px0, py0); ctx.rotate(Math.PI); ctx.translate(-px0, -py0); };
     ctx.save();
     ctx.translate(px0, py0); ctx.rotate(turn); ctx.translate(-px0, -py0);
@@ -2209,6 +2210,34 @@
     renderWorld();
     snapping = was; noSky = false;
     ctx.restore();
+  }
+  // The sky, turning: each sky is drawn, kept, and put back turned with soft
+  // edges, over an unturned copy that fills the corners
+  let skyA = null, skyB = null, feather = null;
+  const canvasLike = (c) => { c = c || document.createElement('canvas'); if (c.width !== canvas.width || c.height !== canvas.height) { c.width = canvas.width; c.height = canvas.height; c.made = false; } return c; };
+  function turnSkies(C, turn, skyK, px0, py0) {
+    skyA = canvasLike(skyA); skyB = canvasLike(skyB); feather = canvasLike(feather);
+    const keep = (buf) => { const b = buf.getContext('2d'); b.setTransform(1, 0, 0, 1, 0, 0); b.globalCompositeOperation = 'copy'; b.drawImage(canvas, 0, 0); b.globalCompositeOperation = 'source-over'; };
+    drawSky(); keep(skyA);
+    if (skyK > 0) { inState(C.G, () => drawSky()); keep(skyB); }
+    // Underneath, unturned
+    ctx.drawImage(skyA, 0, 0, W, H);
+    if (skyK > 0) { ctx.save(); ctx.globalAlpha = skyK; ctx.drawImage(skyB, 0, 0, W, H); ctx.restore(); }
+    if (turn < 0.002) return;
+    if (!feather.made) {
+      const f = feather.getContext('2d'), fw = feather.width, fh = feather.height, e = Math.min(fw, fh) * 0.22;
+      f.setTransform(1, 0, 0, 1, 0, 0); f.clearRect(0, 0, fw, fh); f.fillStyle = '#000'; f.fillRect(0, 0, fw, fh);
+      f.globalCompositeOperation = 'destination-out';
+      for (const [x0, y0, x1, y1, rx, ry, rw, rh] of [[0, 0, e, 0, 0, 0, e, fh], [fw, 0, fw - e, 0, fw - e, 0, e, fh], [0, 0, 0, e, 0, 0, fw, e], [0, fh, 0, fh - e, 0, fh - e, fw, e]]) {
+        const g = f.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+        f.fillStyle = g; f.fillRect(rx, ry, rw, rh);
+      }
+      f.globalCompositeOperation = 'source-over'; feather.made = true;
+    }
+    const soften = (buf) => { const b = buf.getContext('2d'); b.globalCompositeOperation = 'destination-in'; b.drawImage(feather, 0, 0); b.globalCompositeOperation = 'source-over'; };
+    const put = (buf, ang, a) => { ctx.save(); ctx.globalAlpha = a; ctx.translate(px0, py0); ctx.rotate(ang); ctx.translate(-px0, -py0); ctx.drawImage(buf, 0, 0, W, H); ctx.restore(); };
+    soften(skyA); put(skyA, turn, 1);
+    if (skyK > 0) { soften(skyB); put(skyB, turn - Math.PI, skyK); }
   }
   // The turn's done and you're falling towards the new world's ground: from
   // here on it's simply that level, already exactly as it was drawn
@@ -4650,7 +4679,21 @@
       const seen = (a, m = 0) => Math.abs(wrap(a + rot)) < reach + m / R0;
       ctx.fillStyle = L.col;
       ctx.beginPath(); ctx.arc(cx, my, R0 - 6 + L.top, 0, TAU); ctx.fill();
-      if (L === world.plains[1]) drawBaseGroup(P(rot, L.top), rot, L.col);
+      if (L.peaks) {
+        // Far off, the lunar mountains (like the Apennines, up to 5 km high),
+        // lit along their tops by the Sun
+        const hgt = (a) => Math.max(0, 22 + 26 * Math.sin(a * 23 + 1) + 16 * Math.sin(a * 57 + 2) + 9 * Math.sin(a * 131)) + 30 * Math.max(0, Math.sin(a * 7 + 0.5)) ** 3;
+        const p0 = -reach - 0.05, p1 = reach + 0.05, st = 0.006;
+        ctx.beginPath(); ctx.moveTo(...P(p0, 0));
+        for (let ph = p0; ph <= p1; ph += st) ctx.lineTo(...P(ph, L.top + hgt(ph - rot)));
+        ctx.lineTo(...P(p1, 0)); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = light(L.col, 0.18); ctx.lineWidth = 2; ctx.beginPath();
+        for (let ph = p0; ph <= p1; ph += st) ctx.lineTo(...P(ph, L.top + hgt(ph - rot)));
+        ctx.stroke();
+      }
+      // The base, split across two layers that slide past each other
+      if (L === world.plains[2]) drawBaseGroup(P(rot, L.top), rot, L.col, BASE_FAR, 0.7);
+      if (L === world.plains[3]) drawBaseGroup(P(rot + 0.18, L.top), rot + 0.18, L.col, BASE_NEAR, 0.95);
       // Oval craters on the plain: lit far wall, shadow in the bowl
       for (const c of L.craters) {
         if (!seen(c.a, c.rx)) continue;
@@ -4665,17 +4708,19 @@
     ctx.globalAlpha = 1;
   }
   // The base, as one group standing on a flat stretch of the distant horizon
-  const BASE_LAYOUT = [
-    [-150, 'rocketpad'], [-108, 'dish2'], [-90, 'dome', { w: 26, h: 16, ant: true }], [-52, 'dome', { w: 54, h: 30, door: true }],
-    [-18, 'fence'], [26, 'dome', { w: 74, h: 30, wins: 3, ant: true }], [78, 'tower'], [122, 'dome', { w: 46, h: 24 }], [150, 'hover'],
+  // Far half: the landing pad and the small habitats; near half: the big
+  // dome, the tower and the hover pad
+  const BASE_FAR = [
+    [-110, 'rocketpad'], [-66, 'dish2'], [-46, 'dome', { w: 26, h: 16, ant: true }], [-6, 'dome', { w: 54, h: 30, door: true }], [40, 'fence'],
   ];
-  function drawBaseGroup([x, y], ph, ground) {
+  const BASE_NEAR = [[-60, 'dome', { w: 74, h: 30, wins: 3, ant: true }], [-4, 'tower'], [44, 'dome', { w: 46, h: 24 }], [80, 'hover']];
+  function drawBaseGroup([x, y], ph, ground, layout, sc) {
     if (Math.abs(wrap(ph)) * R0 > (view.x1 - view.x0) / 2 + 260) return;
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ph); ctx.scale(0.8, 0.8);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ph); ctx.scale(sc, sc);
     // A flat shelf of ground for the base to stand on
-    ctx.fillStyle = ground; ctx.fillRect(-190, -1, 380, 40);
-    ctx.fillStyle = hexOf(mix(ground, '#ffffff', 0.12)); ctx.fillRect(-190, -1, 380, 2);
-    for (const [bx, kind, opts] of BASE_LAYOUT) { ctx.save(); ctx.translate(bx, 0); MOON_DECOR[kind](opts || {}); ctx.restore(); }
+    ctx.fillStyle = ground; ctx.fillRect(-150, -1, 300, 40);
+    ctx.fillStyle = hexOf(mix(ground, '#ffffff', 0.12)); ctx.fillRect(-150, -1, 300, 2);
+    for (const [bx, kind, opts] of layout) { ctx.save(); ctx.translate(bx, 0); MOON_DECOR[kind](opts || {}); ctx.restore(); }
     ctx.restore();
   }
   const hexOf = (rgb) => '#' + rgb.match(/\d+/g).slice(0, 3).map((v) => (+v).toString(16).padStart(2, '0')).join('');
