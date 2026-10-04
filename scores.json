@@ -10,6 +10,15 @@
       "at": 1791036108
     },
     {
+      "name": "Marty Mc",
+      "score": 1430123,
+      "time_ms": 41228,
+      "stars": 16,
+      "total_stars": 34,
+      "falls": 1,
+      "at": 1791147626
+    },
+    {
       "name": "Tina",
       "score": 925415,
       "time_ms": 146053,
@@ -53,15 +62,6 @@
       "total_stars": 35,
       "falls": 28,
       "at": 1791018397
-    },
-    {
-      "name": "Marty Mc",
-      "score": 357403,
-      "time_ms": 25840,
-      "stars": 23,
-      "total_stars": 42,
-      "falls": 1,
-      "at": 1791147573
     }
   ],
   "uber": [
