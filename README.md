@@ -27,6 +27,12 @@ Chrome: ⋮ menu). It then launches full screen with its own icon, like an app.
 |---|---|---|
 | Walk / steer | ← → or A D | ◀ ▶, or tap TILT and lean the phone |
 | Hop on | walk up to a trampoline or launch pad and you hop on by yourself | |
+| Stop and record your score | Esc | STOP (top right) |
+
+Stop whenever you like: the game freezes where it is and you get your score so
+far (the whole trip, if you've come straight on from earlier worlds), with the
+time, geoms and falls, to post to the scoreboard. Then carry on from right where
+you were (Carry on, Space or Esc), start the level again, or go back to the menu.
 
 Tilt steering uses the phone's motion sensor. The angle you hold the phone at when
 you switch it on counts as level. It works when the game is opened from its own web
@@ -57,7 +63,11 @@ says so if that happens.
   and butterflies round the flowers and a beehive. Animals wander and pause,
   and run (or hop) away if you get close. Birds fly round the planet in V
   formations. The first time you set foot in each region you get a short
-  note about it.
+  note about it. The regions go back in depth too: two layers behind the
+  ground (smaller and hazier, sliding past more slowly: far trees, herds,
+  barns and wind turbines, desert mesas, the sea on the horizon behind the
+  beach) and one in front of you (low grass, ferns, flowers, pebbles and
+  snow sliding past faster). Every layer follows the region you're in.
 - Five mountain ranges sit behind the ground and turn more slowly than it
   (parallax), so they feel further away. They also sink more slowly than the
   ground as you climb, so the first few bounces reveal the far ranges behind,
