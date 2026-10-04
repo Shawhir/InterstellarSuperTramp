@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
-<link rel="stylesheet" href="style.css?v=c543342">
+<link rel="stylesheet" href="style.css?v=764c970">
 </head>
 <body>
 <canvas id="game" tabindex="0" aria-label="Interstellar SuperTramp game"></canvas>
@@ -32,6 +32,7 @@
       <button id="music" type="button" aria-pressed="true">MUSIC ON</button>
       <button id="sfx" type="button" aria-pressed="true">SFX ON</button>
       <button id="tilt" type="button" aria-pressed="false" hidden>TILT OFF</button>
+      <button id="stop" type="button" title="Stop here and record your score (Esc)">STOP</button>
     </div>
   </div>
 </div>
@@ -78,7 +79,7 @@
 
 <div class="overlay" id="won" hidden>
   <div class="card">
-    <h1>You made it to <span id="won-dest">the Moon</span></h1>
+    <h1 id="won-title">You made it to <span id="won-dest">the Moon</span></h1>
     <p class="won-mode" id="won-mode"></p>
     <p class="won-score"><span id="won-score">0</span> <b id="won-score-new" hidden>NEW BEST</b></p>
     <p id="won-stats">384,400 km from home, one bounce at a time.</p>
@@ -94,6 +95,7 @@
     <p class="post-status" id="post-status" hidden></p>
     <button id="post-skip" class="linkish skip" type="button" hidden>Skip, don't post my score</button>
     <div class="won-actions" id="won-actions">
+      <button id="carry-on" class="level2" type="button" hidden>Carry on<span>Back where you were, score and all</span></button>
       <button id="to-l2" class="level2" type="button" hidden>On to Mars or Venus<span>Level 2, score carried on</span></button>
       <button id="to-l3" class="level2" type="button" hidden>On to the asteroid belt<span>Level 3, score carried on</span></button>
       <button id="to-l4" class="level2" type="button" hidden>On to Mercury<span>Level 4, score carried on</span></button>
@@ -124,10 +126,10 @@
   <button type="button" data-key="right" aria-label="Walk right">▶</button>
 </div>
 
-<script src="scoreboard-config.js?v=c543342"></script>
-<script src="scoreboard.js?v=c543342"></script>
-<script src="audio.js?v=c543342"></script>
-<script src="game.js?v=c543342"></script>
+<script src="scoreboard-config.js?v=764c970"></script>
+<script src="scoreboard.js?v=764c970"></script>
+<script src="audio.js?v=764c970"></script>
+<script src="game.js?v=764c970"></script>
 <script>
   // Play offline once the game has been opened (on the public site only)
   if ('serviceWorker' in navigator && /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname)) {

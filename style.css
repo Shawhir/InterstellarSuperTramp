@@ -408,3 +408,7 @@ body.playing .conspiracy-tag { display: none; }
 /* During the level 5 run, words go up top, out of your way */
 body.run .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 6px) !important; font-size: 15px !important; line-height: 1.05; max-width: min(620px, calc(100% - 24px)); padding: 4px 10px; background: rgba(11, 15, 38, 0.6); border-width: 1px; }
 @media (pointer: coarse) { body.run .toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 94px) !important; } }
+
+/* Stop and record your score: only while you're playing */
+#stop { border-color: #ff8a7a; color: #ffd6d0; }
+body:not(.playing) #stop { display: none; }
