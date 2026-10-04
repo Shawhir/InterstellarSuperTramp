@@ -71,17 +71,27 @@ says so if that happens.
   as its gravity takes over. The next level's own world really is up there,
   upside down and getting closer, drawn alongside the one you're leaving. The
   view turns right over about you (you stay upright; home swings round
-  overhead and the sky becomes the new world's sky; nothing zooms), and you
+  overhead; nothing zooms). The sky turns with it at the same speed: the old
+  sky turns away while the new world's sky turns in, upside down to right way
+  up, with soft edges so no corners show. Then you
   fall feet first from high above the next level's ground. Where the world
   has air (Earth, Mars, Venus) you fall in through it: it glows in a cap
   under your feet and streams away above you, and slows you more and more
   as you get lower. Nothing swaps or fades: the game simply carries on there,
   with that world's own gravity, the score carried on and the whole trip
   counted as one run.
-- Going back: each world's starting ground has a blue backdrop tramp ("BACK TO
-  EARTH", "BACK TO THE MOON", "BACK TO MARS"). Bounce on it and you're off the
-  way you came, the same way round: up, over, and falling onto the world
-  before. Your score comes with you.
+- The way home: from the Moon base, the blue HOME pad (right by where you
+  start) is a whole climb of its own, a third route alongside Mars and Venus.
+  384,400 km back to Earth, with Earth's pull getting stronger the closer you
+  get: Apollo 13's free return, Apollo 8's Earthrise, comet dust, back past
+  geostationary orbit, through the Van Allen belts (dodge the radiation
+  bursts), the GPS satellites and the space junk of low Earth orbit, then
+  re-entry. Earth slides up out of sight, the view turns over and you fall in
+  through the air, glowing, onto the ground you started from.
+- Going back elsewhere: Mars, Venus and the belt each have a blue backdrop
+  tramp on their starting ground ("BACK TO THE MOON", "BACK TO MARS"). Bounce
+  on it and you're off the way you came, the same way round: up, over, and
+  falling onto the world before. Your score comes with you.
 - Gravity on the way to the Moon gets weaker the higher you go, so you hang
   in the air longer: Earth's pull falls off with the square of your distance
   from its centre. (Softened so it stays playable: by the GPS satellites the
@@ -142,10 +152,13 @@ says so if that happens.
 Reach the Moon and you can carry straight on (your score comes with you), or
 start level 2 from the title screen once you've landed there once.
 
-- **The Moon base.** You start below a base drawn in a clean flat vector style,
-  standing as one group on a flat stretch of the distant horizon under a big
-  Earth: a rocket on its pad between two boosters, domes, a dish, a railing,
-  a tall twin tower and a lander hovering overhead. The Moon is shown in cross-section
+- **The Moon base.** You start below a base drawn in a clean flat vector style
+  under a big Earth, split across two parallax layers that slide past each
+  other: further back, a rocket on its pad between two boosters, small domes,
+  a dish and a railing; nearer, the big dome, a tall twin tower and a lander
+  hovering overhead. Behind the Moon's ground are four layers in all: far
+  lunar mountains lit along their tops (like the Apennines, up to 5 km high),
+  a cratered plain, then the two halves of the base. The Moon is shown in cross-section
   like Earth: crust with pale highland rock, polar ice, meteorite iron, orange
   volcanic glass and lava tubes; a cold mantle with moonquake cracks; a partly
   molten layer; and a small iron core. On the surface: Apollo 11's landing
@@ -386,7 +399,7 @@ switches it off. You get:
   city 85 m deep), St Kinga's Chapel (carved from salt), Coober Pedy's dugouts,
   and Beijing's Cold War tunnel city.
 
-  Behind each cavern are its own far-off walls in four parallax layers (far ones smaller, darker and hazier, each sliding past at its own speed): jungle,
+  Behind each cavern are its own far-off walls in four parallax layers (far ones smaller, darker and hazier, each sliding past at its own speed, with mist lying between them): a long far ridge at the back, then clusters and gaps of every size, with each cavern's second kind of shape in the middle (Pellucidar's long-necked dinosaurs, a sea arch and Lidenbrock's raft, stepped pyramids, Naica-style crystal clusters, puffballs, turning Morlock gears, lavafalls, skybridges, mine headframes) and great rock columns close by: jungle,
   sea cliffs and waterfalls, golden towers, giant crystals, giant mushrooms,
   smoking factories, volcanoes, skyscrapers with neon cables, tunnel mouths.
   Each is drawn only inside its own cavern, so they blend as you climb from
