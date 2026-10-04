@@ -7601,8 +7601,8 @@
   // edges, from where they run round Saturn's far side (the ellipse) to where
   // they cross the band you hop along (x from x0 to x1)
   const SHEET = [
-    [-200, 1800, 1.24, 1.52, [150, 135, 115], 0.45], [1800, 4300, 1.52, 1.95, [238, 224, 192], 0.85], [4300, 4900, 1.95, 2.02, [30, 30, 40], 0.3],
-    [4900, 6000, 2.02, 2.19, [214, 198, 166], 0.8], [6000, 6300, 2.19, 2.2, [30, 30, 40], 0.4], [6300, 6900, 2.2, 2.27, [214, 198, 166], 0.8], [6950, 7150, 2.32, 2.34, [240, 230, 210], 0.75],
+    [-300, 2000, 1.24, 1.52, [150, 135, 115], 0.45], [2000, 4300, 1.52, 1.95, [238, 224, 192], 0.85],
+    [4820, 5900, 2.02, 2.19, [214, 198, 166], 0.8], [6160, 6800, 2.2, 2.27, [214, 198, 166], 0.8], [6980, 7700, 2.32, 2.34, [240, 230, 210], 0.75],
   ];
   function drawRingSheet(SX, plane, sx, sy, sr) {
     const E = 0.2, arc = 0.55, n = 10;
@@ -7723,7 +7723,7 @@
     if (t >= SL_ARR) {
       // Arriving: Saturn's rings, side on, coming up to meet you
       const k = clamp((t - SL_ARR) / (SL_END - SL_ARR), 0, 1), z = Math.exp(lerp(Math.log(0.05), 0, smooth(k)));
-      const Z = S.Z, st = Z.plats[0], ax = W * 0.38, ay = H * 0.66 + st.top;
+      const Z = S.Z, ax = W * 0.38, ay = H * 0.66;
       drawRings7(Z, { zoom: z, ax, ay, noPlayer: true, streak: (1 - k) * 2 });
       const C = [W * 0.6, H * 0.42], e = smooth(k), x = lerp(C[0], ax, e), y = lerp(C[1], ay, e);
       drawRide(x, y + 4); drawSprite('stand', x, y, false, 1, 1, 1, SUIT); if (conspiracy) drawFoilHat(x, y, 0);
@@ -7761,19 +7761,24 @@
     drawRunPops(x, y);
   }
 
-  // ---- Saturn's rings, side on: bounce across them and on to Titan ----------------
-  // Everything here is laid out left to right from Saturn; x in px. Each chunk
-  // of ring ice (and each moon) bounces you up; steer across the gaps.
-  const R7_G = 1500, R7_BOUNCE = 860, R7_VX = 440, TITAN_X = 12700;
+  // ---- Saturn's rings, side on: skate across them, jump the gaps, on to Titan --
+  // Laid out left to right from Saturn, x in px. The rings are solid ice to
+  // skate on; the gaps between them have to be jumped, and the wider ones need
+  // speed. Past the F ring you launch out and hop from moon to moon to Titan.
+  const R7_G = 1500, R7_BOUNCE = 860, R7_VX = 440, TITAN_X = 13000;
+  const R7_JUMP = 720, R7_TOP = 780, F_END = 7700;
+  // The ring surfaces: [from, to, ring]
+  const R7_SURF = [[-300, 1500, 0], [1620, 2000, 0], [2000, 4300, 1], [4820, 5900, 3], [6160, 6650, 3], [6730, 6800, 3], [6980, F_END, 6]];
+  const R7_GAPS = { 1500: 'the Maxwell Gap', 4300: 'the Cassini Division', 5900: 'the Encke Gap', 6650: 'the Keeler Gap', 6800: 'the gap to the F ring' };
   const R7_ZONES = [
-    { x: -200, name: 'THE C RING', sub: 'FAINT, CLOSE TO SATURN', fact: "The C ring, the closest of the main rings to Saturn: fainter, with dustier ice. Up close, Saturn fills half the sky." },
-    { x: 1800, name: 'THE B RING', sub: 'THE BIGGEST AND BRIGHTEST', fact: 'The B ring: the biggest, brightest and most packed ring of all. Chunks of water ice, from specks of dust to boulders as big as a house.' },
-    { x: 4300, name: 'THE CASSINI DIVISION', sub: 'ABOUT 4,800 KM WIDE', fact: "The Cassini Division: a gap about 4,800 km wide, first spotted by Giovanni Cassini in 1675. It isn't empty, just much thinner. Mind the gap!" },
-    { x: 4900, name: 'THE A RING', sub: 'ICE, FROM DUST TO BOULDERS', fact: 'The A ring. At the end of its mission in 2017, the Cassini spacecraft dived between Saturn and its rings 22 times, then plunged into Saturn.' },
-    { x: 6000, name: 'THE ENCKE GAP', sub: 'SWEPT CLEAR BY LITTLE PAN', fact: 'The Encke Gap, kept clear by the little moon Pan, which is shaped like a ravioli. Bounce on it!' },
-    { x: 6300, name: 'THE A RING', sub: 'ITS OUTER EDGE', fact: null },
-    { x: 6950, name: 'THE F RING', sub: 'NARROW AND TWISTED', fact: "The F ring: narrow and twisted into braids, kept in line by two little 'shepherd' moons, Prometheus and Pandora." },
-    { x: 7300, name: 'THE E RING', sub: "SATURN'S MOONS", fact: "Out past the main rings: the faint E ring, made of ice sprayed out by the moon Enceladus, and Saturn's moons, one after another. Titan's at the end!" },
+    { x: -300, name: 'THE C RING', sub: 'FAINT, CLOSE TO SATURN', fact: "The C ring, the closest of the main rings to Saturn: fainter, with dustier ice. Skate! Hold right to build up speed, and you'll jump the gaps by yourself (or jump when you like with Space, ↑ or a tap)." },
+    { x: 2000, name: 'THE B RING', sub: 'THE BIGGEST AND BRIGHTEST', fact: 'The B ring: the biggest, brightest and most packed ring of all. Chunks of water ice, from specks of dust to boulders as big as a house. Build up speed: the Cassini Division is coming!' },
+    { x: 4300, name: 'THE CASSINI DIVISION', sub: 'ABOUT 4,800 KM WIDE', fact: "The Cassini Division: a gap about 4,800 km wide, first spotted by Giovanni Cassini in 1675. It isn't empty, just much thinner." },
+    { x: 4820, name: 'THE A RING', sub: 'ICE, FROM DUST TO BOULDERS', fact: 'The A ring. At the end of its mission in 2017, the Cassini spacecraft dived between Saturn and its rings 22 times, then plunged into Saturn.' },
+    { x: 5900, name: 'THE ENCKE GAP', sub: 'SWEPT CLEAR BY LITTLE PAN', fact: 'The Encke Gap, kept clear by the little moon Pan, which is shaped like a ravioli.' },
+    { x: 6160, name: 'THE A RING', sub: 'ITS OUTER EDGE', fact: 'The Keeler Gap, near the A ring\'s outer edge, is kept clear by a tiny moon, Daphnis, which raises waves in the ring as it goes.' },
+    { x: 6800, name: 'THE F RING', sub: 'NARROW AND TWISTED', fact: "The F ring: narrow and twisted into braids, kept in line by two little 'shepherd' moons, Prometheus and Pandora. At its end, launch off towards the moons!" },
+    { x: F_END, name: 'THE E RING', sub: "SATURN'S MOONS", fact: "Out past the main rings: the faint E ring, made of ice sprayed out by the moon Enceladus, and Saturn's moons, one after another. Bounce from moon to moon to Titan!" },
   ];
   const R7_MOONS = {
     mimas: { R: 55, body: '#b4b0aa', fact: "Mimas: its giant Herschel crater makes it look a lot like a certain moon-sized space station from the films. That's no moon... oh wait, it is." },
@@ -7789,33 +7794,24 @@
   };
   function buildRings7() {
     const plats = [], geoms = [];
-    const chunk = (x, w, zone) => plats.push({ x, w, top: -(8 + Math.random() * 22), kind: 'chunk', zone, ph: Math.random() * TAU, shape: Array.from({ length: 9 }, () => 0.75 + Math.random() * 0.25) });
+    const chunk = (x, w) => plats.push({ x, w, top: -(8 + Math.random() * 22), kind: 'chunk', zone: 7, ph: Math.random() * TAU, shape: Array.from({ length: 9 }, () => 0.75 + Math.random() * 0.25) });
     const moonlet = (x, name) => plats.push({ x, w: 46, top: -22, kind: 'moonlet', name, ph: Math.random() * TAU });
     const moon = (x, name) => { const R = R7_MOONS[name].R; plats.push({ x, w: R * 1.3, top: -R, kind: 'moon', name, R, ph: 0 }); };
-    // The main rings: gaps you can always clear (the Cassini Division and the
-    // Encke Gap each have a stepping stone)
-    let x = 0;
-    while (x < 7150) {
-      if (x > 4300 && x < 4900) { moonlet(4600, null); x = 4900; continue; }
-      if (x > 6000 && x < 6300) { plats.push({ x: 6150, w: 70, top: -24, kind: 'pan', name: 'pan', ph: 0 }); x = 6300; continue; }
-      const zone = x < 1800 ? 0 : x < 4300 ? 1 : x < 6950 ? 3 : 6, w = zone === 6 ? 40 + Math.random() * 20 : 55 + Math.random() * 75;
-      chunk(x + w / 2, w, zone);
-      const gap = zone === 1 ? 50 + Math.random() * 150 : 80 + Math.random() * 190;
-      if (Math.random() < 0.45) geoms.push({ x: x + w + gap / 2, y: -200 - Math.random() * 40, taken: false });
-      x += w + gap;
-    }
-    // Out past the rings: the moons, with little moons and E-ring ice between
-    // (every gap here is a jump of no more than about 340 px)
-    for (const [mx, name] of [[7330, null], [7700, 'mimas'], [8050, null], [8400, 'enceladus'], [8780, 'telesto'], [9200, 'tethys'], [9600, 'calypso'], [9960, 'helene'], [10380, 'dione'], [10780, 'polydeuces'], [11130, null], [11550, 'rhea'], [11960, null], [12330, null], [TITAN_X, 'titan']]) {
-      if (!name) chunk(mx, 50, 7);
+    // Past the F ring: from moon to moon (every hop no more than about 340 px)
+    for (const [mx, name] of [[8100, 'mimas'], [8450, null], [8800, 'enceladus'], [9180, 'telesto'], [9600, 'tethys'], [10000, 'calypso'], [10360, 'helene'], [10780, 'dione'], [11180, 'polydeuces'], [11530, null], [11950, 'rhea'], [12360, null], [12730, null], [TITAN_X, 'titan']]) {
+      if (!name) chunk(mx, 50);
       else if (R7_MOONS[name].R) moon(mx, name);
       else moonlet(mx, name);
     }
-    for (let i = 0; i < plats.length - 1; i++) if (plats[i].x > 7300 && Math.random() < 0.6) geoms.push({ x: (plats[i].x + plats[i + 1].x) / 2, y: -230, taken: false });
-    const st = plats[0];
-    return { plats, geoms, x: st.x, y: st.top, vx: 0, vy: 0, camX: st.x - W * 0.38, camY: 0, zone: -1, seen: {}, last: st, on: st, standT: 0, probeT: 0, done: false, doneT: 0, bits: [], squash: 0, warned: false };
+    // Geoms: some low along the ice to skate through, and up high over each
+    // gap for a jump to take you through
+    for (const [a, b] of R7_SURF) for (let x = a + 300; x < b - 200; x += 420 + Math.random() * 300) geoms.push({ x, y: -30, taken: false });
+    for (let i = 0; i < R7_SURF.length - 1; i++) { const g0 = R7_SURF[i][1], g1 = R7_SURF[i + 1][0]; geoms.push({ x: (g0 + g1) / 2, y: -150, taken: false }); }
+    for (let i = 0; i < plats.length - 1; i++) if (Math.random() < 0.6) geoms.push({ x: (plats[i].x + plats[i + 1].x) / 2, y: -230, taken: false });
+    return { plats, geoms, x: 60, y: 0, vx: 0, vy: 0, ground: true, mode: 'skate', camX: 60 - W * 0.38, camY: 0, zone: -1, seen: {}, cleared: {}, last: null, standT: 0, probeT: 0, done: false, doneT: 0, bits: [], squash: 0, warned: false, skate: 0, wantJump: false, startX: 60 };
   }
   const r7Top = (p) => p.top + (p.kind === 'chunk' ? Math.sin(clock * 1.3 + p.ph) * 3 : 0);
+  const r7Surf = (x) => R7_SURF.find(([a, b]) => x >= a && x <= b);
   function updateRings7(dt) {
     const Z = fx.rings7;
     tickCommon(dt);
@@ -7824,18 +7820,41 @@
     Z.bits = Z.bits.filter((q) => q.t < q.life);
     const kdir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0), dir = kdir !== 0 ? kdir : tilt.on ? tilt.axis : 0;
     if (Math.abs(dir) > 0.1) player.facing = Math.sign(dir);
+    const jump = (v = R7_JUMP) => { Z.vy = -v; Z.ground = false; Z.squash = -0.6; Z.jumpX = Z.x; sfx.hop(); for (let i = 0; i < 8; i++) Z.bits.push({ x: Z.x, y: 0, vx: -Z.vx * 0.3 + (Math.random() - 0.5) * 120, vy: -Math.random() * 150, t: 0, life: 0.5, c: '#eef4ff' }); };
     if (Z.done) {
       Z.doneT += dt;
       if (Z.doneT > 2 && state === 'play') { lastTier = TOP; bestTier = TOP; win(); }
     } else if (Z.standT > 0) {
-      // Just off the spacecraft: a moment on the first chunk, then boing
-      Z.standT -= dt; Z.y = r7Top(Z.on);
-      if (Z.standT <= 0) { Z.vy = -R7_BOUNCE; Z.on = null; Z.squash = 1; sfx.boing(1, 1); }
+      // Just off the spacecraft: a moment to find your feet on the ice
+      Z.standT -= dt; Z.y = 0; Z.wantJump = false;
+    } else if (Z.mode === 'skate' && Z.ground) {
+      // Skating: push off to speed up, ease off to glide, push back to brake
+      if (dir > 0.1) Z.vx += 620 * dir * dt; else if (dir < -0.1) Z.vx += 900 * dir * dt; else Z.vx *= 1 - 0.2 * dt;
+      Z.vx = clamp(Z.vx, -260, R7_TOP);
+      Z.x += Z.vx * dt; Z.skate += Math.abs(Z.vx) * dt;
+      if (Math.abs(Z.vx) > 300 && Math.random() < dt * 30) Z.bits.push({ x: Z.x - Math.sign(Z.vx) * 10, y: -2, vx: -Z.vx * 0.25, vy: -Math.random() * 90, t: 0, life: 0.45, c: '#f4f8ff' });
+      const sf = r7Surf(Z.x);
+      if (!sf) { Z.ground = false; Z.vy = 0; }
+      // At the edge of a gap you jump by yourself (or jump whenever you like)
+      else if (Z.wantJump || (Z.vx > 40 && sf[1] - Z.x < 8 + Z.vx * 0.03 && sf[1] < F_END + 1)) jump(sf[1] >= F_END ? R7_JUMP * 1.3 : R7_JUMP);
+      Z.wantJump = false;
     } else {
-      Z.vx = approach(Z.vx, dir * R7_VX, 2600 * dt);
+      // In the air: over the rings a little steering; out among the moons, plenty
+      if (Z.mode === 'skate') Z.vx = clamp(Z.vx + dir * 260 * dt, -300, R7_TOP);
+      else Z.vx = approach(Z.vx, dir * R7_VX, 2600 * dt);
       const prevY = Z.y;
       Z.vy += R7_G * dt; Z.x += Z.vx * dt; Z.y += Z.vy * dt;
-      if (Z.vy > 0) for (const p of Z.plats) {
+      Z.wantJump = false;
+      if (Z.x > F_END + 40 && Z.mode === 'skate') Z.mode = 'hop';
+      // Landing back on the ice
+      if (Z.mode === 'skate' && Z.vy > 0 && prevY <= 0 && Z.y >= 0 && r7Surf(Z.x)) {
+        Z.y = 0; Z.vy = 0; Z.ground = true; Z.squash = 1; sfx.thud();
+        for (let i = 0; i < 10; i++) Z.bits.push({ x: Z.x, y: 0, vx: (Math.random() - 0.5) * 220 + Z.vx * 0.3, vy: -Math.random() * 120, t: 0, life: 0.6, c: '#eef4ff' });
+        // Cleared a gap?
+        const g = Object.keys(R7_GAPS).map(Number).find((g0) => Z.jumpX <= g0 && Z.x > g0);
+        if (g !== undefined && !Z.cleared[g]) { Z.cleared[g] = true; addMult(); addScore(g === 4300 ? 1000 : 300); pop(`CLEARED ${R7_GAPS[g].toUpperCase()}!`, '#6dff7a', player.r + 110); if (g === 4300) { sfx.perfect(); addShake(6); } }
+      }
+      if (Z.mode === 'hop' && Z.vy > 0) for (const p of Z.plats) {
         if (Math.abs(p.x - Z.x) > p.w / 2 + 8) continue;
         const top = r7Top(p);
         if (prevY <= top && Z.y >= top) {
@@ -7851,33 +7870,40 @@
           if (p.name && !Z.seen[p.name]) {
             Z.seen[p.name] = true; addMult(); addScore(300);
             if (p.kind === 'moon') { pop(p.name.toUpperCase() + '!', '#ffd23f', player.r + 120); addShake(5); }
-            const f = p.name === 'pan' ? null : R7_MOONS[p.name] && R7_MOONS[p.name].fact;
+            const f = R7_MOONS[p.name] && R7_MOONS[p.name].fact;
             if (f) toast(f, 6);
           }
           break;
         }
       }
-      for (const g of Z.geoms) if (!g.taken && Math.hypot(g.x - Z.x, g.y - (Z.y - 24)) < 34) { g.taken = true; addMult(); addScore(50); sfx.star(mult); updateStarsHud(true); }
-      // Below the rings: Saturn's pull would have you, so back to the last chunk
-      if (Z.y > 380) {
+      // Fell through a gap (or off a moon): Saturn's pull would have you
+      if (Z.y > 320) {
         falls++; loseMult(); sfx.fall();
-        if (!Z.warned) { Z.warned = true; toast("Fell through the rings! Saturn's gravity would pull you down, so back to the last chunk you landed on.", 5); }
-        Z.x = Z.last.x; Z.y = r7Top(Z.last) - 120; Z.vy = 0; Z.vx = 0;
+        if (Z.mode === 'skate' || !Z.last) {
+          const back = [...R7_SURF].reverse().find(([a]) => a < Z.x) || R7_SURF[0];
+          const gapName = R7_GAPS[back[1]];
+          toast(gapName ? `Not fast enough to clear ${gapName}! Back you go: build up more speed on the run-up.` : 'Back onto the ice!', 4);
+          Z.mode = 'skate'; Z.x = Math.max(back[0] + 40, back[1] - 650); Z.y = 0; Z.vy = 0; Z.vx = 200; Z.ground = true;
+        } else {
+          if (!Z.warned) { Z.warned = true; toast("Missed! Saturn's gravity would pull you down, so back to the last moon you landed on.", 5); }
+          Z.x = Z.last.x; Z.y = r7Top(Z.last) - 120; Z.vy = 0; Z.vx = 0;
+        }
       }
     }
+    for (const g of Z.geoms) if (!g.taken && Math.hypot(g.x - Z.x, g.y - (Z.y - 24)) < 36) { g.taken = true; addMult(); addScore(50); sfx.star(mult); }
     // Into each new zone
     let zi = 0; while (zi < R7_ZONES.length - 1 && R7_ZONES[zi + 1].x <= Z.x) zi++;
     if (zi !== Z.zone) { Z.zone = zi; const Zn = R7_ZONES[zi]; banner(Zn.name, Zn.sub); if (Zn.fact) toast(Zn.fact, 6); sfx.tier(); }
     Z.camX += (Z.x - W * 0.38 - Z.camX) * Math.min(1, dt * 6);
     Z.camY += (Math.min(0, Z.y + 160) - Z.camY) * Math.min(1, dt * 4);
-    if (snd) snd.music.set({ tierF: 13 + TOP + clamp(Z.x / TITAN_X, 0, 1) * 4, speed: 1.2, won: state === 'won', belt: state === 'play' });
+    if (snd) snd.music.set({ tierF: 13 + TOP + clamp(Z.x / TITAN_X, 0, 1) * 4, speed: 1 + Math.abs(Z.vx) / 1000, won: state === 'won', belt: state === 'play' });
     // How far out from Saturn's middle you are
-    const marks = [[-200, 74500], [7150, 140200], [7700, 185500], [8400, 238000], [9200, 294700], [10380, 377400], [11550, 527100], [TITAN_X, 1221900]];
+    const marks = [[-300, 74500], [F_END, 140200], [8100, 185500], [8800, 238000], [9600, 294700], [10780, 377400], [11950, 527100], [TITAN_X, 1221900]];
     let km = marks[marks.length - 1][1];
     for (let i = 0; i < marks.length - 1; i++) if (Z.x < marks[i + 1][0]) { km = lerp(marks[i][1], marks[i + 1][1], clamp((Z.x - marks[i][0]) / (marks[i + 1][0] - marks[i][0]), 0, 1)); break; }
     hud.alt.textContent = `${fmtKm(km)} from Saturn`;
     const near = Z.plats.find((p) => p.kind === 'moon' && Math.abs(p.x - Z.x) < p.w);
-    hud.layer.textContent = near ? near.name[0].toUpperCase() + near.name.slice(1) : R7_ZONES[Math.max(0, Z.zone)].name.replace('THE ', 'The ').replace(/\b([A-Z])([A-Z]+)/g, (m, a, b) => a + b.toLowerCase());
+    hud.layer.textContent = near ? near.name[0].toUpperCase() + near.name.slice(1) : `${R7_ZONES[Math.max(0, Z.zone)].name.replace('THE ', 'The ').replace(/\b([A-Z])([A-Z]+)/g, (m, a, b) => a + b.toLowerCase())}${Z.mode === 'skate' ? ` · ${Math.round(Math.abs(Z.vx) * 0.05)} km/s` : ''}`;
   }
   const R7_ICE = ['#b8b0a2', '#ece4d2', '#888', '#ddd4c2', '#888', '#ddd4c2', '#f4f0e6', '#e4eef8'];
   function drawRings7(Z = fx.rings7, o = {}) {
@@ -7898,19 +7924,26 @@
       drawSaturnBig(sx, sy, sr);
       drawRingSheet(SX, plane, sx, sy, sr);
     }
-    // The rings, side on: a band of ice right across, darker in the gaps,
-    // fading out into the faint E ring
-    for (let wx = Math.floor((Z.camX - 200) / 24) * 24; wx < Z.camX + W / (o.zoom || 1) + 200; wx += 24) {
-      const gap = (wx > 4300 && wx < 4900) || (wx > 6000 && wx < 6300) || (wx > 6900 && wx < 6950) || (wx > 7150 && wx < 7300);
-      const sx = SX(wx);
-      if (wx < -260 || sx < -40 || sx > W / (o.zoom || 1) + W) continue;
-      const zi = wx < 1800 ? 0 : wx < 4300 ? 1 : wx < 6950 ? 3 : wx < 7300 ? 6 : 7;
-      const a = wx > 7300 ? 0.12 : gap ? 0.08 : zi === 1 ? 0.75 : zi === 0 ? 0.35 : 0.55;
-      ctx.fillStyle = zi === 7 ? `rgba(160,200,240,${a})` : `rgba(236,224,200,${a})`;
-      ctx.fillRect(sx, plane - (zi === 7 ? 30 : 6), 24, zi === 7 ? 60 : 12);
-      if (!gap && zi < 7) for (let k = 0; k < 3; k++) { const h = hash3(wx, k, 7); px(sx + h * 24, plane - 8 + hash3(k, wx, 3) * 16, 2 + (h * 3 | 0), 2, 'rgba(255,250,240,0.7)'); }
+    // The ring surfaces you skate on: the near edge of the ice, with the gaps
+    // between them open to the stars; past the F ring, the faint E ring
+    ctx.fillStyle = 'rgba(160,200,240,0.1)'; ctx.fillRect(Math.max(-50, SX(F_END + 100)), plane - 30, W * 3, 60);
+    for (const [a, b, zone] of R7_SURF) {
+      const x0 = SX(a), x1 = SX(b);
+      if (x1 < -40 || x0 > W / (o.zoom || 1) + W) continue;
+      ctx.fillStyle = R7_ICE[zone]; ctx.fillRect(x0, plane - 4, x1 - x0, 16);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(x0, plane - 4, x1 - x0, 3);
+      ctx.fillStyle = 'rgba(0,0,10,0.35)'; ctx.fillRect(x0, plane + 8, x1 - x0, 4);
+      for (let wx = Math.ceil((Math.max(a, Z.camX - 100)) / 26) * 26; wx < Math.min(b, Z.camX + W / (o.zoom || 1) + 100); wx += 26) px(SX(wx) + hash3(wx, 3, 1) * 20, plane + 1 + hash3(1, wx, 5) * 8, 2 + (hash3(wx, 2, 2) * 4 | 0), 2, 'rgba(255,250,240,0.6)');
+      // Rounded ends where the ice stops at a gap
+      ctx.fillStyle = R7_ICE[zone]; ctx.beginPath(); ctx.arc(x0, plane + 4, 8, 0, TAU); ctx.arc(x1, plane + 4, 8, 0, TAU); ctx.fill();
     }
-    // Chunks of ring ice, little moons and the big moons
+    // The gaps' names, under the edge
+    ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(200,220,255,0.65)';
+    for (let i = 0; i < R7_SURF.length - 1; i++) { const g0 = R7_SURF[i][1], g1 = R7_SURF[i + 1][0], name = R7_GAPS[g0]; if (name) { const x = SX((g0 + g1) / 2); if (x > -100 && x < W + 100) ctx.fillText(name.replace('the ', '').toUpperCase(), x, plane + 30); } }
+    // Pan, in the Encke Gap
+    { const x = SX(6030), y = plane + 4 + Math.sin(clock) * 4; if (x > -60 && x < W + 60) { ctx.fillStyle = '#c9c0b0'; ctx.beginPath(); ctx.ellipse(x, y, 16, 9, 0, 0, TAU); ctx.fill(); px(x - 19, y - 1, 38, 3, '#e6ddcc'); } }
+    ctx.textAlign = 'start';
+    // Little moons and the big moons, out past the rings
     for (const p of Z.plats) {
       const x = SX(p.x), y = SY(r7Top(p));
       if (x < -p.w * 2 - 300 || x > W / (o.zoom || 1) + W + 300) continue;
@@ -7920,9 +7953,8 @@
         ctx.beginPath(); p.shape.forEach((k, j) => { const ang = (j * TAU) / 9; const xx = x + Math.cos(ang) * r * k, yy = y + 12 + Math.sin(ang) * 14 * k; j ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); }); ctx.closePath(); ctx.fill();
         ctx.strokeStyle = 'rgba(20,20,40,0.6)'; ctx.lineWidth = 2; ctx.stroke();
         px(x - r * 0.6, y, r * 1.2, 2, '#ffffff');
-      } else if (p.kind === 'moonlet' || p.kind === 'pan') {
-        ctx.fillStyle = p.kind === 'pan' ? '#c9c0b0' : '#d8d4cc'; ctx.beginPath(); ctx.ellipse(x, y + 16, p.w / 2, 18, 0, 0, TAU); ctx.fill();
-        if (p.kind === 'pan') px(x - p.w / 2 - 6, y + 14, p.w + 12, 4, '#e6ddcc');
+      } else if (p.kind === 'moonlet') {
+        ctx.fillStyle = '#d8d4cc'; ctx.beginPath(); ctx.ellipse(x, y + 16, p.w / 2, 18, 0, 0, TAU); ctx.fill();
         if (p.name) { ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.85)'; ctx.fillText(p.name.toUpperCase(), x, y - 10); ctx.textAlign = 'start'; }
       } else {
         const M = R7_MOONS[p.name], R = p.R, cy0 = SY(0);
@@ -7943,14 +7975,16 @@
     }
     for (const g of Z.geoms) if (!g.taken) drawGeomAt(SX(g.x), SY(g.y));
     // The spacecraft you rode in on, flying off to go into orbit
-    if (Z.probeT < 3 && Z.plats[0]) { const st = Z.plats[0], k = Z.probeT / 3; ctx.globalAlpha = 1 - k; drawRide(SX(st.x) + k * 500, SY(st.top) - k * 260 + 4); ctx.globalAlpha = 1; }
+    if (Z.probeT < 3) { const k = Z.probeT / 3; ctx.globalAlpha = 1 - k; drawRide(SX(Z.startX) + k * 500, plane - k * 260 + 4); ctx.globalAlpha = 1; }
     for (const q of Z.bits) { ctx.globalAlpha = 1 - q.t / q.life; px(SX(q.x) - 2, SY(q.y) - 2, 4, 4, q.c); }
     ctx.globalAlpha = 1;
     if (!o.noPlayer) {
       const x = SX(Z.x), y = SY(Z.y), sq = Z.squash;
-      const frame = Z.done || Z.standT > 0 ? 'stand' : 'jump';
-      drawSprite(frame, x, y, player.facing < 0, 1 - sq * 0.2, 1 + sq * 0.15, 1, SUIT, clamp(Z.vx / 3000, -0.15, 0.15));
-      if (conspiracy) drawFoilHat(x, y, 0, player.facing < 0);
+      const skating = Z.mode === 'skate' && Z.ground && !Z.done;
+      const frame = Z.done || Z.standT > 0 ? 'stand' : skating ? (Math.abs(Z.vx) > 30 ? WALK_CYCLE[Math.floor(Z.skate / 40) % 4] : 'stand') : 'jump';
+      const lean = skating ? clamp(Z.vx / 2200, -0.25, 0.3) : clamp(Z.vx / 3000, -0.15, 0.15);
+      drawSprite(frame, x, y, player.facing < 0, 1 - sq * 0.2, 1 + sq * 0.15, 1, SUIT, lean);
+      if (conspiracy) drawFoilHat(x, y, lean, player.facing < 0);
       if (Z.done) { px(x + 30, y - 40, 3, 40, '#e8e8f0'); px(x + 33, y - 40, 22, 14, '#e0433b'); px(x + 36, y - 36, 6, 6, '#ffd23f'); }
       drawRunPops(x, y + 6);
     }
@@ -8824,7 +8858,7 @@
     setTimeout(() => launchSecretStar(), 1200);
   }
 
-  canvas.addEventListener('pointerdown', () => { if (state === 'splash') beginDescend(); else if (state === 'tour' && intro.tT > 0.5) beginZoom(); });
+  canvas.addEventListener('pointerdown', () => { if (fx.rings7 && state === 'play') { fx.rings7.wantJump = true; return; } if (state === 'splash') beginDescend(); else if (state === 'tour' && intro.tT > 0.5) beginZoom(); });
   // No long-press menus on the game or its touch buttons (Android)
   for (const el of [canvas, ...document.querySelectorAll('.pad button, .hud button')]) el.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -9438,6 +9472,7 @@
     } else if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
     else if (JUMP.has(e.code)) {
       e.preventDefault();
+      if (fx.rings7 && state === 'play') { fx.rings7.wantJump = true; return; }
       if (state === 'splash') { if (!e.repeat) beginDescend(); return; }
       if (state === 'tour') { if (!e.repeat && intro.tT > 0.5) beginZoom(); return; }
       if (state === 'descend') return;
