@@ -499,10 +499,10 @@
       return out;
     };
     const plains = [
-      { f: 0.16, sink: 0.5, top: 104, col: '#1e2a33', rx: [7, 10], craters: 2, peaks: true },
-      { f: 0.3, sink: 0.6, top: 66, col: '#26343e', rx: [9, 14], craters: 5 },
-      { f: 0.5, sink: 0.74, top: 42, col: '#2e3e49', rx: [13, 20], craters: 4 },
-      { f: 0.72, sink: 0.87, top: 20, col: '#374955', rx: [17, 24], craters: 4 },
+      { f: 0.16, sink: 0.5, top: 84, col: '#8d8b97', rx: [7, 10], craters: 2, peaks: true },
+      { f: 0.3, sink: 0.6, top: 62, col: '#9a98a4', rx: [9, 14], craters: 5 },
+      { f: 0.5, sink: 0.74, top: 40, col: '#a7a5b1', rx: [13, 20], craters: 4 },
+      { f: 0.72, sink: 0.87, top: 20, col: '#b3b1bd', rx: [17, 24], craters: 4 },
     ].map((L, i, all) => {
       const below = i < all.length - 1 ? all[i + 1].top : 0;
       const room = L.top - below;
@@ -4678,14 +4678,25 @@
       ctx.fillStyle = L.col;
       ctx.beginPath(); ctx.arc(cx, my, R0 - 6 + L.top, 0, TAU); ctx.fill();
       if (L.peaks) {
-        // Far off, the lunar mountains (like the Apennines, up to 5 km high),
-        // lit along their tops by the Sun
-        const hgt = (a) => Math.max(0, 22 + 26 * Math.sin(a * 23 + 1) + 16 * Math.sin(a * 57 + 2) + 9 * Math.sin(a * 131)) + 30 * Math.max(0, Math.sin(a * 7 + 0.5)) ** 3;
-        const p0 = -reach - 0.05, p1 = reach + 0.05, st = 0.006;
+        // Far off, low rolling hills and old crater rims, softened by billions
+        // of years of tiny meteorite hits: long gentle slopes lit by the Sun,
+        // then a steeper side in shadow, like sand dunes
+        const dune = (u) => (u < 0.7 ? (1 - Math.cos((u / 0.7) * Math.PI)) / 2 : (1 + Math.cos(((u - 0.7) / 0.3) * Math.PI)) / 2);
+        const fr = (v) => v - Math.floor(v);
+        const hgt = (a) => 4 + 30 * dune(fr(a * 1.9 + 0.3)) + 10 * dune(fr(a * 4.3 + 0.7));
+        const p0 = -reach - 0.05, p1 = reach + 0.05, st = 0.005;
         ctx.beginPath(); ctx.moveTo(...P(p0, 0));
         for (let ph = p0; ph <= p1; ph += st) ctx.lineTo(...P(ph, L.top + hgt(ph - rot)));
         ctx.lineTo(...P(p1, 0)); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = light(L.col, 0.18); ctx.lineWidth = 2; ctx.beginPath();
+        // The steep sides, in shadow
+        ctx.fillStyle = dark(L.col, 0.22);
+        for (let ph = p0; ph < p1; ph += st) {
+          const h0 = hgt(ph - rot), h1 = hgt(ph + st - rot);
+          if (h1 >= h0 - 0.05) continue;
+          ctx.beginPath(); ctx.moveTo(...P(ph, L.top + h0)); ctx.lineTo(...P(ph + st * 1.2, L.top + h1)); ctx.lineTo(...P(ph + st * 1.2, L.top + h1 - 14)); ctx.lineTo(...P(ph, L.top + h0 - 14)); ctx.fill();
+        }
+        ctx.fillStyle = L.col;
+        ctx.strokeStyle = light(L.col, 0.3); ctx.lineWidth = 2; ctx.beginPath();
         for (let ph = p0; ph <= p1; ph += st) ctx.lineTo(...P(ph, L.top + hgt(ph - rot)));
         ctx.stroke();
       }
@@ -4796,10 +4807,10 @@
     ctx.save();
     ctx.clip(outline);
     const crustG = ctx.createRadialGradient(cx, cy, R0 * 0.9, cx, cy, R0);
-    crustG.addColorStop(0, '#2c3a45'); crustG.addColorStop(1, '#455865');
+    crustG.addColorStop(0, '#7c7a86'); crustG.addColorStop(1, '#a6a4b0');
     disc(R0 + 24, crustG);
     const mantle = ctx.createRadialGradient(cx, cy, R0 * 0.32, cx, cy, R0 * 0.9);
-    mantle.addColorStop(0, '#26323c'); mantle.addColorStop(1, '#3a4955');
+    mantle.addColorStop(0, '#5a5864'); mantle.addColorStop(1, '#75737f');
     disc(R0 * 0.9, mantle);
     disc(R0 * 0.32, '#a8553a');
     const outer = ctx.createRadialGradient(cx, cy, R0 * 0.19, cx, cy, R0 * 0.26);
@@ -4817,16 +4828,16 @@
     }
     for (const c of world.crust) {
       at(c.a + theta, c.rf * R0, () => {
-        if (c.kind === 'rock') { px(-5, -3, 10, 6, ['#6f828e', '#64767f', '#7a8c97'][c.hue]); px(-3, -5, 6, 2, '#8ea1ac'); }
-        else if (c.kind === 'ice') { px(-2, -5, 4, 10, '#7f9cb0'); px(-5, -2, 10, 4, '#7f9cb0'); px(-1, -4, 2, 2, '#b8cfdc'); }
-        else if (c.kind === 'meteorite') { px(-5, -4, 10, 8, '#1f2c36'); px(-3, -3, 3, 3, '#6d7f8a'); px(1, 0, 2, 2, '#8ea1ac'); }
+        if (c.kind === 'rock') { px(-5, -3, 10, 6, ['#c4c2cc', '#b5b3be', '#cfcdd6'][c.hue]); px(-3, -5, 6, 2, '#e2e0e8'); }
+        else if (c.kind === 'ice') { px(-2, -5, 4, 10, '#a9c4d6'); px(-5, -2, 10, 4, '#a9c4d6'); px(-1, -4, 2, 2, '#e0eef6'); }
+        else if (c.kind === 'meteorite') { px(-5, -4, 10, 8, '#3a3846'); px(-3, -3, 3, 3, '#8a8896'); px(1, 0, 2, 2, '#b0aeba'); }
         else if (c.kind === 'glass') { for (const [x, y] of [[-4, -2], [0, -4], [3, 0], [-1, 2]]) px(x, y, 3, 3, c.hue ? '#8c8072' : '#9a8d7c'); }
         else { px(-18, -2, 36, 5, '#4a4757'); px(-18, -3, 36, 1, '#8a8796'); px(-20, -1, 2, 3, '#4a4757'); px(18, -1, 2, 3, '#4a4757'); } // lava tube
       }, 34);
     }
     // Pale regolith on top: dust and broken rock, smooth like Earth's grass band
-    ctx.strokeStyle = '#4c606d'; ctx.lineWidth = 22; ctx.stroke(outline);
-    ctx.strokeStyle = '#6d828f'; ctx.lineWidth = 5; ctx.stroke(outline);
+    ctx.strokeStyle = '#b9b6c2'; ctx.lineWidth = 22; ctx.stroke(outline);
+    ctx.strokeStyle = '#dedce6'; ctx.lineWidth = 5; ctx.stroke(outline);
     ctx.restore();
     ctx.font = '8px "Press Start 2P", monospace';
     ctx.textAlign = 'center';
@@ -4844,9 +4855,9 @@
   const MOON_DECOR = {
     boulder(d) {
       ctx.scale(d.size, d.size);
-      ctx.fillStyle = ['#566975', '#617480', '#4b5d69'][d.hue];
+      ctx.fillStyle = ['#a8a6b2', '#b4b2bd', '#9c9aa6'][d.hue];
       ctx.beginPath(); ctx.moveTo(-12, 0); ctx.lineTo(-9, -10); ctx.lineTo(2, -14); ctx.lineTo(11, -7); ctx.lineTo(12, 0); ctx.closePath(); ctx.fill();
-      px(-7, -11, 7, 3, '#8ea1ac'); px(6, -6, 5, 6, '#33434e');
+      px(-7, -11, 7, 3, '#dcdae3'); px(6, -6, 5, 6, '#6e6c7a');
     },
     // The base, in a clean flat vector style: pale buildings, soft shading
     // (lit from the left), dark doors and windows
