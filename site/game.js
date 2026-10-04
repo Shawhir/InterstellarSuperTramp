@@ -2784,18 +2784,34 @@
       ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-20, yC - 400);
       for (let x = -20; x <= W + 40; x += 30) ctx.lineTo(x, yC + 14 + 18 * Math.sin((x + theta * Rm * pf) * 0.05 + z + L) + 10 * Math.sin((x + theta * Rm * pf) * 0.13));
       ctx.lineTo(W + 40, yC - 400); ctx.fill();
+      if (L === 0) {
+        // The far wall of the cavern: a long ridge of rock, with the odd light
+        const off = theta * Rm * pf, rh = (x) => 50 + 40 * Math.sin((x + off) * 0.011 + z * 2) + 26 * Math.sin((x + off) * 0.029 + z) + 12 * Math.sin((x + off) * 0.07);
+        ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-20, yF + 10);
+        for (let x = -20; x <= W + 40; x += 20) ctx.lineTo(x, yF - rh(x) * 1.6);
+        ctx.lineTo(W + 40, yF + 10); ctx.fill();
+        for (let k = 0; k < 14; k++) {
+          const lx = ((k * 211 + off * 1) % (W + 200) + W + 200) % (W + 200) - 100;
+          if (hash3(k, z, 9) > 0.5) px(lx, yF - rh(lx) * 1.6 * hash3(k, z, 4), 3, 3, glow);
+        }
+      }
       const i0 = Math.floor((-theta - span) / step), i1 = Math.ceil((-theta + span) / step);
       for (let i = i0; i <= i1; i++) {
         const x = W / 2 + wrap(i * step + theta) * Rm * pf, h1 = hash3(i, z, L), h2 = hash3(i + 7, z, L), h3 = hash3(i, z + 3, L + 5);
-        const H1 = lerp(120, 70, nk) + h1 * lerp(170, 110, nk), w = lerp(26, 34, nk) + h2 * lerp(28, 44, nk);
+        // Gaps and clusters, and every size from runt to giant
+        if (h3 < (L === 0 ? 0.3 : L === 3 ? 0.4 : 0.15)) continue;
+        const sc = 0.55 + hash3(i, z + 9, L) * 0.95;
+        const H1 = (lerp(120, 70, nk) + h1 * lerp(170, 110, nk)) * sc, w = (lerp(26, 34, nk) + h2 * lerp(28, 44, nk)) * lerp(0.8, 1.25, sc - 0.55);
+        if (L === 3 && h1 > 0.72) { cavernColumn(x, yF, yC, w, dark, mid, glow, key); continue; }
         ctx.fillStyle = dark;
         // From the roof: stalactites, roots, vines, cables
         if (key === 'fungus' || key === 'shaft' || key === 'pellucidar') { ctx.fillStyle = key === 'pellucidar' ? '#1e3a18' : '#3a2a1a'; for (let k = 0; k < 3; k++) ctx.fillRect(x + (k - 1) * 9, yC + 10, 2, 30 + hash3(i, k, L) * 80); }
         else if (key === 'city') { ctx.strokeStyle = h3 > 0.5 ? glow : '#8fff6a'; ctx.globalAlpha = 0.4; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 60, yC + 20); ctx.quadraticCurveTo(x, yC + 60 + h1 * 40, x + 60, yC + 20); ctx.stroke(); ctx.globalAlpha = A; }
         else if (key === 'morlock') { ctx.fillRect(x - 70, yC + 30 + h1 * 30, 140, 6); px(x, yC + 10, 2, 40 + h2 * 40, dark); }
         else { ctx.beginPath(); ctx.moveTo(x - 8, yC + 10); ctx.lineTo(x + 8, yC + 10); ctx.lineTo(x, yC + 40 + h1 * 60); ctx.fill(); if (key === 'crystal' || key === 'agartha') px(x - 1, yC + 14, 2, 20 + h1 * 30, glow); if (key === 'lava' && Math.sin(clock * 3 + i) > 0.6) px(x - 1, yC + 40 + h1 * 60 + ((clock * 60 + i * 13) % 80), 2, 4, '#ff8a3a'); }
-        // From the floor: each cavern's own far-off shapes
+        // From the floor: each cavern's own far-off shapes (two kinds each)
         ctx.fillStyle = mid;
+        if ((L === 2 && h2 > 0.3) || (L === 1 && h2 > 0.75)) { ctx.save(); cavernAlt(key, x, yF, yC, H1, w, mid, dark, glow, i); ctx.restore(); ctx.globalAlpha = A; continue; }
         if (key === 'pellucidar') {
           ctx.fillRect(x - 4, yF - H1, 8, H1); for (const [ox, oy, r] of [[0, 0, 26], [-18, 14, 18], [18, 12, 20]]) { ctx.beginPath(); ctx.arc(x + ox, yF - H1 + oy, r * lerp(1.35, 1, nk), 0, TAU); ctx.fill(); }
         } else if (key === 'sea') {
@@ -2830,7 +2846,94 @@
       const fg = ctx.createLinearGradient(0, yF - 80, 0, yF + 10);
       fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, hexOf(mix(Z.col, glow, 0.25)));
       ctx.fillStyle = fg; ctx.fillRect(0, yF - 80, W, 90);
+      // Mist lying between the layers, drifting, so each depth sits apart
+      if (L === 0 || L === 2) {
+        const c = mix(Z.col, glow, 0.35).match(/\d+/g), my = yF - (L ? 50 : 90), mh = L ? 120 : 170;
+        const mg = ctx.createLinearGradient(0, my - mh / 2, 0, my + mh / 2);
+        mg.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},0)`); mg.addColorStop(0.5, `rgba(${c[0]},${c[1]},${c[2]},${L ? 0.16 : 0.24})`); mg.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
+        ctx.globalAlpha = 1; ctx.fillStyle = mg; ctx.fillRect(0, my - mh / 2, W, mh);
+        for (let k = 0; k < 5; k++) {
+          const mx = (((k * 260 + clock * (8 + k * 3) + theta * Rm * pf) % (W + 400)) + W + 400) % (W + 400) - 200;
+          ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},0.08)`; ctx.beginPath(); ctx.ellipse(mx, my + Math.sin(k) * 14, 160, 22, 0, 0, TAU); ctx.fill();
+        }
+      }
       ctx.globalAlpha = 1;
+    }
+  }
+  // A great column where a stalactite and stalagmite have met, close by
+  function cavernColumn(x, yF, yC, w, dark, mid, glow, key) {
+    const cw = w * 0.7;
+    ctx.fillStyle = dark;
+    ctx.beginPath(); ctx.moveTo(x - cw * 1.6, yF); ctx.quadraticCurveTo(x - cw * 0.5, yF - 60, x - cw * 0.45, (yF + yC) / 2);
+    ctx.quadraticCurveTo(x - cw * 0.5, yC + 50, x - cw * 1.5, yC); ctx.lineTo(x + cw * 1.5, yC);
+    ctx.quadraticCurveTo(x + cw * 0.5, yC + 50, x + cw * 0.45, (yF + yC) / 2); ctx.quadraticCurveTo(x + cw * 0.5, yF - 60, x + cw * 1.6, yF); ctx.fill();
+    ctx.fillStyle = mid; ctx.fillRect(x - cw * 0.45, yC + 60, 3, Math.max(0, yF - yC - 120));
+    // Something growing on it
+    if (key === 'fungus' || key === 'pellucidar') for (let k = 0; k < 5; k++) px(x - cw * 0.5 - 4, yC + 80 + k * ((yF - yC - 160) / 5), 8, 4, key === 'fungus' ? glow : '#3f7a2a');
+    else if (key === 'crystal' || key === 'agartha') for (let k = 0; k < 4; k++) px(x + cw * 0.2, yC + 90 + k * ((yF - yC - 180) / 4), 3, 12, glow);
+  }
+  // Each cavern's second kind of far-off shape
+  function cavernAlt(key, x, yF, yC, H, w, mid, dark, glow, i) {
+    ctx.fillStyle = mid;
+    if (key === 'pellucidar') {
+      // A long-necked dinosaur, as in Burroughs's Pellucidar stories
+      const s = H / 120, wob = Math.sin(clock * 0.8 + i) * 4 * s;
+      ctx.beginPath(); ctx.ellipse(x, yF - 30 * s, 40 * s, 20 * s, 0, 0, TAU); ctx.fill();
+      ctx.lineWidth = 9 * s; ctx.strokeStyle = mid; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x + 30 * s, yF - 36 * s); ctx.quadraticCurveTo(x + 55 * s, yF - 80 * s, x + 50 * s + wob, yF - 110 * s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - 36 * s, yF - 30 * s); ctx.quadraticCurveTo(x - 70 * s, yF - 20 * s, x - 90 * s, yF - 8 * s); ctx.stroke();
+      ctx.lineCap = 'butt';
+      for (const lx of [-24, -10, 12, 26]) ctx.fillRect(x + lx * s, yF - 18 * s, 7 * s, 18 * s);
+    } else if (key === 'sea') {
+      // A sea arch, and a raft like Lidenbrock's
+      ctx.beginPath(); ctx.moveTo(x - w * 1.6, yF); ctx.lineTo(x - w * 1.3, yF - H); ctx.lineTo(x + w * 1.3, yF - H); ctx.lineTo(x + w * 1.6, yF);
+      ctx.lineTo(x + w * 0.7, yF); ctx.quadraticCurveTo(x, yF - H * 1.4, x - w * 0.7, yF); ctx.fill();
+      const rx = x + Math.sin(clock * 0.2 + i) * 40;
+      ctx.fillStyle = dark; ctx.fillRect(rx - 14, yF - 6, 28, 4); ctx.fillRect(rx - 1, yF - 26, 2, 20);
+      ctx.beginPath(); ctx.moveTo(rx + 1, yF - 25); ctx.lineTo(rx + 13, yF - 12); ctx.lineTo(rx + 1, yF - 10); ctx.fill();
+    } else if (key === 'agartha') {
+      // A stepped pyramid, its top alight
+      for (let k = 0; k < 5; k++) ctx.fillRect(x - w * (1.6 - k * 0.3), yF - (k + 1) * H * 0.18, w * (3.2 - k * 0.6), H * 0.18 + 1);
+      ctx.fillStyle = glow; ctx.globalAlpha *= 0.6 + 0.4 * Math.sin(clock * 2 + i);
+      ctx.beginPath(); ctx.arc(x, yF - H * 0.95, 6, 0, TAU); ctx.fill();
+    } else if (key === 'crystal') {
+      // A cluster of giant crystals leaning every way (like Naica's)
+      for (const [ang, len, ww] of [[-0.5, 1, 0.5], [0.1, 1.3, 0.6], [0.6, 0.8, 0.45], [-0.15, 0.6, 0.35]]) {
+        ctx.save(); ctx.translate(x, yF); ctx.rotate(ang);
+        ctx.beginPath(); ctx.moveTo(-w * ww, 0); ctx.lineTo(-w * ww * 0.8, -H * len); ctx.lineTo(0, -H * len - 14); ctx.lineTo(w * ww * 0.8, -H * len); ctx.lineTo(w * ww, 0); ctx.fill();
+        ctx.globalAlpha *= 0.5; px(-1, -H * len * 0.9, 2, H * len * 0.8, glow); ctx.restore();
+      }
+    } else if (key === 'fungus') {
+      // Puffballs, breathing out spores
+      for (const [ox, r] of [[-w * 0.8, 0.5], [0, 0.75], [w * 0.9, 0.42]]) {
+        const rr = H * r * 0.45; ctx.beginPath(); ctx.arc(x + ox, yF - rr, rr, 0, TAU); ctx.fill();
+        for (let k = 0; k < 3; k++) { const t = (clock * 0.4 + k / 3 + i * 0.13) % 1; px(x + ox + Math.sin(t * 6 + k) * 10, yF - rr * 2 - t * 60, 3, 3, glow); }
+      }
+    } else if (key === 'morlock') {
+      // A huge turning gear, and the pipe that feeds it
+      const r = H * 0.42, cxg = x, cyg = yF - r - 6, rot = clock * 0.5 * (i % 2 ? 1 : -1);
+      for (let k = 0; k < 10; k++) { const a = rot + (k / 10) * TAU; ctx.save(); ctx.translate(cxg + Math.cos(a) * r, cyg + Math.sin(a) * r); ctx.rotate(a); ctx.fillRect(-5, -7, 12, 14); ctx.restore(); }
+      ctx.beginPath(); ctx.arc(cxg, cyg, r, 0, TAU); ctx.arc(cxg, cyg, r * 0.35, 0, TAU, true); ctx.fill('evenodd');
+      ctx.fillRect(x + r, yF - 20, w * 2, 12); ctx.fillRect(x + r + w * 2 - 12, yC + 10, 12, yF - yC - 10);
+    } else if (key === 'lava') {
+      // A lavafall from the roof, into a glowing pool
+      const top = yC + 30, g = ctx.createLinearGradient(0, top, 0, yF);
+      g.addColorStop(0, 'rgba(255,200,80,0.9)'); g.addColorStop(1, 'rgba(255,90,20,0.8)');
+      ctx.fillStyle = g; ctx.fillRect(x - w * 0.25, top, w * 0.5, yF - top);
+      for (let k = 0; k < 4; k++) px(x - w * 0.25 + 2, top + ((clock * 140 + k * 70 + i * 23) % Math.max(1, yF - top)), w * 0.5 - 4, 8, '#ffd23f');
+      ctx.fillStyle = 'rgba(255,120,30,0.6)'; ctx.beginPath(); ctx.ellipse(x, yF - 2, w * 1.6, 8, 0, 0, TAU); ctx.fill();
+    } else if (key === 'city') {
+      // A dome and a skybridge between two towers
+      ctx.beginPath(); ctx.arc(x, yF, w * 1.4, Math.PI, TAU); ctx.fill();
+      ctx.fillRect(x - w * 2.4, yF - H * 1.1, w * 0.6, H * 1.1); ctx.fillRect(x + w * 1.8, yF - H * 0.9, w * 0.6, H * 0.9);
+      ctx.fillRect(x - w * 1.8, yF - H * 0.75, w * 3.6, 5);
+      for (let k = 0; k < 6; k++) px(x - w * 1.7 + k * w * 0.62, yF - H * 0.75 + 1, 3, 3, (Math.floor(clock * 3) + k) % 3 ? glow : '#ffffff');
+    } else {
+      // A mine's headframe, its wheel turning
+      ctx.beginPath(); ctx.moveTo(x - w, yF); ctx.lineTo(x - 3, yF - H); ctx.lineTo(x + 3, yF - H); ctx.lineTo(x + w, yF); ctx.lineTo(x + w - 6, yF); ctx.lineTo(x, yF - H + 10); ctx.lineTo(x - w + 6, yF); ctx.fill();
+      ctx.strokeStyle = mid; ctx.lineWidth = 3; const a = clock * 1.5;
+      ctx.beginPath(); ctx.arc(x, yF - H, 14, 0, TAU); ctx.moveTo(x + Math.cos(a) * 14, yF - H + Math.sin(a) * 14); ctx.lineTo(x - Math.cos(a) * 14, yF - H - Math.sin(a) * 14); ctx.stroke();
+      ctx.fillRect(x - 1, yF - H, 2, H);
     }
   }
   // How far from the middle of the world the screen reaches, nearest and furthest

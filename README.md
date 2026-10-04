@@ -386,7 +386,7 @@ switches it off. You get:
   city 85 m deep), St Kinga's Chapel (carved from salt), Coober Pedy's dugouts,
   and Beijing's Cold War tunnel city.
 
-  Behind each cavern are its own far-off walls in four parallax layers (far ones smaller, darker and hazier, each sliding past at its own speed): jungle,
+  Behind each cavern are its own far-off walls in four parallax layers (far ones smaller, darker and hazier, each sliding past at its own speed, with mist lying between them): a long far ridge at the back, then clusters and gaps of every size, with each cavern's second kind of shape in the middle (Pellucidar's long-necked dinosaurs, a sea arch and Lidenbrock's raft, stepped pyramids, Naica-style crystal clusters, puffballs, turning Morlock gears, lavafalls, skybridges, mine headframes) and great rock columns close by: jungle,
   sea cliffs and waterfalls, golden towers, giant crystals, giant mushrooms,
   smoking factories, volcanoes, skyscrapers with neon cables, tunnel mouths.
   Each is drawn only inside its own cavern, so they blend as you climb from
