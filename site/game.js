@@ -7597,6 +7597,42 @@
     ctx.restore();
     if (r > 30) { ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.75)'; ctx.fillText('SATURN', x, y - r * 1.25); ctx.textAlign = 'start'; }
   }
+  // The ring sheet: for each ring, the region between its inner and outer
+  // edges, from where they run round Saturn's far side (the ellipse) to where
+  // they cross the band you hop along (x from x0 to x1)
+  const SHEET = [
+    [-200, 1800, 1.24, 1.52, [150, 135, 115], 0.45], [1800, 4300, 1.52, 1.95, [238, 224, 192], 0.85], [4300, 4900, 1.95, 2.02, [30, 30, 40], 0.3],
+    [4900, 6000, 2.02, 2.19, [214, 198, 166], 0.8], [6000, 6300, 2.19, 2.2, [30, 30, 40], 0.4], [6300, 6900, 2.2, 2.27, [214, 198, 166], 0.8], [6950, 7150, 2.32, 2.34, [240, 230, 210], 0.75],
+  ];
+  function drawRingSheet(SX, plane, sx, sy, sr) {
+    const E = 0.2, arc = 0.55, n = 10;
+    const ell = (rho, phi) => [sx + Math.cos(phi) * rho * sr, sy + Math.sin(phi) * rho * sr * E];
+    for (const [x0, x1, r0, r1, c, a] of SHEET) {
+      if (c[0] < 50) continue; // the gaps: just empty, the stars showing through
+      const f0 = [SX(x0), plane], f1 = [SX(x1), plane];
+      if (Math.max(f0[0], f1[0]) < -400 && Math.max(ell(r0, 0)[0], ell(r1, 0)[0]) < -40) continue;
+      // From the far side round the back (top), out to the right-hand tip,
+      // round the near side a little, then sweeping down to the band
+      const g = ctx.createLinearGradient(0, sy, 0, plane);
+      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${a * 0.7})`); g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},${a})`);
+      ctx.fillStyle = g; ctx.beginPath();
+      for (let i = 0; i <= n; i++) { const [x, y] = ell(r1, -0.15 + (i / n) * (arc + 0.15)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      const e1 = ell(r1, arc), e0 = ell(r0, arc);
+      ctx.bezierCurveTo(e1[0] + (f1[0] - e1[0]) * 0.2, lerp(e1[1], plane, 0.7), f1[0], lerp(e1[1], plane, 0.9), f1[0], f1[1]);
+      ctx.lineTo(f0[0], f0[1]);
+      ctx.bezierCurveTo(f0[0], lerp(e0[1], plane, 0.9), e0[0] + (f0[0] - e0[0]) * 0.2, lerp(e0[1], plane, 0.7), e0[0], e0[1]);
+      for (let i = n; i >= 0; i--) { const [x, y] = ell(r0, -0.15 + (i / n) * (arc + 0.15)); ctx.lineTo(x, y); }
+      ctx.closePath(); ctx.fill();
+    }
+    // Ringlets running along the sheet, so it reads as rings, not a blob
+    ctx.strokeStyle = 'rgba(255,250,235,0.12)'; ctx.lineWidth = 1;
+    for (const [x0, x1, r0, r1] of SHEET.slice(0, 7)) for (let q = 0.25; q < 1; q += 0.25) {
+      const rr = lerp(r0, r1, q), fx0 = SX(lerp(x0, x1, q)), e = ell(rr, arc);
+      ctx.beginPath();
+      for (let i = 0; i <= n; i++) { const [x, y] = ell(rr, -0.15 + (i / n) * (arc + 0.15)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.bezierCurveTo(e[0] + (fx0 - e[0]) * 0.2, lerp(e[1], plane, 0.7), fx0, lerp(e[1], plane, 0.9), fx0, plane); ctx.stroke();
+    }
+  }
   // ---- Level 7: the slingshot round Jupiter, then across Saturn's rings --------
   // The things every frame needs while the world itself is paused
   function tickCommon(dt) {
@@ -7852,11 +7888,15 @@
     for (const st of world.sky) { const x = (((st.x * W - Z.camX * 0.05) % W) + W) % W; ctx.fillRect(x, st.y * H, st.s + streak * 20, st.s); }
     if (o.zoom) { ctx.translate(o.ax, o.ay); ctx.scale(o.zoom, o.zoom); ctx.translate(-o.ax, -o.ay); }
     const SX = (wx) => wx - Z.camX, SY = (wy) => H * 0.66 + (wy - Z.camY), plane = SY(0);
-    // Saturn, the whole planet and its tilted rings, hanging in the sky
-    // behind; it drifts slowly and shrinks as you head out towards Titan
+    // Saturn, the whole planet and its rings, hanging in the sky behind; it
+    // drifts slowly and shrinks as you head out towards Titan. The rings you're
+    // on are its own: each one sweeps from its place round Saturn down to the
+    // stretch of ring under your feet, as one sheet of ice seen from just above
     {
       const k = clamp(Z.x / TITAN_X, 0, 1), sr = Math.min(W, H) * lerp(0.26, 0.11, k);
-      drawSaturnBig(lerp(W * 0.42, W * 0.22, k) - Z.camX * 0.02, plane - H * lerp(0.36, 0.42, k), sr);
+      const sx = lerp(W * 0.36, W * 0.16, k) - Z.camX * 0.02, sy = plane - H * lerp(0.36, 0.42, k);
+      drawSaturnBig(sx, sy, sr);
+      drawRingSheet(SX, plane, sx, sy, sr);
     }
     // The rings, side on: a band of ice right across, darker in the gaps,
     // fading out into the faint E ring

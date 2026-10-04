@@ -430,8 +430,11 @@ Reach the seafloor of Europa at the end of level 5 and carry straight on
   view, level, seen from just above the ring plane: the banded gold planet
   with its rings round it (C, B, the
   Cassini Division, A, the Encke Gap, F), the rings' shadow across it. It
-  drifts and shrinks as you head out. In front of it, the rings stretch away
-  to the right as a band of ice. Jump off the spacecraft and bounce across
+  drifts and shrinks as you head out. The rings you hop along are its own:
+  each ring (C, B, A, F) sweeps as one sheet of ice from its place round
+  Saturn down to the stretch under your feet, in the same colours, with the
+  Cassini Division and the Encke Gap left open to the stars, so you can see
+  just which ring you're on. Jump off the spacecraft and bounce across
   chunks of ring ice, steering over the gaps: the C ring, the bright B ring,
   the Cassini Division (one stepping stone), the A ring, the Encke Gap
   (bounce on little ravioli-shaped Pan) and the braided F ring. Then on out
