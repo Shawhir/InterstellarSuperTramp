@@ -340,18 +340,21 @@ or start from the title screen (you start on Ceres).
   carbon-rich asteroids with pinball and pop bumpers between them. As in the
   rest of the belt, there's no fireball and sinking back down is slow.
 - **Mass drivers.** About a third of the way through the rest of the belt,
-  the miners' magnet rails fling you on. From there it's a run: you fly
-  forward, slowly at first through empty space, until Jupiter's gravity picks
-  you up and pulls you in faster and faster (your speed shows in km/s, and
-  rings of its pull slide in towards it). Near the end the stars, dust and
-  speed lines stream past faster than a fireball fall to Earth, with warp
-  streaks pouring out of Jupiter, and you hit its air as a roaring fireball. A
-  green marker at the top shows where the next band's gap is. Bands of asteroids
-  stretch right across the way, each with a gap: through cleanly and your
-  multiplier goes up, and every 5 in a row is a streak bonus; clip one and it
-  costs you points. The bands spread out as you speed up, so there's always
-  time to react. On the way: the outer
-  belt, the Hilda asteroids, drifting bands of comet pieces (like
+  the miners' magnet rails fling you on, and from there it's a fall: Jupiter's
+  gravity has you, and it's all about the thrill. You start fast and it pulls
+  you in faster and faster, up to about 2,400 px/s, faster than the fall
+  through the hollow Earth (your speed shows in km/s, up to about 72, near
+  the real Juno probe's 265,000 km/h). Stars, dust, speed lines and warp
+  streaks pour past, the screen shakes, and you hit Jupiter's air as a
+  roaring fireball. There are no walls: just loose asteroids scattered in
+  your way, which always come at you slowly enough to dodge. Skim close past
+  one for a CLOSE CALL and your multiplier goes up (every 5 in a row is a
+  streak bonus); clip one and it costs you points. And Jupiter's four big
+  moons loom in from the side, each with its own pull dragging you towards
+  it, so you steer against it: Callisto, Ganymede (the biggest moon in the
+  Solar System, with the strongest pull), Europa and volcanic Io. Touch one
+  and you bounce off and lose points. On the way: the outer belt, the Hilda
+  asteroids, drifting comet pieces (like
   Shoemaker-Levy 9) and Jupiter's radiation belts. During the run, messages
   sit in a slim strip at the bottom and banners are see-through, so nothing
   hides what's coming.
