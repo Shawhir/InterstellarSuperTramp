@@ -340,14 +340,19 @@ or start from the title screen (you start on Ceres).
   carbon-rich asteroids with pinball and pop bumpers between them. As in the
   rest of the belt, there's no fireball and sinking back down is slow.
 - **Mass drivers.** About a third of the way through the rest of the belt,
-  the miners' magnet rails fling you on, and from there it's a fall: Jupiter's
+  the miners' magnet rails fling you on: land on one and it grabs you, its
+  coils charge one after another with sparks, and it flings you up and away
+  in a flash, the view blending into the run as you go. From there it's a fall: Jupiter's
   gravity has you, and it's all about the thrill. You start fast and it pulls
   you in faster and faster, up to about 2,400 px/s, faster than the fall
   through the hollow Earth (your speed shows in km/s, up to about 72, near
   the real Juno probe's 265,000 km/h). Stars, dust, speed lines and warp
   streaks pour past, the screen shakes, and you hit Jupiter's air as a
   roaring fireball. There are no walls: just loose asteroids scattered in
-  your way, which always come at you slowly enough to dodge. Skim close past
+  your way, which always come at you slowly enough to dodge. They're easy to
+  pick out: each has a dark outline, a bright rim and a warm glow, red arrows
+  at the top edge show where they're about to come in, and the speed streaks
+  keep out of your path. Skim close past
   one for a CLOSE CALL and your multiplier goes up (every 5 in a row is a
   streak bonus); clip one and it costs you points. And Jupiter's four big
   moons loom in from the side, each with its own pull dragging you towards
