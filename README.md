@@ -71,10 +71,21 @@ says so if that happens.
   as its gravity takes over. The next level's own world really is up there,
   upside down and getting closer, drawn alongside the one you're leaving. The
   view turns right over about you (you stay upright; home swings round
-  overhead and the sky becomes the new world's sky), and you're falling feet
-  first towards the next level's ground. Nothing swaps or fades: the game
-  simply carries on there, with that world's own gravity, the score carried
-  on and the whole trip counted as one run.
+  overhead and the sky becomes the new world's sky; nothing zooms), and you
+  fall feet first from high above the next level's ground. Where the world
+  has air (Earth, Mars, Venus) you fall in through it: it glows in a cap
+  under your feet and streams away above you, and slows you more and more
+  as you get lower. Nothing swaps or fades: the game simply carries on there,
+  with that world's own gravity, the score carried on and the whole trip
+  counted as one run.
+- Going back: each world's starting ground has a blue backdrop tramp ("BACK TO
+  EARTH", "BACK TO THE MOON", "BACK TO MARS"). Bounce on it and you're off the
+  way you came, the same way round: up, over, and falling onto the world
+  before. Your score comes with you.
+- Gravity on the way to the Moon gets weaker the higher you go, so you hang
+  in the air longer: Earth's pull falls off with the square of your distance
+  from its centre. (Softened so it stays playable: by the GPS satellites the
+  real figure is about 6%.)
 - Reaching a belt world on level 3, the destination swells to the size of the
   next level's world as you touch down, and you play on there. Mercury and
   Europa are the ends of the line, with a results screen: at Mercury the view
@@ -337,7 +348,10 @@ switches it off. You get:
   what's really true (the Moon landings, chemtrails, Nibiru, Mercury in
   retrograde, and more);
 - **level 6, the hollow Earth.** On level 1, crash into Earth as a fireball and
-  you smash straight through the crust, score and all. (Or pick "Secret: the
+  you smash straight through the crust, score and all: you burrow down
+  through solid rock, burst out of the roof of the topmost cavern and fall
+  all the way down through every cavern, crashing through each one's floor,
+  to the inner sun. Then you climb back out. (Or pick "Secret: the
   hollow Earth" on the menu.) It's a round world inside the world: a little
   "inner sun" at the centre, and nine caverns in rings round it, each walled
   off from the next by a shell of rock with a way through. Climb out, from the

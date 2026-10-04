@@ -32,15 +32,18 @@
     { km: 18, type: 'balloon', layer: 'Stratosphere', note: 'Stratosphere. The ozone layer lives up here.' },
     { km: 28, type: 'balloon', layer: 'Stratosphere' },
     { km: 40, type: 'balloon', layer: 'Stratosphere', note: 'Weather balloons burst at around 40 km.' },
-    { km: 80, type: 'nlc', layer: 'Mesosphere', note: 'Noctilucent clouds: the highest clouds on Earth, 80 km up.' },
-    { km: 100, type: 'satellite', layer: 'Thermosphere', note: 'The Kármán line, 100 km. You are officially in space.' },
-    { km: 200, type: 'satellite', layer: 'Thermosphere' },
-    { km: 408, type: 'station', layer: 'Thermosphere', note: 'The International Space Station orbits at 408 km.' },
-    { km: 2000, type: 'satellite', layer: 'Low Earth orbit', note: 'Low Earth orbit ends around 2,000 km.' },
-    { km: 20200, type: 'satellite', layer: 'Medium Earth orbit', note: 'GPS satellites circle at 20,200 km.' },
-    { km: 35786, type: 'satellite', layer: 'Geostationary orbit', note: 'Geostationary orbit, 35,786 km. One lap per day.' },
-    { km: 150000, type: 'asteroid', layer: 'Deep space', note: 'Deep space. Nearly there.' },
-    { km: 384400, type: 'moon', layer: 'The Moon' },
+    // g: Earth's pull weakens the further out you go (it falls off with the
+    // square of your distance from Earth's centre). Softened so it stays
+    // playable: really it's down to about 6% by the GPS satellites.
+    { km: 80, type: 'nlc', layer: 'Mesosphere', g: 0.98, note: 'Noctilucent clouds: the highest clouds on Earth, 80 km up.' },
+    { km: 100, type: 'satellite', layer: 'Thermosphere', g: 0.97, note: 'The Kármán line, 100 km. You are officially in space.' },
+    { km: 200, type: 'satellite', layer: 'Thermosphere', g: 0.94 },
+    { km: 408, type: 'station', layer: 'Thermosphere', g: 0.88, note: "The International Space Station orbits at 408 km. Gravity there is still about 90% of what it is on the ground: astronauts float because they're falling round Earth." },
+    { km: 2000, type: 'satellite', layer: 'Low Earth orbit', g: 0.62, note: "Low Earth orbit ends around 2,000 km. Earth's pull is weaker up here, a bit over half what it is on the ground, so you hang in the air longer." },
+    { km: 20200, type: 'satellite', layer: 'Medium Earth orbit', g: 0.5, note: 'GPS satellites circle at 20,200 km.' },
+    { km: 35786, type: 'satellite', layer: 'Geostationary orbit', g: 0.48, note: 'Geostationary orbit, 35,786 km. One lap per day.' },
+    { km: 150000, type: 'asteroid', layer: 'Deep space', g: 0.45, note: "Deep space. Nearly there. Earth's pull is tiny out here, and soon the Moon's takes over." },
+    { km: 384400, type: 'moon', layer: 'The Moon', g: 0.45 },
   ];
   let TIERS = L1_TIERS;
   let TOP = TIERS.length - 1;
@@ -200,7 +203,7 @@
     const n = sf.length, f = ((((a / TAU) * n) % n) + n) % n, i = Math.floor(f), k = f - i;
     return sf[i] * (1 - k) + sf[(i + 1) % n] * k;
   }
-  const gravAt = (k) => (level >= 2 ? TIERS[Math.max(0, Math.min(TOP, k))].g || 0.6 : 1);
+  const gravAt = (k) => TIERS[Math.max(0, Math.min(TOP, k))].g || (level >= 2 ? 0.6 : 1);
   const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220,
     pad: 80, haven: 180, shade: 150, mercury: 220, driver: 150, mush: 90, fern: 120, raft: 130, gold: 120, crystal: 110, sway: 120, girder: 130, neon: 120, ledge: 110, hole: 160, rubble: 104, ufo: 112, refinery: 230, rocket: 116, kamo: 84, car: 150, comet: 140, phobos: 110, deimos: 80, cloudv: 140, mars: 220, venus: 220,
     cloudm: 140, miner: 120, hauler: 160, outpost: 150, ceres: 160, vesta: 110, pallas: 106, hygiea: 96 };
@@ -305,7 +308,7 @@
     const stars = [];
     const mk = (tier, a) => {
       const type = TIERS[tier].type;
-      const p = { tier, a, a0: a, type, R: tierR(tier), w: WIDTH[type], bounce: bounceFor(tier), squash: 0, jig: 9, hit: 0, sway: 0, freq: 0, phase: 0, spin: rnd() * TAU };
+      const p = { tier, a, a0: a, type, g: gravAt(tier), R: tierR(tier), w: WIDTH[type], bounce: bounceFor(tier), squash: 0, jig: 9, hit: 0, sway: 0, freq: 0, phase: 0, spin: rnd() * TAU };
       if (type === 'satellite' || type === 'station' || type === 'asteroid') {
         // Orbiting things sway back and forth so they never drift out of reach for good.
         p.sway = (30 + rnd() * 40) / p.R;
@@ -897,6 +900,7 @@
 
   function reset(seed) {
     world = buildWorld(seed);
+    addBackTramp();
     Object.assign(player, { r: R0, vr: 0, vx: 0, onGround: true, facing: 1, walkT: 0, squash: 0, speed: 1, apexR: R0, lastPlat: null, lastH: 0, heat: 0, suit: level >= 2, field: 0, lost: false, adrift: 0, carried: false, spin: 0, inside: false, g: gravAt(0), shield: 0, hurt: 0, grit: 0 });
     theta = 0; lastTier = -1; bestTier = -1; playTime = 0; particles = [];
     fx = freshFx();
@@ -1057,7 +1061,8 @@
   function land(p) {
     player.hopLock = 0; // an auto-hop holds your steering until you land
     if (p === world.issPlat && !player.suit && p.ride.state === 'near') { dock(p); return; }
-    if ((level === 2 || level === 3) && p.tier === 0 && p.route !== route) chooseRoute(p.route);
+    if ((level === 2 || level === 3) && p.tier === 0 && !p.back && p.route !== route) chooseRoute(p.route);
+    player.backTo = p.back ? p.back : 0; player.backR = p.R;
     const off = Math.abs(wrap(p.a + theta) * p.R);
     if (player.heat > 0.3) {
       // Put out by the landing: a hiss of steam
@@ -2102,7 +2107,12 @@
   // the new world's sky) and by the end you're simply falling towards the
   // next level's ground, which is where the game carries on: nothing swaps.
   const climbOut = () => (level === 1 || level === 2 || level === 6) && nextLevel() > 0;
-  const CLIMB_TURN = [0.35, 1.85], CLIMB_T = 1.9, DROP_H = 300, CLIMB_VE = 320, CLIMB_BUMP = 1100;
+  const CLIMB_TURN = [0.35, 1.85], CLIMB_T = 1.9, DROP_H = 1250, CLIMB_VE = 420, CLIMB_BUMP = 1100;
+  // The backdrop tramp on each world's starting ground takes you back the way you came
+  const PREV = { 2: 1, 3: 2, 4: 2, 5: 3 };
+  const WORLD_NAME = { 1: 'Earth', 2: 'the Moon', 3: 'Mars', 4: 'Venus', 5: 'the belt', 6: 'the hollow Earth' };
+  // Worlds with air to fall through on the way down
+  const AIRY = (lv) => lv === 1 || lv === 3 || lv === 4;
   const climbTurn = () => (fx.climb ? Math.PI * smooth(clamp((fx.climb.t - CLIMB_TURN[0]) / (CLIMB_TURN[1] - CLIMB_TURN[0]), 0, 1)) : 0);
   // How far you've flown after t seconds: off the bounce, faster and faster,
   // then easing as the new world's gravity takes over
@@ -2116,8 +2126,9 @@
   }
   function inState(G, fn) { const S = grabState(); putState(G); try { fn(); } finally { G.cam = cam; putState(S); } }
   let ghostDraw = false, noSky = false;
-  function startClimb() {
-    const C = fx.climb = { t: 0, next: nextLevel(), time: playTime, r0: player.r, v0: Math.max(player.vr, 400) };
+  function startClimb(next = nextLevel(), back = false) {
+    const C = fx.climb = { t: 0, next, back, time: playTime, r0: player.r, v0: Math.max(player.vr, 400) };
+    const from = level;
     lastTier = TOP; bestTier = TOP;
     player.heat = 0; fx.flames = []; player.hopLock = 0;
     // Build the next level's world now: it's up there, waiting
@@ -2125,12 +2136,15 @@
     level = C.next; route = null; aimFor = null; landedOn = null; useTiers();
     theta = 0; flipK = 0; checkpoint = 0; lastTier = -1; bestTier = -1; particles = []; fx = freshFx();
     world = buildWorld(Math.floor(Math.random() * 1e9));
+    addBackTramp();
     cam = { r: R0 + DROP_H + climbDist(C, CLIMB_T), anchor: 0.5, zoom: 1 };
     player.r = cam.r; player.vr = 0; player.onGround = false; player.spin = 0;
     C.G = grabState();
     putState(S);
     fx.climb = C;
-    banner(level === 6 ? 'DAYLIGHT!' : `${destName().replace('the ', '').toUpperCase()}'S PULL`, level === 6 ? 'UP AND OUT' : 'UP AND OVER');
+    player.backTo = 0;
+    if (back) banner(`BACK TO ${WORLD_NAME[next].replace('the ', '').toUpperCase()}`, 'BACKDROP!');
+    else banner(from === 6 ? 'DAYLIGHT!' : `${destName().replace('the ', '').toUpperCase()}'S PULL`, from === 6 ? 'UP AND OUT' : 'UP AND OVER');
     sfx.whoosh(); addShake(4);
   }
   function updateClimb(dt) {
@@ -2156,23 +2170,18 @@
   // Both worlds, turned over about the tramp: the old one below (then above),
   // the new one above (then below)
   function drawClimb() {
-    const C = fx.climb, turn = climbTurn(), c = Math.abs(Math.cos(turn)), sn = Math.abs(Math.sin(turn));
+    const C = fx.climb, turn = climbTurn();
     const skyK = smooth(clamp((C.t - 0.3) / (CLIMB_T - 0.35), 0, 1));
-    // Zoomed in just enough as it turns that no corners ever show
-    const z = Math.max((W * c + H * sn) / W, (W * sn + H * c) / H) * (1 + (sn * 80) / Math.min(W, H));
-    // Everything turns about the middle of the tramp, who stays put and upright
+    // The sky stays put and slowly becomes the new world's; the worlds turn
+    // about the middle of the tramp, who stays put and upright
+    if (skyK < 1) drawSky();
+    if (skyK > 0) inState(C.G, () => { ctx.save(); ctx.globalAlpha = skyK; drawSky(); ctx.restore(); });
     const px0 = W / 2, py0 = H * (cam.anchor || 0.5) - 24;
     const flip = () => { ctx.translate(px0, py0); ctx.rotate(Math.PI); ctx.translate(-px0, -py0); };
     ctx.save();
-    ctx.translate(px0, py0); ctx.rotate(turn); ctx.scale(z, z); ctx.translate(-px0, -py0);
-    if (skyK < 1) drawSky();
+    ctx.translate(px0, py0); ctx.rotate(turn); ctx.translate(-px0, -py0);
     const was = snapping; snapping = true; noSky = true;
-    inState(C.G, () => {
-      ctx.save(); flip();
-      if (skyK > 0) { ctx.save(); ctx.globalAlpha = skyK; noSky = false; drawSky(); noSky = true; ctx.restore(); }
-      ghostDraw = true; renderWorld(); ghostDraw = false;
-      ctx.restore();
-    });
+    inState(C.G, () => { ctx.save(); flip(); ghostDraw = true; renderWorld(); ghostDraw = false; ctx.restore(); });
     renderWorld();
     snapping = was; noSky = false;
     ctx.restore();
@@ -2182,8 +2191,9 @@
   function climbArrive() {
     const C = fx.climb, from = level, suit = player.suit;
     playTime = C.time + C.t;
-    const bonus = win(true);
-    startGame(C.next, { score, mult, ...lastWin });
+    let bonus = 0;
+    if (C.back) { const c = carry || { time: 0, got: 0, total: 0, falls: 0 }; startGame(C.next, { ...c, score, mult, time: c.time + playTime }); }
+    else { bonus = win(true); startGame(C.next, { score, mult, ...lastWin }); }
     const keep = fx; putState(C.G); fx = keep; // (startGame's banner and toast, the world as drawn)
     theta = 0; lastTier = -1; bestTier = -1;
     player.r = R0 + DROP_H; player.vr = -CLIMB_VE; player.onGround = false; player.apexR = player.r; player.spin = 0;
@@ -2191,8 +2201,49 @@
     cam.r = player.r; cam.zoom = 1;
     updateStarsHud();
     fx.drop = true;
-    pop(`LEVEL ${from} DONE! +${fmtScore(bonus)}`, '#ffd23f', player.r + 110);
+    if (bonus) pop(`LEVEL ${from} DONE! +${fmtScore(bonus)}`, '#ffd23f', player.r + 110);
+    if (AIRY(level) && from !== 6) toast(level === 1 ? 'Back into Earth\'s air: it heats up round you as it slows you down.' : level === 3 ? "Into Mars's thin air: it's less than 1% as thick as Earth's, but at this speed it still glows round you." : "Into Venus's thick clouds of sulfuric acid. The air down at the surface is 90 times as thick as Earth's.", 5);
     sfx.tier();
+  }
+  // Falling into a world's air: it piles up in a glowing cap under your feet
+  // and streams away above you, fading as the air slows you down
+  function drawEntry(x, y) {
+    const k = clamp((player.r - R0 - 150) / 700, 0, 1) * clamp(-player.vr / 400, 0, 1);
+    if (k <= 0.02) return;
+    const col = level === 4 ? '255,225,150' : level === 3 ? '255,150,90' : '255,190,120';
+    const g = ctx.createRadialGradient(x, y + 6, 4, x, y + 6, 70);
+    g.addColorStop(0, `rgba(255,255,235,${0.9 * k})`); g.addColorStop(0.35, `rgba(${col},${0.6 * k})`); g.addColorStop(1, `rgba(${col},0)`);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y + 6, 70, 0, TAU); ctx.fill();
+    ctx.strokeStyle = `rgba(255,245,220,${0.8 * k})`; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y - 18, 40, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    for (let i = 0; i < 10; i++) {
+      const ox = (i - 4.5) * 7 + Math.sin(clock * 9 + i) * 3, len = (40 + ((i * 37) % 50)) * k, t = (clock * 3 + i * 0.23) % 1;
+      ctx.fillStyle = `rgba(${col},${0.55 * k * (1 - t)})`; ctx.fillRect(x + ox - 1, y - 50 - t * 60 - len, 3, len);
+    }
+  }
+  // A trampoline for going back: bounce on it and you're off the way you came
+  function addBackTramp() {
+    const to = PREV[level];
+    if (!to || !world) return;
+    const ground = world.plats.filter((q) => q.tier === 0);
+    const free = (a) => Math.abs(a) * R0 > 150 && ground.every((q) => Math.abs(wrap(q.a - a)) * R0 > 150);
+    const a = [-0.42, 0.42, -0.62, 0.62, -0.85, 0.85, -1.1, 1.1, -1.4, 1.4].find(free);
+    if (a === undefined) return;
+    world.plats.push({ tier: 0, a, a0: a, type: 'backdrop', back: to, g: gravAt(0), R: tierR(0), w: 84, bounce: bounceFor(0), squash: 0, jig: 9, hit: 0, sway: 0, freq: 0, phase: 0, spin: 0 });
+  }
+  function drawBackTramp(p, w, sq) {
+    // A blue trampoline, and a sign pointing home
+    px(-w / 2 + 6, 4, 4, 26, '#3b3b4f'); px(w / 2 - 10, 4, 4, 26, '#3b3b4f');
+    px(-w / 2, 0, w, 6, '#3f6fd8');
+    ctx.fillStyle = '#1b1530';
+    ctx.beginPath(); ctx.moveTo(-w / 2 + 6, 1); ctx.quadraticCurveTo(0, 1 + sq * 14, w / 2 - 6, 1); ctx.lineTo(w / 2 - 6, 4); ctx.quadraticCurveTo(0, 4 + sq * 14, -w / 2 + 6, 4); ctx.fill();
+    px(-w / 2, 0, 6, 6, '#8fd0ff'); px(w / 2 - 6, 0, 6, 6, '#8fd0ff');
+    px(w / 2 - 4, -44, 3, 44, '#9aa3b5');
+    const label = `BACK TO ${WORLD_NAME[p.back].replace('the ', '').toUpperCase()}`;
+    ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+    const tw = ctx.measureText(label).width + 12;
+    px(w / 2 - 3 - tw, -58, tw, 15, '#1b1530'); px(w / 2 - 3 - tw, -58, tw, 2, '#8fd0ff');
+    ctx.fillStyle = '#8fd0ff'; ctx.fillText(label, w / 2 - 3 - tw / 2, -47); ctx.textAlign = 'start';
   }
   // The ground is the same size and in the same place either side of the
   // change; this just blends the two skies for a moment
@@ -2605,12 +2656,65 @@
     return { seed, plats, stars, decor, crust: [], swirls: [], sky, ranges: [], issPlat: null, beams, dust: [], movers, shells };
   }
   // In from a crash on level 1: the score comes too
+  // Conspiracy mode: hit the ground as a fireball and you don't stop. You
+  // smash through the crust, burrow down through solid rock, burst out of
+  // the roof of the topmost cavern and fall all the way down through the
+  // hollow Earth, crashing through each cavern's floor, to the inner sun.
+  function startBurrow() {
+    fx.burrow = { phase: 1, t: 0, v: 950 };
+    player.onGround = false; player.heat = 0; fx.flames = [];
+    fx.flash = 0.8; addShake(16); sfx.boom(1); buzz([60, 40, 120]);
+    burst(-theta, R0, '#8a5a3b', 30, 420); ring(-theta, R0, '#ff8a3a', 2);
+    banner('SMASH!', "IT'S... HOLLOW?!");
+  }
+  function updateBurrow(dt) {
+    const B = fx.burrow;
+    B.t += dt;
+    if (state === 'play') playTime += dt;
+    B.v = Math.max(650, B.v - 300 * dt);
+    player.r -= B.v * dt; player.vr = -B.v; player.onGround = false; player.spin = 0;
+    cam.r += (player.r - cam.r) * Math.min(1, dt * 12); cam.anchor = lerp(cam.anchor || 0.46, 0.4, Math.min(1, dt * 3));
+    if (Math.random() < dt * 30) burst(-theta + (Math.random() - 0.5) * 0.05, player.r + 30, Math.random() < 0.5 ? '#6b5440' : '#4a3a2a', 3, 200);
+    for (const q of particles) { q.R += q.vr * dt; q.a += (q.vt * dt) / q.R; q.vr -= 380 * dt; q.life -= dt; }
+    particles = particles.filter((q) => q.life > 0);
+    for (const q of fx.pops) q.t += dt;
+    fx.pops = fx.pops.filter((q) => q.t < 1.1);
+    if (fx.banner) { fx.banner.t += dt; if (fx.banner.t > 2.6) fx.banner = null; }
+    shake = Math.max(shake * 0.9, 3); fx.flash = Math.max(0, fx.flash - dt * 1.5);
+    if (player.r < R0 - 380) enterHollowEarth();
+  }
+  const hollowOuter = () => tierR(TOP) + 260;
   function enterHollowEarth() {
     const got = routeStars().filter((s) => s.taken).length;
     startGame(6, { score, mult, time: playTime, got, total: routeStars().length, falls, trail: ['Earth'] });
-    fx.flash = 0.8; addShake(16); sfx.boom(1); buzz([60, 40, 120]);
-    toast('You smashed straight through the crust… into the HOLLOW EARTH, with a little sun at its middle! Climb back out, cavern by cavern.', 6);
+    // Still in the rock, just above the topmost cavern's roof, and falling
+    player.r = hollowOuter() + 260; player.vr = -950; player.onGround = false; player.apexR = player.r;
+    cam.r = player.r; cam.anchor = 0.4;
+    fx.drop = true; fx.burrow = { phase: 2 };
+    toast('You smashed straight through the crust… into the HOLLOW EARTH, with a little sun at its middle! Down you go, through every cavern. Then climb back out.', 7);
   }
+  // Solid rock rushing past while you burrow through it
+  function drawRock(k) {
+    if (k <= 0) return;
+    ctx.save(); ctx.globalAlpha = k;
+    ctx.fillStyle = '#2a2018'; ctx.fillRect(0, 0, W, H);
+    for (let i = 0; i < 40; i++) {
+      const x = (i * 0.618 % 1) * W, sz = 6 + (i % 5) * 6, y = H + 40 - ((i * 97 + clock * 1100) % (H + 80));
+      px(x - sz / 2, y, sz, sz * 0.7, i % 3 ? '#4a3a2a' : '#6b5440');
+      if (i % 7 === 0) px(x - 1, y - 30, 2, 24, 'rgba(255,140,60,0.5)');
+    }
+    // The hole you're making, glowing round you
+    const g = ctx.createRadialGradient(W / 2, H * 0.4, 10, W / 2, H * 0.4, 120);
+    g.addColorStop(0, 'rgba(255,170,90,0.35)'); g.addColorStop(1, 'rgba(255,170,90,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+  const rockK = () => {
+    const B = fx.burrow;
+    if (!B) return 0;
+    if (B.phase === 1) return clamp((R0 - player.r) / 240, 0, 1);
+    return level === 6 ? clamp((player.r - hollowOuter() + 30) / 240, 0, 1) : 0;
+  };
   const ZONE_GLOW = ['#8fff6a', '#6ac4d8', '#ffd23f', '#b8a8ff', '#b8ff6a', '#ff6a3a', '#ff8a1a', '#ff6ad5', '#e8c88a'];
   const shellGap = (sh) => Math.abs(wrap(-theta - sh.gapA)) < sh.gapW / 2;
   // Landing on a cavern's floor: from a fall it costs the multiplier, and the
@@ -3327,6 +3431,8 @@
     if (fx.run) { updateRunFrame(dt); return; }
     if (fx.arrive) { updateArriveFrame(dt); return; }
     if (fx.climb) { updateClimb(dt); return; }
+    if (fx.burrow && fx.burrow.phase === 1) { updateBurrow(dt); return; }
+    if (fx.burrow && level === 6 && player.r < hollowOuter() - 500) fx.burrow = null;
     for (const p of world.plats) {
       if (p.sway) p.a = p.a0 + p.sway * Math.sin(clock * p.freq + p.phase);
       if (p.ride) updateRide(p, dt);
@@ -3414,6 +3520,7 @@
         }
         player.r += player.vr * dt;
         if (state === 'play' && climbOut() && lastTier === TOP - 1 && player.vr > 0 && player.r > tierR(TOP - 1) + 120) { startClimb(); return; }
+        if (state === 'play' && player.backTo && player.vr > 0 && player.r > player.backR + 120) { startClimb(player.backTo, true); return; }
         // Close to the world you're heading for, its gravity takes hold and
         // pulls you in
         if (state === 'play' && !beltFlight() && player.vr > 0) {
@@ -3437,7 +3544,14 @@
             }
           }
         }
-        if (fx.drop) { player.heat = 0; player.vr = Math.max(player.vr, -650); }
+        // Dropping onto a new world: air (where there is some) slows you
+        // more and more as you get lower
+        if (fx.drop) { player.heat = 0; player.vr = Math.max(player.vr, level === 6 ? -1500 : AIRY(level) ? -lerp(330, 680, clamp((player.r - R0) / 900, 0, 1)) : -650); }
+        if (fx.drop && level === 6) {
+          // Crashing down through each cavern's floor (slowing near the bottom)
+          for (const sh of world.shells) if (prev >= sh.R && player.r < sh.R) { burst(-theta, sh.R, '#8a7056', 18, 320); ring(-theta, sh.R, ZONE_GLOW[sh.zone], 1.6); addShake(8); sfx.thud(); }
+          if (player.r < R0 + 900) player.vr = Math.max(player.vr, -lerp(380, 1500, clamp((player.r - R0) / 900, 0, 1)));
+        }
         if (player.vr < 0 && !fx.drop) {
           let landed = false;
           for (const p of world.plats) {
@@ -3463,7 +3577,7 @@
           if (lastTier >= 0) { falls++; loseMult(); }
           if (fx.drop) { fx.drop = false; addShake(6); sfx.thud(); }
           player.r = R0; player.vr = 0; player.onGround = true; player.squash = 1; player.lost = false;
-          if (player.heat > 0.3 && conspiracy && level === 1) enterHollowEarth();
+          if (player.heat > 0.3 && conspiracy && level === 1) startBurrow();
           else if (player.heat > 0.3) impact(player.heat);
           else if (level === 2 && hard) moonCrash();
           else if (lastTier >= 0) { toast(level === 6 ? 'Back down in Pellucidar by the inner sun. Bounce back up!' : level === 5 ? `Back on ${l5Start.name}, score and all. Bounce back up!` : level === 4 ? 'Back on the clouds of Venus, score and all. Bounce back up!' : level === 3 ? 'Back on Mars, score and all. Bounce back up from the launch field!' : level === 2 ? 'Back on the Moon. Find a launch pad!' : 'Back on solid ground. Find a trampoline!'); sfx.thud(); addShake(hard ? 12 : 6); ring(-theta, R0, level === 5 ? '#8d8a86' : level === 4 ? '#f2d98a' : level === 3 ? '#c8603c' : level === 2 ? '#b4b2be' : '#c9a27a', 1.4); }
@@ -3586,7 +3700,7 @@
     if ((flipK > 0.5) !== document.body.classList.contains('flipped')) setPadFlip(flipK > 0.5);
 
     // Camera: follow height, and look further down while falling.
-    cam.r += (player.r - cam.r) * Math.min(1, dt * 7);
+    cam.r += (player.r - cam.r) * Math.min(1, dt * (fx.drop ? 14 : 7));
     // (dropping onto a new world: look down at it coming up to meet you)
     const want = fx.drop ? 0.24 : player.vr < -250 ? 0.34 : 0.46;
     cam.anchor = lerp(cam.anchor || want, want, Math.min(1, dt * 2));
@@ -5972,7 +6086,8 @@
     const sq = p.squash;
     at(p.a + theta, p.R, () => {
       const w = p.w;
-      if (level === 6 && HOLLOW_PLATS[p.type]) { hollowSupport(p, w); HOLLOW_PLATS[p.type](p, w); }
+      if (p.back) drawBackTramp(p, w, sq);
+      else if (level === 6 && HOLLOW_PLATS[p.type]) { hollowSupport(p, w); HOLLOW_PLATS[p.type](p, w); }
       else if (p.type === 'trampoline') {
         px(-w / 2 + 6, 4, 4, 26, '#3b3b4f'); px(w / 2 - 10, 4, 4, 26, '#3b3b4f');
         px(-w / 2, 0, w, 6, '#e0433b');
@@ -6769,6 +6884,12 @@
     if (fx.climb) { drawClimb(); drawBanner(); drawRail(); return; }
     renderWorld();
     if (fx.land) drawLandSnap();
+    if (fx.burrow) {
+      const k = rockK();
+      drawRock(k);
+      // You, smashing on down through it
+      if (k > 0) { const fy = H * (cam.anchor || 0.4) + cam.r - player.r; drawSprite('jump', W / 2, fy, player.facing < 0, 1, 1, k, level === 1 && !player.suit ? PAL : SUIT); if (conspiracy) drawFoilHat(W / 2, fy, 0); }
+    }
   }
   function renderWorld() {
     if (fx.run) {
@@ -6851,6 +6972,7 @@
     if (!hidden && !ghostDraw) {
       drawGuide(feetX, feetY);
       drawFire(feetX, feetY);
+      if (fx.drop && AIRY(level)) drawEntry(feetX, feetY);
       drawSprite(frame, feetX, feetY, player.facing < 0, sy, sx, 1, player.heat > 0.55 ? HOT : player.suit ? SUIT : PAL, player.spin || 0);
       if (conspiracy) drawFoilHat(feetX, feetY, player.spin || 0, player.facing < 0);
       if (level >= 2 && player.shield > 0 && (player.shield > 3 || Math.sin(clock * 20) > 0)) {
@@ -6871,7 +6993,7 @@
     drawParticles();
     drawFx();
     ctx.restore();
-    if (ghostDraw) return; // the far world: no overlays
+    if (ghostDraw || noSky) return; // the far world, or turning over: no screen overlays
     if (fk > 0) {
       // Speed lines run along the direction of travel, so sideways once turned
       ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(flipA); ctx.translate(-W / 2, -H / 2);
@@ -7939,6 +8061,7 @@
       theta = data.theta; lastTier = data.lastTier; bestTier = data.bestTier; playTime = data.playTime;
       checkpoint = data.checkpoint || 0; falls = data.falls || 0; score = data.score || 0; mult = data.mult || 1; updateScoreHud(); mode = data.mode === 'uber' ? 'uber' : 'checkpoint';
       Object.assign(player, data.player);
+      if (data.conspiracy) setConspiracy(true);
       player.inside = false;
       cam.r = player.r;
       for (const id of data.taken || []) if (world.stars[id]) world.stars[id].taken = true;
