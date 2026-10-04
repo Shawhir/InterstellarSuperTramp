@@ -78,10 +78,18 @@ says so if that happens.
   as you get lower. Nothing swaps or fades: the game simply carries on there,
   with that world's own gravity, the score carried on and the whole trip
   counted as one run.
-- Going back: each world's starting ground has a blue backdrop tramp ("BACK TO
-  EARTH", "BACK TO THE MOON", "BACK TO MARS"). Bounce on it and you're off the
-  way you came, the same way round: up, over, and falling onto the world
-  before. Your score comes with you.
+- The way home: from the Moon base, the blue HOME pad (right by where you
+  start) is a whole climb of its own, a third route alongside Mars and Venus.
+  384,400 km back to Earth, with Earth's pull getting stronger the closer you
+  get: Apollo 13's free return, Apollo 8's Earthrise, comet dust, back past
+  geostationary orbit, through the Van Allen belts (dodge the radiation
+  bursts), the GPS satellites and the space junk of low Earth orbit, then
+  re-entry. Earth slides up out of sight, the view turns over and you fall in
+  through the air, glowing, onto the ground you started from.
+- Going back elsewhere: Mars, Venus and the belt each have a blue backdrop
+  tramp on their starting ground ("BACK TO THE MOON", "BACK TO MARS"). Bounce
+  on it and you're off the way you came, the same way round: up, over, and
+  falling onto the world before. Your score comes with you.
 - Gravity on the way to the Moon gets weaker the higher you go, so you hang
   in the air longer: Earth's pull falls off with the square of your distance
   from its centre. (Softened so it stays playable: by the GPS satellites the

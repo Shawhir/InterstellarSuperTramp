@@ -87,6 +87,23 @@
       { km: 37999950, type: 'cloudv', layer: 'Venus clouds', g: 0.75, note: "50 km up in Venus's clouds, the air is almost like Earth's. Down at the surface it's 465°C." },
       { km: 38000000, type: 'venus', layer: 'Venus' },
     ],
+    // The way home: back across the gap to Earth, its pull getting stronger
+    // all the way, through the radiation belts and down into the air
+    earth: [
+      ...MOON_TIERS,
+      { km: 100000, type: 'rocket', layer: 'Free return', g: 0.5, note: 'Apollo 13, 1970: after an oxygen tank exploded, the crew swung round the Moon and let its gravity sling them home. All three made it back.' },
+      { km: 150000, type: 'asteroid', layer: 'Earth–Moon space', g: 0.5, visitor: 'oumuamua' },
+      { km: 200000, type: 'asteroid', layer: 'Earth–Moon space', g: 0.52, note: 'Halfway home. On average Earth and the Moon are about 384,000 km apart: all the other planets could just about fit in the gap.' },
+      { km: 260000, type: 'rocket', layer: 'Earth–Moon space', g: 0.54, fact: { kind: 'earthrise', text: "Apollo 8, Christmas Eve 1968: the first people to see Earth rise over the Moon. Their photo, 'Earthrise', is one of the most famous ever taken." } },
+      { km: 320000, type: 'asteroid', layer: 'Earth–Moon space', g: 0.56, dust: 1, note: 'Bits of comet dust out here. Hang about in a cloud and it sandblasts you.' },
+      { km: 348600, type: 'satellite', layer: 'Geostationary orbit', g: 0.6, note: 'Back at geostationary orbit, 35,786 km up: weather satellites here watch the same half of Earth all day long.' },
+      { km: 364200, type: 'satellite', layer: 'Van Allen belts', g: 0.64, rad: 1, note: "The Van Allen belts: charged particles trapped by Earth's magnetic field. Apollo crews crossed them quickly to keep their radiation dose low. Dodge the bursts!" },
+      { km: 370000, type: 'satellite', layer: 'Van Allen belts', g: 0.68, rad: 1 },
+      { km: 374000, type: 'satellite', layer: 'Medium Earth orbit', g: 0.72, note: 'GPS satellites, 20,200 km up: your phone listens to several of them at once to work out where you are.' },
+      { km: 382000, type: 'station', layer: 'Low Earth orbit', g: 0.82, wind: 0.8, note: 'Low Earth orbit: home of the Space Station, thousands of satellites, and a lot of space junk zipping round. It pushes you about.' },
+      { km: 384200, type: 'satellite', layer: 'Re-entry', g: 0.92, note: "Re-entry! Coming home from the Moon you hit the air at about 11 km/s. Apollo's heat shield had to take around 2,800°C." },
+      { km: 384400, type: 'earth', layer: 'Earth' },
+    ],
   };
   const VISITORS = {
     oumuamua: "'Oumuamua, 2017: the first object seen visiting from another star. Its name means scout, or messenger from afar.",
@@ -204,7 +221,7 @@
     return sf[i] * (1 - k) + sf[(i + 1) % n] * k;
   }
   const gravAt = (k) => TIERS[Math.max(0, Math.min(TOP, k))].g || (level >= 2 ? 0.6 : 1);
-  const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220,
+  const WIDTH = { earth: 220, trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220,
     pad: 80, haven: 180, shade: 150, mercury: 220, driver: 150, mush: 90, fern: 120, raft: 130, gold: 120, crystal: 110, sway: 120, girder: 130, neon: 120, ledge: 110, hole: 160, rubble: 104, ufo: 112, refinery: 230, rocket: 116, kamo: 84, car: 150, comet: 140, phobos: 110, deimos: 80, cloudv: 140, mars: 220, venus: 220,
     cloudm: 140, miner: 120, hauler: 160, outpost: 150, ceres: 160, vesta: 110, pallas: 106, hygiea: 96 };
   const MOON_R = 110; // the landing Moon's radius; its top is the last bouncy surface
@@ -408,15 +425,17 @@
     };
     // Mars is to the right of the base, Venus to the left; the routes head away
     // from each other so they never tangle.
-    for (const [rt, s] of [['mars', 1], ['venus', -1]]) {
+    // The way home to Earth starts from the pad right by the base, and heads
+    // straight up between them.
+    for (const [rt, s, a0, bias] of [['mars', 1, 0.62, 0.8], ['venus', -1, -0.62, 0.8], ['earth', 1, 0.2, 0.5]]) {
       const T = L2_ROUTES[rt], top = T.length - 1;
-      mk(rt, 0, s * 0.62).main = true;
-      mk(rt, 0, s * 1.7);
-      let prevA = s * 0.62;
+      mk(rt, 0, a0).main = true;
+      if (rt !== 'earth') mk(rt, 0, s * 1.7);
+      let prevA = a0;
       for (let k = 1; k <= top; k++) {
         const R = tierR(k), t = T[k];
         if (k === top) { mk(rt, k, prevA + (s * 170) / R).dest = true; break; }
-        const off = (110 + (rnd() * 200) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.8 ? s : -s);
+        const off = (110 + (rnd() * 200) / Math.sqrt(speedFor(k - 1))) * (rnd() < bias ? s : -s);
         const a = prevA + off / R;
         const mp = mk(rt, k, a);
         mp.main = true;
@@ -454,6 +473,7 @@
     decor.push(
       { a: -0.45, kind: 'sign', text: '< VENUS', col: '#ffd23f' },
       { a: 0.45, kind: 'sign', text: 'MARS >', col: '#ff6a4a' },
+      { a: 0.06, kind: 'sign', text: 'HOME ^', col: '#8fd0ff' },
       { a: 0.95, kind: 'solar' }, { a: -0.95, kind: 'solar' },
       { a: -1.25, kind: 'greenhouse' }, { a: 1.25, kind: 'antenna' },
       { a: 1.98, kind: 'lander' }, { a: 2.3, kind: 'mining' },
@@ -988,7 +1008,7 @@
     const f = (r - tierR(0)) / TIER_GAP;
     return clamp(f, 0, TOP);
   }
-  const destName = () => (level === 6 ? 'the surface' : level === 5 ? 'Europa' : level === 4 ? 'Mercury' : level === 3 ? (landedOn ? landedOn.name : 'the asteroid belt') : level === 2 ? (route === 'venus' ? 'Venus' : 'Mars') : 'the Moon');
+  const destName = () => (level === 6 ? 'the surface' : level === 5 ? 'Europa' : level === 4 ? 'Mercury' : level === 3 ? (landedOn ? landedOn.name : 'the asteroid belt') : level === 2 ? (route === 'venus' ? 'Venus' : route === 'earth' ? 'Earth' : 'Mars') : 'the Moon');
   function layerName() {
     if (fx.run) {
       const R = fx.run;
@@ -1055,6 +1075,9 @@
       const W = BELT_WORLDS[rt];
       banner(`TO ${W.name.toUpperCase()}`, W.kind);
       toast(`Heading for ${W.name}. ${W.way} awaits in the belt.`, 4);
+    } else if (rt === 'earth') {
+      banner('THE WAY HOME', 'BACK TO EARTH');
+      toast("Heading home: 384,400 km back to Earth. Its pull gets stronger the closer you get, and you'll have to get through the radiation belts and the space junk first.", 6);
     } else banner(rt === 'mars' ? 'TO MARS' : 'TO VENUS', rt === 'mars' ? 'THE RED PLANET' : 'THE HOTTEST PLANET');
     sfx.tier();
   }
@@ -2060,7 +2083,7 @@
     earth: { g: 1, cover: 'daylight', sky: ['#58b4f0', '#d4f0ff'], ground: ['#4fb34a', '#2f6f2a'], curve: 5, note: "Back in daylight! You climbed right out of the hollow Earth. Nobody's ever going to believe you." },
   };
   // Where each world leads on to: you land on the next level, ready to play
-  const nextLevel = () => (level === 1 ? 2 : level === 2 ? (route === 'venus' ? 4 : 3) : level === 3 ? 5 : level === 6 ? 1 : 0);
+  const nextLevel = () => (level === 1 ? 2 : level === 2 ? (route === 'venus' ? 4 : route === 'earth' ? 1 : 3) : level === 3 ? 5 : level === 6 ? 1 : 0);
   const ARR_PULL = 0.9;
   function reachDest(p) {
     if (p.world) landedOn = p.world;
@@ -2109,7 +2132,8 @@
   const climbOut = () => (level === 1 || level === 2 || level === 6) && nextLevel() > 0;
   const CLIMB_TURN = [0.35, 1.85], CLIMB_T = 1.9, DROP_H = 1250, CLIMB_VE = 420, CLIMB_BUMP = 1100;
   // The backdrop tramp on each world's starting ground takes you back the way you came
-  const PREV = { 2: 1, 3: 2, 4: 2, 5: 3 };
+  // (The Moon has no backdrop tramp: the way home to Earth is a whole route of its own)
+  const PREV = { 3: 2, 4: 2, 5: 3 };
   const WORLD_NAME = { 1: 'Earth', 2: 'the Moon', 3: 'Mars', 4: 'Venus', 5: 'the belt', 6: 'the hollow Earth' };
   // Worlds with air to fall through on the way down
   const AIRY = (lv) => lv === 1 || lv === 3 || lv === 4;
@@ -2197,7 +2221,7 @@
     const keep = fx; putState(C.G); fx = keep; // (startGame's banner and toast, the world as drawn)
     theta = 0; lastTier = -1; bestTier = -1;
     player.r = R0 + DROP_H; player.vr = -CLIMB_VE; player.onGround = false; player.apexR = player.r; player.spin = 0;
-    if (C.next === 2) player.suit = suit; // (no quick change on the way down to the Moon)
+    if (from !== 6) player.suit = suit; // (no quick change on the way down)
     cam.r = player.r; cam.zoom = 1;
     updateStarsHud();
     fx.drop = true;
@@ -3710,7 +3734,7 @@
         const d = pull(s, s.big ? 200 : 150);
         if (d < (s.big ? 60 : 28)) {
           s.taken = true;
-          if (s.fact) { toast(s.fact.text, 6); addScore(500); pop(s.fact.kind === 'marsrock' ? 'MARS ROCK!' : 'SPACE PROBE!', '#ffab3d', player.r + 140); }
+          if (s.fact) { toast(s.fact.text, 6); addScore(500); pop(s.fact.kind === 'marsrock' ? 'MARS ROCK!' : s.fact.kind === 'earthrise' ? 'EARTHRISE!' : 'SPACE PROBE!', '#ffab3d', player.r + 140); }
           sfx.star(mult);
           burst(s.a, s.R, '#6dff7a', 16, 170);
           ring(s.a, s.R, '#6dff7a', 0.8);
@@ -4032,7 +4056,7 @@
     ctx.fillStyle = sg; ctx.fillRect(sx - sr * 5, sy - sr * 5, sr * 10, sr * 10);
     ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
     // Earth hangs in the black sky, shrinking behind you as you go
-    drawPlanet('earth', W * 0.84, H * 0.17 + tf * 22, 46 / (1 + tf * 0.45));
+    if (route !== 'earth') drawPlanet('earth', W * 0.84, H * 0.17 + tf * 22, 46 / (1 + tf * 0.45));
     if (fx.visitor) drawVisitor(fx.visitor);
     if (route) drawSkyMoon();
     else {
@@ -5350,7 +5374,7 @@
   }
   const L2_PLATS = {
     pad(p, w, sq) {
-      const col = p.world ? p.world.pad : p.route === 'venus' ? '#ffd23f' : '#ff6a4a';
+      const col = p.world ? p.world.pad : p.route === 'venus' ? '#ffd23f' : p.route === 'earth' ? '#8fd0ff' : '#ff6a4a';
       if (p.world) {
         // A signpost pointing the way to this one's world
         px(-w / 2 - 4, -46, 2, 46, '#c9ced9');
@@ -6466,7 +6490,7 @@
       // From the Moon at the bottom to Mars or Venus at the top
       ctx.fillStyle = '#c9c7cf'; ctx.beginPath(); ctx.arc(x, bottom + 10, 8, 0, TAU); ctx.fill();
       px(x - 4, bottom + 6, 3, 3, '#9e9caa'); px(x + 1, bottom + 11, 3, 3, '#9e9caa');
-      if (route) { ctx.fillStyle = route === 'venus' ? '#efd9a0' : '#c8553a'; ctx.beginPath(); ctx.arc(x, top - 10, 7, 0, TAU); ctx.fill(); }
+      if (route) { ctx.fillStyle = route === 'venus' ? '#efd9a0' : route === 'earth' ? '#2f6fd0' : '#c8553a'; ctx.beginPath(); ctx.arc(x, top - 10, 7, 0, TAU); ctx.fill(); }
       else {
         ctx.fillStyle = '#efd9a0'; ctx.beginPath(); ctx.arc(x - 6, top - 10, 5, 0, TAU); ctx.fill();
         ctx.fillStyle = '#c8553a'; ctx.beginPath(); ctx.arc(x + 6, top - 10, 5, 0, TAU); ctx.fill();
