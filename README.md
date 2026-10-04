@@ -57,7 +57,11 @@ says so if that happens.
   and butterflies round the flowers and a beehive. Animals wander and pause,
   and run (or hop) away if you get close. Birds fly round the planet in V
   formations. The first time you set foot in each region you get a short
-  note about it.
+  note about it. The regions go back in depth too: two layers behind the
+  ground (smaller and hazier, sliding past more slowly: far trees, herds,
+  barns and wind turbines, desert mesas, the sea on the horizon behind the
+  beach) and one in front of you (low grass, ferns, flowers, pebbles and
+  snow sliding past faster). Every layer follows the region you're in.
 - Five mountain ranges sit behind the ground and turn more slowly than it
   (parallax), so they feel further away. They also sink more slowly than the
   ground as you climb, so the first few bounces reveal the far ranges behind,

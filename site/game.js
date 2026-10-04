@@ -5506,6 +5506,71 @@
     snowrock(d) { px(-10, -8, 20, 8, '#8a8f98'); px(-8, -10, 16, 3, '#ffffff'); },
     hive(d) { px(-1, -26, 2, 26, '#6b4226'); ctx.fillStyle = '#e9b23a'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(0, -16 + k * 4 - 12, 8 - k, 3, 0, 0, TAU); ctx.fill(); } },
   };
+  // The same regions in depth: two layers further back (smaller, hazier,
+  // sliding past more slowly) and one in front of you (low grass, bushes and
+  // flowers sliding past faster). Each layer follows the region you're in.
+  const ECO_BACK = { town: ['house', 'tree', 'oak'], farm: ['barn', 'hedge', 'turbine', 'wheat', 'cow', 'sheep'], forest: ['pine', 'oak', 'birch', 'pine', 'deer'], lake: ['willow', 'oak', 'reeds', 'heron'], savanna: ['acacia', 'grass', 'elephant', 'giraffe', 'zebra'], desert: ['cactus', 'mesa', 'dune', 'camel'], sea: ['palm', 'shell'], tundra: ['snowpine', 'snowrock', 'reindeer', 'polarbear'], meadow: ['tree', 'hedge', 'flower', 'hive', 'rabbit'] };
+  const ECO_FRONT = { town: ['tuft', 'flower'], farm: ['tuft', 'wheat'], forest: ['fern', 'mushroom', 'tuft'], lake: ['reeds', 'tuft'], savanna: ['grass', 'tuft'], desert: ['pebbles'], sea: ['pebbles', 'shell'], tundra: ['snowtuft'], meadow: ['flower', 'tuft', 'flower'] };
+  const ECO_LAYERS = [
+    { f: 0.9, sink: 0.95, sc: 0.5, alpha: 0.62, step: 0.06, keep: 0.55, lift: 34 },
+    { f: 0.95, sink: 0.975, sc: 0.72, alpha: 0.82, step: 0.07, keep: 0.5, lift: 16 },
+  ];
+  const ECO_FRONT_L = { f: 1.1, sink: 1, sc: 1.15, alpha: 0.95, step: 0.05, keep: 0.38, lift: -2 };
+  function drawEcoLayers(front) {
+    const tf = tierFloat(player.r);
+    const fade = clamp(1 - (tf - 2) / 3, 0, 1) * clamp((cam.zoom - 0.55) / 0.35, 0, 1);
+    if (fade <= 0) return;
+    const climb = cam.r - R0, reach = ((view.x1 - view.x0) / 2 + 120) / R0;
+    for (const L of front ? [ECO_FRONT_L] : ECO_LAYERS) {
+      const my = cy - climb * (1 - L.sink);
+      if (my - R0 - 120 > view.y1 + 20) continue;
+      const N = Math.round(TAU / L.step), step = TAU / N;
+      // The sea, out on the horizon behind the beach
+      if (!front) {
+        const sea = BIOMES.find((b) => b.key === 'sea'), R = R0 - 6 + L.lift;
+        for (const k of [-1, 0, 1]) {
+          const p0 = L.f * (sea.a0 + 0.1 + k * TAU + theta) - Math.PI / 2, p1 = L.f * (sea.a1 + k * TAU + theta) - Math.PI / 2;
+          ctx.globalAlpha = fade * L.alpha; ctx.strokeStyle = '#2a6ab8'; ctx.lineWidth = 10;
+          ctx.beginPath(); ctx.arc(cx, my, R, p0, p1); ctx.stroke();
+        }
+      }
+      // Ground angles round the one under you; each lands on the screen at f times its turn
+      const g0 = -theta - reach / L.f, g1 = -theta + reach / L.f;
+      for (let i = Math.floor(g0 / step); i <= Math.ceil(g1 / step); i++) {
+        const idx = ((i % N) + N) % N, h = hash3(idx, L.f * 10, 3), h2 = hash3(idx, L.f * 10, 7);
+        if (h > L.keep) continue;
+        const g = i * step + (h2 - 0.5) * step * 0.6, b = biomeAt(g);
+        const list = (front ? ECO_FRONT : ECO_BACK)[b.key];
+        const kind = list[Math.floor(h2 * list.length) % list.length];
+        // Nothing standing on the water (in front, or out on the sea)
+        if ((front || b.key === 'sea') && world.life.water.some((w) => wrap(g - w.a0) > -0.02 && wrap(w.a1 - g) > -0.02)) continue;
+        const ph = L.f * (g + theta), r = R0 - 6 + L.lift;
+        const x = cx + r * Math.sin(ph), y = my - r * Math.cos(ph);
+        ctx.save(); ctx.globalAlpha = fade * L.alpha;
+        ctx.translate(x, y); ctx.rotate(ph);
+        const sc = L.sc * (0.8 + hash3(idx, 5, L.f * 10) * 0.4);
+        ctx.scale(sc * (h2 > 0.5 ? 1 : -1), sc);
+        const d = { a: g, hue: Math.floor(hash3(idx, 2, 9) * 4), size: 1 };
+        if (ANIMALS[kind]) { ctx.translate(Math.sin(clock * 0.25 + idx) * 14, 0); ANIMALS[kind](Math.sin(clock * 6 + idx) * 0.6, { phase: idx, dir: 1 }); }
+        else if (ECO_EXTRA[kind]) ECO_EXTRA[kind](d);
+        else if (EARTH_PLANTS[kind]) EARTH_PLANTS[kind](d);
+        else if (kind === 'house') { px(-16, -24, 32, 24, ['#f2e6d0', '#e9c46a', '#c9d7f0', '#f4b6a6'][d.hue]); ctx.fillStyle = '#b8403a'; ctx.beginPath(); ctx.moveTo(-20, -24); ctx.lineTo(0, -40); ctx.lineTo(20, -24); ctx.fill(); px(-4, -12, 8, 12, '#5a3a28'); }
+        else if (kind === 'tree') { px(-3, -18, 6, 18, '#6b4226'); px(-13, -42, 26, 24, ['#2f8f3a', '#3aa047', '#27803a', '#4aa84a'][d.hue]); }
+        else if (kind === 'flower') { px(-1, -8, 2, 8, '#3a8f3a'); px(-3, -12, 6, 4, ['#ff6fa0', '#ffd23f', '#ffffff', '#b58cff'][d.hue]); }
+        ctx.restore();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  // A few things only seen in the layers
+  const ECO_EXTRA = {
+    turbine(d) { px(-1, -60, 3, 60, '#eef1f7'); const a = clock * 1.6 + d.a * 9; ctx.strokeStyle = '#eef1f7'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++) { const t = a + (k * TAU) / 3; ctx.beginPath(); ctx.moveTo(0, -60); ctx.lineTo(Math.cos(t) * 24, -60 + Math.sin(t) * 24); ctx.stroke(); } },
+    mesa(d) { ctx.fillStyle = '#c0703a'; ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(-28, -40); ctx.lineTo(26, -40); ctx.lineTo(40, 0); ctx.fill(); px(-28, -40, 54, 4, '#d8885a'); px(-30, -24, 58, 3, '#a85a2a'); },
+    tuft(d) { for (let x = -8; x <= 8; x += 3) px(x + Math.sin(clock * 2 + x + d.a * 40) * 1.5, -10 - ((x * 7) & 3) * 2, 2, 12, ['#3a9a3a', '#4aa84a', '#2f8a34', '#5ab84a'][d.hue]); },
+    fern(d) { ctx.strokeStyle = '#2f8a34'; ctx.lineWidth = 2; for (const a of [-0.9, -0.4, 0.1, 0.6]) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(Math.sin(a) * 10, -14, Math.sin(a) * 20 + Math.sin(clock + a) * 2, -18); ctx.stroke(); } },
+    pebbles(d) { for (const [x, w] of [[-8, 6], [0, 4], [6, 7]]) px(x, -3, w, 3, ['#a39a8a', '#8a8f98', '#c9b49a', '#b0a898'][d.hue]); },
+    snowtuft(d) { ctx.fillStyle = '#ffffff'; for (const [x, r] of [[-6, 5], [2, 7], [9, 4]]) { ctx.beginPath(); ctx.arc(x, 0, r, Math.PI, TAU); ctx.fill(); } },
+  };
   // The animals, the flocks, and the little things buzzing round the flowers
   function drawEarthLife() {
     const L = world.life;
@@ -7265,7 +7330,7 @@
     view = { x0: cx - cx / z, x1: cx + (W - cx) / z, y0: pivotY - pivotY / z, y1: pivotY + (H - pivotY) / z };
     if (fk > 0) { const half = Math.hypot(W, H) / z; view = { x0: cx - half, x1: cx + half, y0: anchorY - half, y1: anchorY + half }; }
     if (level === 3) drawConvoy(...EARTH_FROM_MARS(), clamp(1 - tierFloat(player.r) / 3.5, 0, 1), 'far');
-    if (level === 3) drawMarsScape(); else if (level === 2) drawPlains(); else if (level === 1) drawMountains();
+    if (level === 3) drawMarsScape(); else if (level === 2) drawPlains(); else if (level === 1) { drawMountains(); drawEcoLayers(false); }
     if (level === 3) drawMarsBody(); else if (level === 2) drawMoonBody(); else if (level === 1) drawEarth();
     if (level === 4) drawVenusBody();
     if (level === 5) drawDwarfBody();
@@ -7333,6 +7398,7 @@
         }
       }
     }
+    if (level === 1) drawEcoLayers(true);
     drawParticles();
     drawFx();
     ctx.restore();
