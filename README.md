@@ -178,8 +178,10 @@ start level 2 from the title screen once you've landed there once.
   other: further back, a rocket on its pad between two boosters, small domes,
   a dish and a railing; nearer, the big dome, a tall twin tower and a lander
   hovering overhead. Behind the Moon's ground are four layers in all: far
-  lunar mountains lit along their tops (like the Apennines, up to 5 km high),
-  a cratered plain, then the two halves of the base. The Moon is shown in cross-section
+  low rolling hills and old crater rims shaped like sand dunes (long sunlit
+  slopes, steeper shaded sides: billions of years of tiny meteorite hits
+  have worn the Moon's hills smooth), a cratered plain, then the two halves
+  of the base. It's all in the same pale greys as the Moon seen from Earth. The Moon is shown in cross-section
   like Earth: crust with pale highland rock, polar ice, meteorite iron, orange
   volcanic glass and lava tubes; a cold mantle with moonquake cracks; a partly
   molten layer; and a small iron core. On the surface: Apollo 11's landing
