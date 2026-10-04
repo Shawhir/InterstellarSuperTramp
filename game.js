@@ -8506,6 +8506,15 @@
   // Out of the hollow Earth: back on the surface, carry on up to the Moon
   $('to-surface').addEventListener('click', () => { jingle(); startGame(1, { score, mult, ...(lastWin || { time: 0, got: 0, total: 0, falls: 0 }) }); });
   $('belt-start').addEventListener('click', () => { jingle(); startGame(3); toBelt(); });
+  // Straight onto a mass driver: it charges and flings you into the run
+  $('jupiter-start').addEventListener('click', () => {
+    jingle(); startGame(5);
+    const d = world.plats.find((q) => q.launch);
+    theta = -d.a; lastTier = TOP; bestTier = TOP;
+    player.r = d.R; player.onGround = true; cam.r = d.R; cam.anchor = 0.46;
+    toastTimer = 0; hud.toast.hidden = true;
+    startLaunch(d);
+  });
   // Straight to the asteroid belt: drop onto the safe rock at the turn, where
   // the being of light is waiting with your force field
   function toBelt() {
