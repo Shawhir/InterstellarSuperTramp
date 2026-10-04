@@ -47,6 +47,17 @@ says so if that happens.
   the same, but faster bounces leave less time to steer; the HUD shows the current
   multiplier. Gaps between platforms shrink a little as it speeds up, so every jump
   stays possible.
+- Life on Earth: walk right round the planet and it changes as you go, through
+  a town, farmland (cows grazing, sheep, a barn, wheat waving), forest (oak,
+  pine and birch, deer, a fox, rabbits, toadstools), a lake with reeds, a
+  willow, ducks, a heron and leaping fish, savanna (acacias, elephants,
+  giraffes, zebras), desert (cacti, dunes, a camel, lizards), a beach and sea
+  (palms, crabs, a sailing boat, a whale coming up to blow), Arctic tundra
+  (snowy pines, a polar bear, an Arctic fox, reindeer) and a meadow with bees
+  and butterflies round the flowers and a beehive. Animals wander and pause,
+  and run (or hop) away if you get close. Birds fly round the planet in V
+  formations. The first time you set foot in each region you get a short
+  note about it.
 - Five mountain ranges sit behind the ground and turn more slowly than it
   (parallax), so they feel further away. They also sink more slowly than the
   ground as you climb, so the first few bounces reveal the far ranges behind,

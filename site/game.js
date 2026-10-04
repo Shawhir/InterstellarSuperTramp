@@ -374,10 +374,7 @@
     stars.forEach((s, i) => { s.id = i; });
 
     const decor = [];
-    for (let i = 0; i < 46; i++) {
-      const r = rnd();
-      decor.push({ a: rnd() * TAU, kind: r < 0.45 ? 'tree' : r < 0.65 ? 'house' : r < 0.85 ? 'flower' : 'rock', hue: Math.floor(rnd() * 4), size: 0.8 + rnd() * 0.5 });
-    }
+    const life = buildEarthLife(rnd, decor);
     const crust = [];
     for (let i = 0; i < 90; i++) {
       const r = rnd();
@@ -409,7 +406,7 @@
     for (let i = 0; i < 170; i++) sky.push({ x: rnd(), y: rnd(), s: rnd() < 0.15 ? 2 : 1, tw: rnd() * TAU });
 
     const issPlat = plats.find((q) => q.ride && q.ride.kind === 'iss') || null;
-    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat };
+    return { seed, plats, stars, decor, crust, swirls, sky, ranges, issPlat, life };
   }
 
   function buildWorld2(seed) {
@@ -3587,6 +3584,7 @@
     if (fx.run) { updateRunFrame(dt); return; }
     if (fx.arrive) { updateArriveFrame(dt); return; }
     if (fx.climb) { updateClimb(dt); return; }
+    if (level === 1 && world.life) updateEarthLife(dt);
     if (fx.burrow && fx.burrow.phase === 1) { updateBurrow(dt); return; }
     if (fx.burrow && level === 6 && player.r < hollowOuter() - 500) fx.burrow = null;
     for (const p of world.plats) {
@@ -5384,6 +5382,7 @@
     if (level === 4) { drawVenusDecor(); return; }
     if (level === 3) { drawMarsDecor(); return; }
     if (level === 2) { drawMoonDecor(); return; }
+    if (world.life) drawBiomeGround();
     for (const d of world.decor) {
       at(d.a + theta, R0 - 2, () => {
         ctx.scale(d.size, d.size);
@@ -5401,12 +5400,184 @@
         } else if (d.kind === 'flower') {
           px(-1, -8, 2, 8, '#3a8f3a');
           px(-3, -12, 6, 4, ['#ff6fa0', '#ffd23f', '#ffffff', '#b58cff'][d.hue]);
-        } else {
+        } else if (EARTH_PLANTS[d.kind]) EARTH_PLANTS[d.kind](d);
+        else {
           px(-8, -6, 16, 6, '#8a8f98'); px(-5, -9, 10, 3, '#a3a8b0');
         }
       });
     }
+    if (world.life) drawEarthLife();
   }
+
+  // ---- Life on Earth ---------------------------------------------------------
+  // The world is split into regions, each with its own ground, plants and
+  // animals: a town, meadows, farmland, forest, a river and lake, savanna,
+  // desert, a beach and sea, and Arctic tundra. Animals wander, graze, and
+  // run (or hop) away if you come close. Birds fly round in flocks.
+  const BIOMES = [
+    { key: 'town', a0: -0.35, a1: 0.35, ground: null },
+    { key: 'farm', a0: 0.35, a1: 1.05, ground: '#9bbf3a', fact: "A cow's stomach has four parts, to break down tough grass. Farms like this feed most of the world." },
+    { key: 'forest', a0: 1.05, a1: 1.8, ground: '#2f7a34', fact: 'Forests cover about a third of all the land on Earth. Their trees take in carbon dioxide and give out oxygen.' },
+    { key: 'lake', a0: 1.8, a1: 2.45, ground: '#4fb34a', fact: 'Only a tiny bit of Earth\'s water is fresh, in rivers, lakes and ice. About 97% of it is salty sea.' },
+    { key: 'savanna', a0: 2.45, a1: 3.2, ground: '#c9b45a', fact: 'On the savanna: African elephants are the biggest animals on land, and giraffes are the tallest.' },
+    { key: 'desert', a0: 3.2, a1: 3.85, ground: '#e6c27a', fact: 'Deserts, hot and cold, cover about a third of the land. Cacti store water in their thick stems.' },
+    { key: 'sea', a0: 3.85, a1: 4.6, ground: '#e9d9a0', fact: 'The ocean covers about 71% of Earth. Blue whales live in it: the biggest animals known ever to have lived.' },
+    { key: 'tundra', a0: 4.6, a1: 5.3, ground: '#eef3f8', fact: 'Arctic tundra: just below the surface the ground stays frozen all year round. It\'s called permafrost.' },
+    { key: 'meadow', a0: 5.3, a1: TAU - 0.35, ground: '#5cc04f', fact: 'Bees and other pollinators help produce around a third of the food crops we eat.' },
+  ];
+  const biomeAt = (a) => { const x = ((a % TAU) + TAU + 0.35) % TAU - 0.35; return BIOMES.find((b) => x >= b.a0 && x < b.a1) || BIOMES[0]; };
+  function buildEarthLife(rnd, decor) {
+    const animals = [], water = [], flowers = [], flocks = [];
+    const put = (b, kind, n, extra = {}) => { for (let i = 0; i < n; i++) decor.push({ a: b.a0 + 0.04 + rnd() * (b.a1 - b.a0 - 0.08), kind, hue: Math.floor(rnd() * 4), size: 0.75 + rnd() * 0.55, ...extra }); };
+    const beast = (b, kind, n, o = {}) => { for (let i = 0; i < n; i++) animals.push({ kind, a0: b.a0 + 0.06 + rnd() * (b.a1 - b.a0 - 0.12), x: 0, dir: rnd() < 0.5 ? -1 : 1, speed: o.speed || 12, range: o.range || 40, pause: rnd() * 3, phase: rnd() * TAU, flee: 0, hop: 0, onWater: o.onWater || false }); };
+    for (const b of BIOMES) {
+      if (b.key === 'town') { put(b, 'house', 5); put(b, 'tree', 4); put(b, 'flower', 5); beast(b, 'dog', 1, { speed: 30, range: 60 }); }
+      if (b.key === 'farm') { put(b, 'wheat', 7); put(b, 'barn', 1); put(b, 'hedge', 3); beast(b, 'cow', 3, { speed: 6, range: 30 }); beast(b, 'sheep', 4, { speed: 7, range: 25 }); }
+      if (b.key === 'forest') { put(b, 'oak', 6); put(b, 'pine', 6); put(b, 'birch', 4); put(b, 'mushroom', 4); beast(b, 'deer', 2, { speed: 14, range: 50 }); beast(b, 'fox', 1, { speed: 22, range: 70 }); beast(b, 'rabbit', 2, { speed: 18, range: 40 }); }
+      if (b.key === 'lake') { const mid = (b.a0 + b.a1) / 2; water.push({ a0: mid - 0.2, a1: mid + 0.2, depth: 16, kind: 'lake' }); put({ a0: b.a0, a1: mid - 0.2 }, 'reeds', 3); put({ a0: mid + 0.2, a1: b.a1 }, 'reeds', 3); put({ a0: b.a0, a1: mid - 0.22 }, 'willow', 1); put({ a0: mid + 0.22, a1: b.a1 }, 'oak', 2); animals.push({ kind: 'duck', a0: mid - 0.08, x: 0, dir: 1, speed: 8, range: 40, pause: 0, phase: 1, flee: 0, hop: 0, onWater: true }, { kind: 'duck', a0: mid + 0.06, x: 0, dir: -1, speed: 7, range: 30, pause: 0, phase: 2, flee: 0, hop: 0, onWater: true }); water[water.length - 1].fish = [mid - 0.12, mid + 0.02, mid + 0.13]; beast({ a0: mid + 0.2, a1: b.a1 }, 'heron', 1, { speed: 3, range: 10 }); }
+      if (b.key === 'savanna') { put(b, 'acacia', 5); put(b, 'grass', 6); beast(b, 'elephant', 2, { speed: 6, range: 40 }); beast(b, 'giraffe', 2, { speed: 8, range: 40 }); beast(b, 'zebra', 2, { speed: 10, range: 40 }); }
+      if (b.key === 'desert') { put(b, 'cactus', 6); put(b, 'dune', 3); beast(b, 'camel', 1, { speed: 6, range: 50 }); beast(b, 'lizard', 2, { speed: 30, range: 30 }); }
+      if (b.key === 'sea') { const mid = (b.a0 + b.a1) / 2; water.push({ a0: mid - 0.24, a1: mid + 0.26, depth: 24, kind: 'sea' }); put({ a0: b.a0, a1: mid - 0.25 }, 'palm', 3); put({ a0: b.a0, a1: mid - 0.25 }, 'shell', 3); beast({ a0: b.a0, a1: mid - 0.25 }, 'crab', 2, { speed: 16, range: 25 }); water[water.length - 1].whale = mid + 0.05; water[water.length - 1].boat = mid - 0.1; }
+      if (b.key === 'tundra') { put(b, 'snowpine', 5); put(b, 'snowrock', 3); beast(b, 'polarbear', 1, { speed: 7, range: 40 }); beast(b, 'arcticfox', 1, { speed: 20, range: 50 }); beast(b, 'reindeer', 2, { speed: 9, range: 40 }); }
+      if (b.key === 'meadow') { put(b, 'flower', 14); put(b, 'tree', 3); put(b, 'hive', 1); beast(b, 'rabbit', 3, { speed: 18, range: 40 }); for (let i = 0; i < 6; i++) flowers.push(b.a0 + 0.05 + rnd() * (b.a1 - b.a0 - 0.1)); }
+    }
+    for (let i = 0; i < 4; i++) flocks.push({ a: rnd() * TAU, R: R0 + 140 + rnd() * 260, speed: (0.03 + rnd() * 0.03) * (rnd() < 0.5 ? -1 : 1), n: 3 + Math.floor(rnd() * 4), phase: rnd() * TAU });
+    return { animals, water, flowers, flocks, seen: {} };
+  }
+  function updateEarthLife(dt) {
+    const L = world.life, me = -theta, low = player.r < R0 + 70;
+    for (const q of L.animals) {
+      q.hop = Math.max(0, q.hop - dt);
+      const pos = q.a0 + q.x / R0, gap = wrap(pos - me) * R0;
+      if (low && Math.abs(gap) < 80 && !q.onWater && q.kind !== 'heron') { q.flee = 1.2; q.dir = gap > 0 ? 1 : -1; if (q.hop <= 0 && (q.kind === 'rabbit' || q.kind === 'deer' || q.kind === 'reindeer')) q.hop = 0.35; }
+      if (q.flee > 0) { q.flee -= dt; q.x += q.dir * q.speed * 5 * dt; continue; }
+      if (q.pause > 0) { q.pause -= dt; continue; }
+      q.x += q.dir * q.speed * dt;
+      if (Math.abs(q.x) > q.range) { q.x = Math.sign(q.x) * q.range; q.dir *= -1; q.pause = 1 + Math.random() * 3; }
+      else if (Math.random() < dt * 0.2) q.pause = 1 + Math.random() * 2;
+    }
+    for (const f of L.flocks) f.a += f.speed * dt;
+    // A note about each region, the first time you're on the ground in it
+    if (state === 'play' && player.onGround && player.r <= R0 + 1 && toastTimer <= 0) {
+      const b = biomeAt(me);
+      if (b.fact && !L.seen[b.key]) { L.seen[b.key] = true; toast(b.fact, 5.5); }
+    }
+  }
+  // Each region's ground colour, and its water
+  function drawBiomeGround() {
+    if (cy - R0 > view.y1 + 60) return;
+    const L = world.life, toCanvas = (a) => a + theta - Math.PI / 2;
+    for (const b of BIOMES) {
+      if (!b.ground) continue;
+      ctx.strokeStyle = b.ground; ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.arc(cx, cy, R0 - 5, toCanvas(b.a0), toCanvas(b.a1)); ctx.stroke();
+      if (b.key === 'tundra') { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, R0 - 1, toCanvas(b.a0), toCanvas(b.a1)); ctx.stroke(); }
+    }
+    for (const w of L.water) {
+      ctx.strokeStyle = w.kind === 'sea' ? '#1f5fa8' : '#2f7fd0'; ctx.lineWidth = w.depth;
+      ctx.beginPath(); ctx.arc(cx, cy, R0 - w.depth / 2, toCanvas(w.a0), toCanvas(w.a1)); ctx.stroke();
+      // Ripples and glints
+      ctx.strokeStyle = 'rgba(220,240,255,0.7)'; ctx.lineWidth = 2;
+      for (let k = 0; k < 10; k++) {
+        const a = w.a0 + ((k + 0.5) / 10) * (w.a1 - w.a0) + Math.sin(clock * 0.8 + k) * 0.005;
+        if (Math.sin(clock * 2 + k * 1.7) > 0.2) { ctx.beginPath(); ctx.arc(cx, cy, R0 - 2, toCanvas(a), toCanvas(a + 0.012)); ctx.stroke(); }
+      }
+      if (w.kind === 'sea') for (const side of [w.a0]) at(side + theta, R0 - 2, () => { for (let k = 0; k < 3; k++) { const t = (clock * 0.5 + k / 3) % 1; ctx.fillStyle = `rgba(255,255,255,${0.8 * (1 - t)})`; ctx.fillRect(-4 - t * 30, -2, 8, 2); } }, 60);
+    }
+  }
+  // Plants and things that grow in each region
+  const EARTH_PLANTS = {
+    oak(d) { px(-3, -20, 6, 20, '#6b4226'); for (const [x, y, r] of [[0, -36, 16], [-11, -28, 11], [11, -28, 11]]) { ctx.fillStyle = ['#2f8f3a', '#3aa047', '#27803a', '#4aa84a'][d.hue]; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); } },
+    pine(d) { px(-2, -10, 4, 10, '#5a3a20'); ctx.fillStyle = '#1f6a3a'; for (const [y, w] of [[-10, 16], [-22, 13], [-34, 9]]) { ctx.beginPath(); ctx.moveTo(-w, y); ctx.lineTo(w, y); ctx.lineTo(0, y - 18); ctx.fill(); } },
+    birch(d) { px(-2, -34, 4, 34, '#f2f2ec'); for (let y = -30; y < 0; y += 7) px(-2, y, 2, 2, '#333'); ctx.fillStyle = '#7cc04a'; ctx.beginPath(); ctx.ellipse(0, -38, 10, 14, 0, 0, TAU); ctx.fill(); },
+    willow(d) { px(-3, -24, 6, 24, '#5a3a20'); ctx.fillStyle = '#6aa83a'; ctx.beginPath(); ctx.arc(0, -30, 18, Math.PI, TAU); ctx.fill(); for (let x = -16; x <= 16; x += 4) px(x, -30, 2, 18 + Math.sin(x + clock) * 3, '#6aa83a'); },
+    mushroom(d) { px(-1, -5, 2, 5, '#f2e6d0'); ctx.fillStyle = '#d8403a'; ctx.beginPath(); ctx.arc(0, -5, 5, Math.PI, TAU); ctx.fill(); px(-2, -8, 1, 1, '#fff'); px(2, -7, 1, 1, '#fff'); },
+    wheat(d) { for (let x = -18; x <= 18; x += 4) { const sway = Math.sin(clock * 1.5 + x * 0.3 + d.a * 50) * 1.5; px(x + sway, -14, 2, 14, '#d9b23a'); px(x + sway - 1, -17, 3, 4, '#e9c84a'); } },
+    barn(d) { px(-22, -26, 44, 26, '#b8403a'); ctx.fillStyle = '#7a2a24'; ctx.beginPath(); ctx.moveTo(-26, -26); ctx.lineTo(0, -42); ctx.lineTo(26, -26); ctx.fill(); px(-8, -16, 16, 16, '#f2e6d0'); px(-7, -15, 14, 14, '#7a2a24'); },
+    hedge(d) { ctx.fillStyle = '#2f7a34'; for (const x of [-12, 0, 12]) { ctx.beginPath(); ctx.arc(x, -6, 8, 0, TAU); ctx.fill(); } },
+    reeds(d) { for (let x = -6; x <= 6; x += 3) { const sway = Math.sin(clock * 2 + x) * 2; px(x + sway, -18, 1, 18, '#4a7a2a'); if (x % 2 === 0) px(x + sway - 1, -20, 3, 6, '#6b4226'); } },
+    acacia(d) { px(-2, -26, 4, 26, '#6b4a2a'); px(-6, -28, 2, 6, '#6b4a2a'); ctx.fillStyle = '#5a8a2a'; ctx.beginPath(); ctx.ellipse(0, -32, 24, 6, 0, 0, TAU); ctx.fill(); },
+    grass(d) { for (let x = -8; x <= 8; x += 4) px(x + Math.sin(clock * 2 + x) * 1, -8, 2, 8, '#b8a040'); },
+    cactus(d) { px(-3, -30, 6, 30, '#3f8a4a'); px(-11, -20, 4, 10, '#3f8a4a'); px(-11, -20, 8, 3, '#3f8a4a'); px(7, -24, 4, 12, '#3f8a4a'); px(3, -14, 8, 3, '#3f8a4a'); if (d.hue === 1) px(-2, -33, 4, 3, '#ff6fa0'); },
+    dune(d) { ctx.fillStyle = '#dcb468'; ctx.beginPath(); ctx.ellipse(0, 0, 40, 12, 0, Math.PI, TAU); ctx.fill(); },
+    palm(d) { const sway = Math.sin(clock * 1.2 + d.a * 30) * 2; ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(4, -20, 2 + sway, -40); ctx.stroke(); ctx.fillStyle = '#3a9a3a'; for (const a of [-2.6, -2, -1.2, -0.5]) { ctx.save(); ctx.translate(2 + sway, -40); ctx.rotate(a + 1.57); ctx.beginPath(); ctx.ellipse(0, -10, 3, 12, 0, 0, TAU); ctx.fill(); ctx.restore(); } px(-1 + sway, -40, 4, 4, '#6b4226'); },
+    shell(d) { ctx.fillStyle = '#f4b6a6'; ctx.beginPath(); ctx.arc(0, -2, 3, Math.PI, TAU); ctx.fill(); },
+    snowpine(d) { EARTH_PLANTS.pine(d); ctx.fillStyle = '#ffffff'; for (const [y, w] of [[-14, 10], [-26, 8], [-38, 5]]) { ctx.beginPath(); ctx.moveTo(-w, y); ctx.lineTo(w, y); ctx.lineTo(0, y - 8); ctx.fill(); } },
+    snowrock(d) { px(-10, -8, 20, 8, '#8a8f98'); px(-8, -10, 16, 3, '#ffffff'); },
+    hive(d) { px(-1, -26, 2, 26, '#6b4226'); ctx.fillStyle = '#e9b23a'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(0, -16 + k * 4 - 12, 8 - k, 3, 0, 0, TAU); ctx.fill(); } },
+  };
+  // The animals, the flocks, and the little things buzzing round the flowers
+  function drawEarthLife() {
+    const L = world.life;
+    for (const q of L.animals) {
+      const pos = q.a0 + q.x / R0, moving = q.flee > 0 || q.pause <= 0;
+      const hopY = q.hop > 0 ? -Math.sin((q.hop / 0.35) * Math.PI) * 10 : 0;
+      at(pos + theta, R0 - (q.onWater ? 6 : 2), () => {
+        ctx.translate(0, hopY); ctx.scale(q.dir, 1);
+        const step = moving ? Math.sin(clock * (q.flee > 0 ? 20 : 8) + q.phase) : 0;
+        ANIMALS[q.kind](step, q);
+      }, 80);
+    }
+    // Fish leaping in the lake; a whale and a boat out at sea
+    for (const w of L.water) {
+      for (const f of w.fish || []) {
+        const t = (clock * 0.35 + f * 7) % 1;
+        if (t < 0.25) { const u = t / 0.25; at(f + (u - 0.5) * 0.02 + theta, R0 - 8 + -Math.sin(u * Math.PI) * 26, () => { ctx.rotate((u - 0.5) * 2); px(-5, -2, 10, 4, '#c8d8e8'); ctx.fillStyle = '#c8d8e8'; ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(-9, -3); ctx.lineTo(-9, 3); ctx.fill(); }, 40); }
+      }
+      if (w.whale) {
+        const t = (clock * 0.12) % 1;
+        if (t < 0.4) at(w.whale + theta, R0 - 12, () => {
+          const up = Math.sin((t / 0.4) * Math.PI);
+          ctx.fillStyle = '#3a4a6a'; ctx.beginPath(); ctx.ellipse(0, 4 - up * 8, 34, 10, 0, Math.PI, TAU); ctx.fill();
+          if (up > 0.6) for (let k = 0; k < 6; k++) px(-4 + Math.sin(k) * 6, -8 - up * 8 - k * 5, 3, 3, 'rgba(220,240,255,0.8)');
+        }, 80);
+      }
+      if (w.boat) at(w.boat + Math.sin(clock * 0.1) * 0.03 + theta, R0 - 20, () => {
+        ctx.rotate(Math.sin(clock * 1.5) * 0.06);
+        px(-16, -6, 32, 6, '#8a5a3a'); px(-1, -30, 2, 24, '#6b4226');
+        ctx.fillStyle = '#f2f2ec'; ctx.beginPath(); ctx.moveTo(1, -29); ctx.lineTo(14, -8); ctx.lineTo(1, -8); ctx.fill();
+      }, 60);
+    }
+    // Bees and butterflies over the meadow flowers
+    for (let i = 0; i < L.flowers.length; i++) {
+      const a = L.flowers[i];
+      at(a + theta, R0 - 2, () => {
+        const bx = Math.sin(clock * 1.7 + i) * 18, by = -18 - Math.abs(Math.sin(clock * 2.3 + i * 2)) * 14;
+        if (i % 2) { px(bx - 2, by - 1, 4, 3, '#ffd23f'); px(bx - 1, by - 1, 1, 3, '#1b1530'); px(bx - 1, by - 3, 2, 2, 'rgba(255,255,255,0.8)'); }
+        else { const flap = Math.abs(Math.sin(clock * 12 + i)); ctx.fillStyle = ['#ff6fa0', '#b58cff', '#ffab3d'][i % 3]; for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(bx + s * 3 * flap, by, 3 * flap + 0.5, 4, 0, 0, TAU); ctx.fill(); } px(bx, by - 3, 1, 6, '#1b1530'); }
+      }, 50);
+    }
+    // Birds in V formation, flapping
+    for (const f of L.flocks) {
+      for (let k = 0; k < f.n; k++) {
+        const side = k % 2 ? 1 : -1, rank = Math.ceil(k / 2);
+        at(f.a - (rank * 16 * Math.sign(f.speed)) / f.R + theta, f.R + Math.sin(clock + f.phase) * 8 - rank * 9 * side * 0.6 + side * rank * 6, () => {
+          const flap = Math.sin(clock * 9 + k + f.phase) * 4;
+          ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(-6, flap); ctx.lineTo(0, 0); ctx.lineTo(6, flap); ctx.stroke();
+        }, 20);
+      }
+    }
+  }
+  const ANIMALS = {
+    dog(st) { px(-8, -8, 14, 6, '#a0703a'); px(4, -12, 6, 6, '#a0703a'); px(9, -10, 3, 2, '#1b1530'); px(-10, -10, 3, 2, '#a0703a'); for (const x of [-7, 2]) px(x + st, -2, 2, 2, '#7a5028'); },
+    cow(st, q) { const graze = Math.sin(clock * 0.8 + q.phase) > 0.3; px(-12, -16, 22, 11, '#ffffff'); px(-8, -15, 6, 5, '#1b1530'); px(2, -12, 5, 4, '#1b1530'); px(9, graze ? -8 : -18, 7, 7, '#ffffff'); px(14, graze ? -6 : -16, 2, 2, '#ff9ab0'); for (const x of [-10, -5, 2, 7]) px(x + (x % 2 ? st : -st), -5, 2, 5, '#3a3a3a'); },
+    sheep(st, q) { ctx.fillStyle = '#f4f4ee'; for (const [x, y] of [[-6, -10], [0, -12], [6, -10], [0, -8]]) { ctx.beginPath(); ctx.arc(x, y, 5, 0, TAU); ctx.fill(); } px(9, -13, 5, 5, '#2a2a2a'); for (const x of [-5, 4]) px(x + st, -4, 2, 4, '#2a2a2a'); },
+    deer(st) { px(-10, -18, 18, 8, '#9a6a3a'); px(6, -26, 4, 10, '#9a6a3a'); px(6, -28, 7, 5, '#9a6a3a'); px(8, -34, 1, 6, '#5a3a20'); px(10, -33, 1, 5, '#5a3a20'); px(-11, -18, 3, 3, '#fff'); for (const x of [-9, -5, 3, 6]) px(x + (x > 0 ? st : -st), -10, 2, 10, '#7a5028'); },
+    reindeer(st) { ANIMALS.deer(st); px(5, -38, 8, 1, '#5a3a20'); px(-11, -18, 3, 3, '#e8e0d0'); },
+    fox(st) { px(-8, -8, 14, 6, '#e0703a'); px(4, -12, 6, 6, '#e0703a'); px(5, -14, 2, 2, '#e0703a'); px(9, -10, 2, 2, '#1b1530'); px(-16, -10, 9, 4, '#e0703a'); px(-17, -10, 3, 4, '#ffffff'); for (const x of [-6, 3]) px(x + st, -2, 2, 2, '#3a2a20'); },
+    arcticfox(st) { px(-8, -8, 14, 6, '#f2f2f2'); px(4, -12, 6, 6, '#f2f2f2'); px(9, -10, 2, 2, '#1b1530'); px(-16, -10, 9, 4, '#f2f2f2'); for (const x of [-6, 3]) px(x + st, -2, 2, 2, '#cfd6de'); },
+    rabbit(st, q) { px(-5, -7, 9, 6, '#c9b49a'); px(3, -10, 5, 5, '#c9b49a'); px(4, -15, 2, 6, '#c9b49a'); px(-6, -7, 3, 3, '#ffffff'); px(7, -9, 1, 1, '#1b1530'); },
+    duck(st, q) { const bob = Math.sin(clock * 3 + q.phase) * 1; px(-6, -5 + bob, 11, 5, '#8a6a3a'); px(3, -10 + bob, 5, 5, '#2f8f3a'); px(8, -8 + bob, 3, 2, '#ffab3d'); },
+    heron(st) { px(-4, -26, 8, 8, '#9aa3b5'); px(2, -36, 2, 12, '#9aa3b5'); px(2, -38, 5, 3, '#9aa3b5'); px(7, -37, 5, 1, '#e9c84a'); px(-2, -18, 1, 18, '#6b6b6b'); px(1, -18, 1, 18, '#6b6b6b'); },
+    elephant(st) { px(-16, -26, 30, 18, '#8a8f98'); px(12, -26, 10, 12, '#8a8f98'); px(18, -16, 4, 14, '#8a8f98'); px(10, -24, 5, 9, '#6f747c'); px(18, -22, 2, 2, '#1b1530'); for (const x of [-14, -7, 3, 9]) px(x + (x > 0 ? st : -st), -8, 5, 8, '#7a7f88'); },
+    giraffe(st) { px(-10, -26, 18, 9, '#e0b050'); px(4, -50, 5, 26, '#e0b050'); px(4, -54, 10, 6, '#e0b050'); px(6, -57, 1, 3, '#7a5028'); for (const [x, y] of [[-7, -24], [-1, -22], [5, -40], [5, -32], [-4, -20]]) px(x, y, 3, 3, '#8a5a28'); for (const x of [-9, -4, 3, 6]) px(x + (x > 0 ? st : -st), -17, 2, 17, '#c9a040'); },
+    zebra(st) { px(-10, -16, 18, 9, '#ffffff'); for (let x = -9; x < 8; x += 4) px(x, -16, 2, 9, '#1b1530'); px(6, -22, 5, 9, '#ffffff'); px(7, -22, 1, 9, '#1b1530'); for (const x of [-9, -4, 3, 6]) px(x + (x > 0 ? st : -st), -7, 2, 7, '#ffffff'); },
+    camel(st) { px(-12, -22, 22, 10, '#c9a060'); ctx.fillStyle = '#c9a060'; ctx.beginPath(); ctx.arc(-4, -22, 6, Math.PI, TAU); ctx.fill(); px(8, -32, 4, 14, '#c9a060'); px(8, -34, 9, 5, '#c9a060'); for (const x of [-10, -5, 2, 6]) px(x + (x > 0 ? st : -st), -12, 2, 12, '#a88048'); },
+    lizard(st) { px(-6, -3, 12, 3, '#6a9a3a'); px(5, -4, 4, 3, '#6a9a3a'); px(-11, -2, 6, 2, '#6a9a3a'); px(-3 + st, -1, 2, 1, '#4a7a2a'); px(2 - st, -1, 2, 1, '#4a7a2a'); },
+    crab(st) { px(-5, -5, 10, 5, '#e0503a'); px(-8, -7 + st, 3, 3, '#e0503a'); px(5, -7 - st, 3, 3, '#e0503a'); px(-3, -7, 1, 2, '#1b1530'); px(2, -7, 1, 2, '#1b1530'); },
+    polarbear(st) { px(-14, -16, 26, 12, '#f2f2ec'); px(10, -18, 9, 8, '#f2f2ec'); px(17, -15, 2, 2, '#1b1530'); px(12, -20, 2, 2, '#f2f2ec'); for (const x of [-12, -6, 3, 8]) px(x + (x > 0 ? st : -st), -5, 4, 5, '#e2e2dc'); },
+  };
 
   // Level 2 platforms. The rockets and meteors follow the drawing: a pointed
   // nose, a porthole, and zigzag flames out the back.
