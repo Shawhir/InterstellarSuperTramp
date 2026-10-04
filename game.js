@@ -769,7 +769,18 @@
   // bumpers between, and the miners' mass drivers along the top.
   const RUN_LEN = 16000; // how far the run to Jupiter goes, px
   const DIVE_LEN = 11000; // then right through Jupiter, layer by layer
-  const OCEAN_LEN = 5200; // and at the end, down into Europa's ocean
+  const OCEAN_LEN = 4300; // and at the end, down through Europa's ice into its ocean
+  // Under Europa's surface, layer by layer like the fall through the hollow
+  // Earth (but not so deep): 'at' is how far down each starts, in px
+  const EU_LAYERS = [
+    { at: 0, name: 'SURFACE ICE', sub: 'ABOUT -160°C', c: ['#ece6dc', '#cfd6de'], fact: "Europa's surface: ice as hard as rock, at about -160°C. The reddish-brown streaks are probably salts that came up from the ocean below." },
+    { at: 450, name: 'THE ICE SHELL', sub: 'PROBABLY 15 TO 25 KM THICK', c: ['#bcd6ea', '#86b0d4'], fact: "The ice shell, probably 15 to 25 km thick. It's cracked into ridges and plates, because Jupiter's pull squeezes and stretches Europa every orbit." },
+    { at: 1400, name: 'WARM ICE', sub: 'SOFT, SLOWLY CHURNING', c: ['#6c9ccc', '#4676ac'], fact: 'Lower down the ice is warmer and softer, slowly churning like a lava lamp. There may even be lakes of water trapped inside it.' },
+    { at: 2100, name: 'THE OCEAN', sub: 'SALTY, MAYBE 60 TO 150 KM DEEP', c: ['#1d4a7c', '#071830'], fact: "The ocean! Salty water, maybe 60 to 150 km deep: twice as much water as all of Earth's oceans put together." },
+    { at: OCEAN_LEN, name: 'THE SEAFLOOR', sub: 'ROCK, AND MAYBE HOT VENTS', c: ['#2a2a32', '#16161c'], fact: "The seafloor: rock, and maybe hot vents like the ones deep-sea creatures live round on Earth. If there's life on Europa, it might be down here. NASA's Europa Clipper arrives in 2030 to find out more." },
+  ];
+  const euLayer = (od) => { let i = 0; while (i < EU_LAYERS.length - 1 && EU_LAYERS[i + 1].at <= od) i++; return i; };
+  const euKm = (od) => (od < 2100 ? (od / 2100) * 20 : 20 + ((od - 2100) / (OCEAN_LEN - 2100)) * 100);
   function buildWorld5(seed) {
     const rnd = mulberry32(seed);
     const plats = [], stars = [], rocks = [], pops = [];
@@ -1010,7 +1021,7 @@
   function layerName() {
     if (fx.run) {
       const R = fx.run;
-      if (R.phase !== 'run') return R.phase === 'exit' ? 'Past Jupiter' : R.phase === 'ocean' ? "Europa's ocean" : 'Europa';
+      if (R.phase !== 'run') return R.phase === 'exit' ? 'Past Jupiter' : R.phase === 'ocean' ? `Europa: ${EU_LAYERS[euLayer(R.od)].name.toLowerCase()}` : 'Europa';
       const f = runF(), k = diveK();
       const name = R.d >= RUN_LEN ? `Jupiter: ${JUP_LAYERS[jupLayer(R.d)].name.toLowerCase()}` : f < 0.26 ? 'Outer belt' : f < 0.44 ? 'Past the belt' : f < 0.6 ? 'Hilda asteroids' : f < 0.75 ? 'Comet pieces' : 'Radiation belts';
       return `${name} · ${Math.round(R.v * 0.03)} km/s`;
@@ -1958,7 +1969,7 @@
   }
   let runFade = null;
   function startRun(p) {
-    fx.run = { d: 0, v: 300, x: 0, vx: 0, t: 0, hitT: 0, phase: 'run', pt: 0, told: 0, trail: [], from: p, field: 0, od: 0, flashT: 0, bolt: null };
+    fx.run = { j0: 9 + tierFloat(p.R) * 1.5, d: 0, v: 300, x: 0, vx: 0, t: 0, hitT: 0, phase: 'run', pt: 0, told: 0, trail: [], from: p, field: 0, od: 0, flashT: 0, bolt: null };
     document.body.classList.add('run');
     player.onGround = false; player.vr = 0; player.vx = 0; player.spin = 0; player.heat = 0; fx.flames = []; fx.trail = [];
     fx.pops = []; particles = [];
@@ -2114,34 +2125,48 @@
       // Up after it as it slides out of sight above you, over you go, and
       // down you drift onto its ice, the same as landing on any other world
       R.x = approach(R.x, 0, 400 * dt);
+      R.vis = Math.max(0, (R.vis || 0) - 500 * dt); R.vd = (R.vd || 0) + R.vis * dt;
       if (R.pt > EU_UP && !R.turnTold) { R.turnTold = true; banner("EUROPA'S PULL", 'UP AND OVER'); sfx.whoosh(); }
       if (R.pt > EU_LAND && !R.landed) {
         R.landed = true; addShake(6); sfx.thud(); buzz(30);
         for (let i = 0; i < 22; i++) R.trail.push({ x: W / 2, y: H * 0.72, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 120, t: 0, life: 1.3, c: '#eef4ff' });
         toast("On Europa! Its gravity is only about a seventh of Earth's, so you drift down slowly. Jupiter fills the sky, and it never moves: Europa always keeps the same face towards it.", 6);
       }
-      if (R.pt > EU_LAND + 1.9) {
-        // Down a crack in the ice, into the ocean
-        R.phase = 'ocean'; R.pt = 0; R.od = 0; R.x = 0; R.vx = 0;
-        banner('INTO THE OCEAN', 'UNDER THE ICE');
-        toast("Down a crack and through Europa's ice shell, probably 15 to 25 km thick. Steer for the glowing geoms on the way down.", 6);
-        sfx.whoosh();
+      if (R.landed) R.crack = clamp((R.pt - EU_LAND - 0.7) / 0.6, 0, 1);
+      if (R.pt > EU_LAND + 1.3) {
+        // The ice gives way under you, and down you go
+        R.phase = 'ocean'; R.pt = 0; R.od = 0; R.ov = 0; R.x = 0; R.vx = 0; R.euL = 0;
+        addShake(10); sfx.thud(); buzz([40, 30, 60]); pop('CRACK!', '#eef4ff', player.r + 90);
+        banner('SURFACE ICE', 'ABOUT -160°C'); toast(EU_LAYERS[0].fact, 6);
       }
     } else if (R.phase === 'ocean') {
       runSteer(dt, lane);
-      R.od += 330 * dt;
-      const by = H * 0.4 + 24;
+      // Smashing down through the ice fast; the water slows you; easing
+      // down onto the seafloor at the end
+      const want = R.od < 2100 ? 1000 : R.od < OCEAN_LEN - 500 ? 560 : 160;
+      R.ov = approach(R.ov, want, (R.od < 2100 ? 900 : 700) * dt);
+      R.od = Math.min(OCEAN_LEN, R.od + R.ov * dt);
+      if (R.od < 2100 && R.ov > 500) shake = Math.max(shake, 2);
+      const fy = euFeetY(R), by = fy - 24, bx = W / 2 + R.x;
+      // Crashing through into each new layer
+      const li = euLayer(R.od);
+      if (li !== R.euL) {
+        R.euL = li; const L = EU_LAYERS[li];
+        banner(L.name, L.sub); toast(L.fact, li === EU_LAYERS.length - 1 ? 8 : 6);
+        addShake(li === 3 ? 8 : 10); sfx.thud(); buzz(25);
+        for (let i = 0; i < 24; i++) R.trail.push({ x: bx + (Math.random() - 0.5) * 120, y: fy, vx: (Math.random() - 0.5) * 460, vy: -Math.random() * 380, t: 0, life: 0.8, c: li === 3 ? '#cfe8ff' : L.c[0] });
+        if (li === 3) { pop('SPLASH!', '#8fd0ff', player.r + 90); sfx.whoosh(); }
+      }
       for (const g of world.stars) {
         if (!g.ocean || g.taken) continue;
-        const y = H * 0.4 + (g.d - R.od), gx = W / 2 + g.u * lane;
-        if (Math.hypot(gx - (W / 2 + R.x), y - by) < 34) {
+        const y = fy + (g.d - R.od), gx = W / 2 + g.u * lane;
+        if (Math.hypot(gx - bx, y - by) < 34) {
           g.taken = true; addMult(); addScore(50); sfx.star(mult); updateStarsHud(true);
           for (let i = 0; i < 8; i++) R.trail.push({ x: gx, y, vx: (Math.random() - 0.5) * 220, vy: (Math.random() - 0.5) * 220, t: 0, life: 0.45, c: '#8fffe0' });
         }
       }
-      if (R.od > 1400 && !R.toldSea) { R.toldSea = true; toast("Europa's ocean may be 60 to 150 km deep: far deeper than any ocean on Earth.", 5); }
-      if (R.od > OCEAN_LEN - 700 && !R.toldVents) { R.toldVents = true; toast('The seafloor. If anything lives on Europa, it might be round hot vents like these, as creatures do round deep-sea vents on Earth. Nobody knows yet: Europa Clipper is on its way.', 7); }
-      if (R.od >= OCEAN_LEN && state === 'play') { R.od = OCEAN_LEN; lastTier = TOP; bestTier = TOP; win(); }
+      if (R.od >= OCEAN_LEN && !R.floored) { R.floored = true; R.floorT = 0; addShake(6); sfx.thud(); for (let i = 0; i < 18; i++) R.trail.push({ x: bx, y: fy, vx: (Math.random() - 0.5) * 240, vy: -Math.random() * 140, t: 0, life: 1, c: '#5a5a66' }); }
+      if (R.floored && (R.floorT += dt) > 1.6 && state === 'play') { lastTier = TOP; bestTier = TOP; win(); }
     }
     for (const q of R.trail) { q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; }
     R.trail = R.trail.filter((q) => q.t < q.life);
@@ -2175,7 +2200,7 @@
       if (toastTimer <= 0) hud.toast.hidden = true;
     }
     const R = fx.run;
-    hud.alt.textContent = R.phase === 'ocean' ? `${fmtKm((R.od / OCEAN_LEN) * 100)} down` : fmtKm(runKm());
+    hud.alt.textContent = R.phase === 'ocean' ? `${fmtKm(euKm(R.od))} down` : fmtKm(runKm());
     hud.layer.textContent = layerName();
   }
   // ---- Arriving at a new world --------------------------------------------------------
@@ -7109,14 +7134,16 @@
         drawFarRocks(0, (R.vd || scroll) * 0.3, clamp(1 - (f - 0.25) * 3, 0, 1));
         // Jupiter grows the whole way; at the end it fills everything as you hit it
         const m = Math.min(W, H);
-        const jr = f < 0.92 ? lerp(10, 0.36 * m, Math.pow(f / 0.92, 2.2)) : 0.36 * m * Math.exp((f - 0.92) * 40);
+        // It starts just where it was in the belt's sky, and glides to the middle
+        const jk = smooth(clamp(f / 0.12, 0, 1)), jx = lerp(W * 0.62, W / 2, jk), jy = lerp(H * 0.15, H * 0.2, jk);
+        const jr = f < 0.92 ? lerp(R.j0 || 10, 0.36 * m, Math.pow(f / 0.92, 2.2)) : 0.36 * m * Math.exp((f - 0.92) * 40);
         // Jupiter's pull: faint rings sliding in towards it, stronger the closer you are
         if (f > 0.1 && f < 0.97) {
           ctx.lineWidth = 2;
           for (let i = 0; i < 6; i++) {
             const k = (clock * (0.25 + f * 0.6) + i / 6) % 1, rr = jr * (1.15 + (1 - k) * 5);
             ctx.strokeStyle = `rgba(255,220,170,${0.18 * k * Math.min(1, f * 2)})`;
-            ctx.beginPath(); ctx.ellipse(W / 2, H * 0.2, rr, rr * 0.6, 0, 0, TAU); ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(jx, jy, rr, rr * 0.6, 0, 0, TAU); ctx.stroke();
           }
         }
         // Warp streaks pouring out of Jupiter as you fall towards it
@@ -7124,11 +7151,12 @@
           ctx.strokeStyle = `rgba(255,235,200,${Math.min(0.28, (f - 0.35) * 0.6)})`; ctx.lineWidth = 2;
           for (let i = 0; i < 46; i++) {
             const a = i * 2.39996, k = ((clock * (0.6 + f * 1.6) + i * 0.137) % 1), r0 = jr + k * k * W, r1 = r0 + 20 + k * (R.vis || sp) * 0.08;
-            ctx.beginPath(); ctx.moveTo(W / 2 + Math.cos(a) * r0, H * 0.2 + Math.sin(a) * r0 * 0.8); ctx.lineTo(W / 2 + Math.cos(a) * r1, H * 0.2 + Math.sin(a) * r1 * 0.8); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(jx + Math.cos(a) * r0, jy + Math.sin(a) * r0 * 0.8); ctx.lineTo(jx + Math.cos(a) * r1, jy + Math.sin(a) * r1 * 0.8); ctx.stroke();
           }
         }
-        drawJupiter(W / 2, H * 0.2, jr);
-        if (f < 0.95) drawGalileans(W / 2, H * 0.2, jr, clamp((f - 0.6) * 4, 0, 1));
+        drawJupiter(jx, jy, jr);
+        if (f < 0.95) drawGalileans(jx, jy, jr, Math.max(0.8 * (1 - f / 0.25), clamp((f - 0.6) * 4, 0, 1)));
+        if (f < 0.12) { ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = `rgba(238,241,255,${0.75 * (1 - f / 0.12)})`; ctx.fillText('JUPITER', jx, jy + jr + 12); ctx.textAlign = 'start'; }
       } else {
         // Out the far side, the way you went in but backwards: Jupiter huge
         // behind you and shrinking, streaks pouring back down into it, the
@@ -7389,19 +7417,37 @@
   function drawExitSpace(R, k) {
     const vis = R.vis || 400;
     for (const st of world.sky) { const y = (st.y * H + (R.vd || 0) * (0.15 + st.s * 0.18)) % H; px(st.x * W, y, st.s, st.s * (1 + vis / 220), st.s > 1 ? '#fff3c4' : '#c9d7f0'); }
-    const jr = lerp(Math.max(W, H) * 1.1, Math.min(W, H) * 0.3, smooth(k)), jy = H + jr * lerp(0.15, 0.55, smooth(k));
+    // One Jupiter all the way: it falls away behind you, and ends up just
+    // where, once the view has turned over, it hangs in Europa's sky
+    const e = smooth(k), J = euJupiter();
+    const jr = Math.exp(lerp(Math.log(Math.max(W, H) * 1.1), Math.log(J.r), e));
+    const jx = lerp(W / 2, W - J.x, e), jy = lerp(H + Math.max(W, H) * 0.16, 2 * (H * 0.45 - 24) - J.y, e);
     // Streaks pouring back down into it behind you
     ctx.strokeStyle = `rgba(255,235,200,${0.25 * (1 - k)})`; ctx.lineWidth = 2;
     for (let i = 0; i < 40; i++) {
-      const a = Math.PI + 0.2 + (i / 40) * (Math.PI - 0.4), kk = ((clock * 1.2 + i * 0.137) % 1), r1 = jr + (1 - kk) * (1 - kk) * W, r0 = r1 + 20 + (1 - k) * 60;
-      ctx.beginPath(); ctx.moveTo(W / 2 + Math.cos(a) * r0, jy + Math.sin(a) * r0); ctx.lineTo(W / 2 + Math.cos(a) * r1, jy + Math.sin(a) * r1); ctx.stroke();
+      const a = i * 2.39996, kk = ((clock * 1.2 + i * 0.137) % 1), r1 = jr + (1 - kk) * (1 - kk) * W, r0 = r1 + 20 + (1 - k) * 60;
+      ctx.beginPath(); ctx.moveTo(jx + Math.cos(a) * r0, jy + Math.sin(a) * r0); ctx.lineTo(jx + Math.cos(a) * r1, jy + Math.sin(a) * r1); ctx.stroke();
     }
-    drawJupiter(W / 2, jy, jr, 0.55);
-    drawGalileans(W / 2, jy, jr, clamp(k * 2, 0, 1));
+    drawJupiter(jx, jy, jr, 0.7);
     // Speed lines down the sides, slowing
     ctx.fillStyle = `rgba(220,235,255,${0.25 * (1 - k)})`;
     for (let i = 0; i < 18; i++) { const x = ((i * 0.618) % 1) * W, y = (i * 211 + (R.vd || 0) * 1.2) % (H + 300) - 150; ctx.fillRect(x, y, 2, 20 + vis * 0.06); }
   }
+  // Europa's surface and sky as you land on it (the space behind, turned
+  // right over, with Jupiter in its place in the sky, and the ice)
+  function drawEuropaSurface(R) {
+    const pc = H * 0.45 - 24;
+    ctx.save(); ctx.translate(W / 2, pc); ctx.rotate(Math.PI); ctx.translate(-W / 2, -pc);
+    ctx.fillStyle = '#04050b'; ctx.fillRect(-W, -H * 3, W * 3, H * 7);
+    drawExitSpace(R, 1);
+    ctx.restore();
+    drawEuropaLanding(R, 1, false);
+  }
+  // Where your feet are on the screen on the way down: from the surface you
+  // landed on, gliding up to leave room to see what's below
+  const euFeetY = (R) => H * lerp(0.72, 0.4, smooth(clamp(R.pt / 1.2, 0, 1)));
+  // Where Jupiter hangs in Europa's sky
+  const euJupiter = () => ({ x: W * 0.68, y: H * 0.26, r: Math.min(W, H) * 0.32 });
   // Europa: it slides up out of sight above you, the view turns right over,
   // and you drift down onto its ice (the same way you land on every world)
   function drawEuropaArrival(R) {
@@ -7421,26 +7467,24 @@
     // Europa's ground, turning in from above to right way up under you
     if (t >= EU_UP) {
       ctx.save(); ctx.translate(W / 2, pc); ctx.rotate(turn - Math.PI); ctx.translate(-W / 2, -pc);
-      drawEuropaLanding(R, skyK);
+      drawEuropaLanding(R, skyK, false);
       ctx.restore();
     }
     // You, upright all the way, then drifting down onto the ice
     const fk = clamp((t - EU_UP - EU_TURN) / EU_FALL, 0, 1);
-    let y = lerp(py0, H * 0.72, fk * fk);
-    if (R.landed && t > EU_LAND + 1.1) y += (t - EU_LAND - 1.1) * 500; // and down the crack you go
+    const y = lerp(py0, H * 0.72, fk * fk);
     const squash = R.landed ? Math.max(0, 1 - (t - EU_LAND) * 4) : 0;
-    drawSprite(R.landed && t < EU_LAND + 1.1 ? 'stand' : 'jump', W / 2 + R.x * (1 - fk), y, false, 1 - squash * 0.2, 1 + squash * 0.15, 1, SUIT);
+    drawSprite(R.landed ? 'stand' : 'jump', W / 2 + R.x * (1 - fk), y, false, 1 - squash * 0.2, 1 + squash * 0.15, 1, SUIT);
     if (conspiracy) drawFoilHat(W / 2 + R.x * (1 - fk), y, 0);
     for (const q of R.trail) { ctx.globalAlpha = 1 - q.t / q.life; px(q.x - 3, q.y - 3, 6, 6, q.c); }
     ctx.globalAlpha = 1;
   }
   // On Europa: down you come onto its cracked, ridged ice, with Jupiter huge
   // in the sky, Io beside it, and a plume of water vapour on the horizon
-  function drawEuropaLanding(R, skyA = 1) {
+  function drawEuropaLanding(R, skyA = 1, ownSky = true) {
     ctx.save(); ctx.globalAlpha = skyA;
-    ctx.fillStyle = '#04050b'; ctx.fillRect(-W, -H * 2, W * 3, H * 2.72);
-    for (const st of world.sky) px(st.x * W, st.y * H * 0.7, st.s, st.s, '#c9d7f0');
-    drawJupiter(W * 0.68, H * 0.26, Math.min(W, H) * 0.32, 0.7);
+    if (ownSky) { ctx.fillStyle = '#04050b'; ctx.fillRect(-W, -H * 2, W * 3, H * 2.72); for (const st of world.sky) px(st.x * W, st.y * H * 0.7, st.s, st.s, '#c9d7f0'); }
+    if (ownSky) { const J = euJupiter(); drawJupiter(J.x, J.y, J.r, 0.7); }
     ctx.fillStyle = '#e8d27a'; ctx.beginPath(); ctx.arc(W * 0.22, H * 0.18, 5, 0, TAU); ctx.fill();
     ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(238,241,255,0.7)'; ctx.fillText('IO', W * 0.22, H * 0.18 - 10); ctx.textAlign = 'start';
     ctx.restore();
@@ -7465,62 +7509,106 @@
     // Chaos terrain: broken blocks of ice that refroze
     for (let i = 0; i < 9; i++) { const x = W * 0.08 + i * 26, y = H * 0.8 + (i % 3) * 14; px(x, y, 20, 12, i % 2 ? '#cfd8e2' : '#e9e2d4'); px(x, y, 20, 2, '#ffffff'); }
     ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(0, H * 0.72, W, 3);
-    // The crack you'll go down
-    if (R.landed) { ctx.fillStyle = '#1a3a5a'; ctx.beginPath(); ctx.moveTo(W / 2 - 40, H * 0.73); ctx.lineTo(W / 2 + 40, H * 0.73); ctx.lineTo(W / 2 + 6, H); ctx.lineTo(W / 2 - 6, H); ctx.fill(); }
+    // Cracks spreading out from under your feet as the ice gives way
+    const ck = R.phase === 'ocean' ? 1 : R.crack || 0;
+    if (ck > 0) {
+      ctx.strokeStyle = '#3a6a9a'; ctx.lineWidth = 3;
+      for (let i = 0; i < 7; i++) { const a = Math.PI * (0.05 + (i / 6) * 0.9), len = ck * (60 + (i % 3) * 40); ctx.beginPath(); ctx.moveTo(W / 2, H * 0.72 + 2); ctx.lineTo(W / 2 + Math.cos(a) * len * 0.6, H * 0.72 + 2 + Math.sin(a) * len * 0.15); ctx.lineTo(W / 2 + Math.cos(a + 0.2) * len, H * 0.72 + 2 + Math.sin(a) * len * 0.3); ctx.stroke(); }
+    }
     ctx.restore();
     if (conspiracy) drawMonolith(W * 0.24, H * 0.72);
   }
   // Under Europa's ice: through the ice shell, down through the dark ocean,
   // to the seafloor and its hot vents
   function drawOcean(R) {
-    const lane = runLane(), py = H * 0.4, k = R.od / OCEAN_LEN;
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, mix('#2a6a9a', '#020814', clamp(k * 1.4, 0, 1))); g.addColorStop(1, mix('#163a5a', '#01040a', clamp(k * 1.4, 0, 1)));
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    const sy = (d) => py + (d - R.od);
-    // The ice shell: walls of blue-white ice, layered, until you drop out under it
-    const iceY = sy(900);
-    if (iceY > 0) {
-      ctx.fillStyle = '#bcd8ec'; ctx.fillRect(0, 0, W, iceY);
-      for (let y = iceY - 20; y > -40; y -= 26) { ctx.fillStyle = 'rgba(140,180,210,0.5)'; ctx.fillRect(0, y, W, 4); }
-      ctx.fillStyle = '#0e2a44'; ctx.beginPath(); ctx.moveTo(W / 2 - 70, 0); ctx.lineTo(W / 2 + 70, 0); ctx.lineTo(W / 2 + 120, iceY); ctx.lineTo(W / 2 - 120, iceY); ctx.fill();
-      // Icicles hanging from the underside of the shell
-      ctx.fillStyle = '#d6ecfa';
-      for (let i = 0; i < 24; i++) { const x = (i * 41) % W; ctx.beginPath(); ctx.moveTo(x, iceY); ctx.lineTo(x + 8, iceY + 14 + (i % 4) * 8); ctx.lineTo(x + 16, iceY); ctx.fill(); }
-    }
-    // Drifting specks in the water, and bubbles from you
-    for (let i = 0; i < 40; i++) px((i * 97) % W, ((i * 53 - R.od * 0.4) % H + H) % H, 2, 2, 'rgba(180,220,255,0.35)');
-    // The seafloor: rock, and hot vents ("black smokers") with shimmering plumes
-    const floorY = sy(OCEAN_LEN + 44);
-    if (floorY < H + 200) {
-      ctx.fillStyle = '#1a1a22'; ctx.fillRect(0, floorY, W, H);
-      for (const vx of [W * 0.2, W * 0.5 + lane * 0.9, W * 0.78]) {
-        px(vx - 12, floorY - 70, 24, 70, '#2a2a30'); px(vx - 8, floorY - 78, 16, 10, '#3a3a40');
-        for (let i = 0; i < 10; i++) { const kk = ((clock * 0.5 + i / 10) % 1); ctx.fillStyle = `rgba(40,40,50,${0.6 * (1 - kk)})`; ctx.beginPath(); ctx.arc(vx + Math.sin(i + clock) * 8 * kk, floorY - 80 - kk * 160, 6 + kk * 16, 0, TAU); ctx.fill(); }
-        const vg = ctx.createRadialGradient(vx, floorY - 74, 2, vx, floorY - 74, 40);
-        vg.addColorStop(0, 'rgba(255,140,60,0.6)'); vg.addColorStop(1, 'rgba(255,140,60,0)');
-        ctx.fillStyle = vg; ctx.fillRect(vx - 40, floorY - 114, 80, 80);
+    const lane = runLane(), fy = euFeetY(R), S = fy - R.od; // S: where the surface is on screen
+    // Above: the surface you landed on, its sky and Jupiter, scrolling away up
+    // (its curved ice carries on down as the surface layer, until the ice shell takes over)
+    if (S + EU_LAYERS[1].at > -10) { ctx.save(); ctx.translate(0, S - H * 0.72); drawEuropaSurface(R); ctx.restore(); }
+    // Below: the layers, each with its own look, cut away like the hollow Earth
+    for (let i = 1; i < EU_LAYERS.length; i++) {
+      const L = EU_LAYERS[i], y0 = Math.max(S + L.at, -10), y1 = Math.min(i < EU_LAYERS.length - 1 ? S + EU_LAYERS[i + 1].at : H + 10, H + 10);
+      if (y1 <= y0) continue;
+      const g = ctx.createLinearGradient(0, S + L.at, 0, S + (i < EU_LAYERS.length - 1 ? EU_LAYERS[i + 1].at : L.at + 400));
+      g.addColorStop(0, L.c[0]); g.addColorStop(1, L.c[1]);
+      ctx.fillStyle = g; ctx.fillRect(0, y0, W, y1 - y0);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, y0, W, y1 - y0); ctx.clip();
+      euLayerFx(i, R, S + L.at, y0, y1);
+      ctx.restore();
+      // The edge, with its name, coming up at you
+      if (i > 0) {
+        const y = S + L.at;
+        if (y > -40 && y < H + 40) {
+          ctx.strokeStyle = i === 3 ? 'rgba(200,235,255,0.95)' : 'rgba(255,255,255,0.85)'; ctx.lineWidth = 3; ctx.beginPath();
+          for (let x = 0; x <= W; x += 20) { const yy = y + Math.sin(x * 0.03 + i) * (i === 3 ? 4 + 2 * Math.sin(clock * 2) : 6); x ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy); }
+          ctx.stroke();
+          if (y > fy) {
+            ctx.font = '10px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(10,8,20,0.75)'; ctx.fillText(L.name, W / 2 + 1, y + 23);
+            ctx.fillStyle = '#ffffff'; ctx.fillText(L.name, W / 2, y + 22);
+            ctx.font = '7px "Press Start 2P", monospace'; ctx.fillStyle = 'rgba(240,248,255,0.9)'; ctx.fillText(L.sub, W / 2, y + 38);
+            ctx.textAlign = 'start';
+          }
+        }
       }
-      // Imagined life, glowing round the vents
-      for (let i = 0; i < 6; i++) {
-        const x = W * 0.2 + ((i * 131 + clock * 30) % (W * 0.6)), y = floorY - 120 - (i % 3) * 30 + Math.sin(clock * 2 + i) * 6;
-        ctx.fillStyle = 'rgba(120,255,220,0.8)'; ctx.beginPath(); ctx.ellipse(x, y, 9, 4, 0, 0, TAU); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(x - 9, y); ctx.lineTo(x - 15, y - 4); ctx.lineTo(x - 15, y + 4); ctx.fill();
-      }
-      ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,255,230,0.8)'; ctx.fillText('IMAGINED LIFE?', W / 2, floorY - 190); ctx.textAlign = 'start';
     }
+    // The seafloor's hot vents ("black smokers"), with shimmering plumes
+    const floorY = S + OCEAN_LEN;
+    if (floorY < H + 260) for (const vx of [W * 0.18, W * 0.5 + lane * 0.85, W * 0.8]) {
+      px(vx - 12, floorY - 70, 24, 70, '#3a3a42'); px(vx - 8, floorY - 78, 16, 10, '#4a4a52');
+      for (let i = 0; i < 10; i++) { const kk = ((clock * 0.5 + i / 10) % 1); ctx.fillStyle = `rgba(40,40,50,${0.6 * (1 - kk)})`; ctx.beginPath(); ctx.arc(vx + Math.sin(i + clock) * 8 * kk, floorY - 80 - kk * 160, 6 + kk * 16, 0, TAU); ctx.fill(); }
+      const vg = ctx.createRadialGradient(vx, floorY - 74, 2, vx, floorY - 74, 40);
+      vg.addColorStop(0, 'rgba(255,140,60,0.6)'); vg.addColorStop(1, 'rgba(255,140,60,0)');
+      ctx.fillStyle = vg; ctx.fillRect(vx - 40, floorY - 114, 80, 80);
+    }
+    // The hole you've smashed down through the ice behind you
+    const iceBot = Math.min(S + 2100, fy - 30);
+    if (iceBot > S) { ctx.fillStyle = 'rgba(14,42,68,0.55)'; ctx.beginPath(); ctx.moveTo(W / 2 + R.x * 0.3 - 26, Math.max(S, -10)); ctx.lineTo(W / 2 + R.x * 0.3 + 26, Math.max(S, -10)); ctx.lineTo(W / 2 + R.x + 22, iceBot); ctx.lineTo(W / 2 + R.x - 22, iceBot); ctx.fill(); }
     for (const gm of world.stars) {
       if (!gm.ocean || gm.taken) continue;
-      const y = sy(gm.d);
+      const y = fy + (gm.d - R.od);
       if (y > -30 && y < H + 30) drawGeomAt(W / 2 + gm.u * lane, y);
     }
     for (const q of R.trail) { ctx.globalAlpha = 1 - q.t / q.life; px(q.x - 2, q.y - 2, 4, 4, q.c); }
     ctx.globalAlpha = 1;
-    const bx = W / 2 + R.x;
-    for (let i = 0; i < 4; i++) { const kk = ((clock * 0.8 + i / 4) % 1); ctx.strokeStyle = `rgba(220,240,255,${0.6 * (1 - kk)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx + 6 + Math.sin(i * 3) * 4, py - 50 - kk * 60, 3 + kk * 2, 0, TAU); ctx.stroke(); }
-    drawSprite('jump', bx, py + 24, player.facing < 0, 1, 1, 1, SUIT, Math.PI);
-    if (conspiracy) drawFoilHat(bx, py + 24, Math.PI);
-    drawRunPops(bx, py + 30);
+    const bx = W / 2 + R.x, wet = R.od > 2100;
+    if (wet) for (let i = 0; i < 4; i++) { const kk = ((clock * 0.8 + i / 4) % 1); ctx.strokeStyle = `rgba(220,240,255,${0.6 * (1 - kk)})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(bx + 6 + Math.sin(i * 3) * 4, fy - 50 - kk * 60, 3 + kk * 2, 0, TAU); ctx.stroke(); }
+    else if (R.ov > 300) for (let i = 0; i < 6; i++) { const kk = ((clock * 3 + i / 6) % 1); px(bx - 18 + i * 7, fy - 50 - kk * 50, 4, 4, `rgba(235,245,255,${0.7 * (1 - kk)})`); }
+    const sq = R.floored ? Math.max(0, 1 - R.floorT * 4) : 0;
+    drawSprite(R.floored ? 'stand' : 'jump', bx, fy, player.facing < 0, 1 - sq * 0.2, 1 + sq * 0.15, 1, SUIT);
+    if (conspiracy) drawFoilHat(bx, fy, 0);
+    drawRunPops(bx, fy + 6);
+  }
+  // What each of Europa's layers looks like as you fall through it
+  function euLayerFx(i, R, top, y0, y1) {
+    if (i === 0) {
+      // Reddish-brown salt streaks, and double ridges
+      ctx.strokeStyle = 'rgba(150,80,50,0.55)'; ctx.lineWidth = 4;
+      for (let k = 0; k < 6; k++) { const y = top + 60 + k * 70; ctx.beginPath(); ctx.moveTo(-20, y); ctx.bezierCurveTo(W * 0.3, y + 30, W * 0.6, y - 20, W + 20, y + 25); ctx.stroke(); }
+    } else if (i === 1) {
+      // Layers of brittle ice, and cracks through them
+      for (let k = 0; k < 16; k++) { const y = top + 30 + k * 58; ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(0, y, W, 3); }
+      ctx.strokeStyle = 'rgba(40,90,140,0.5)'; ctx.lineWidth = 2;
+      for (let k = 0; k < 7; k++) { const x = (k * 157) % W, y = top + 80 + k * 120; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 30, y + 40); ctx.lineTo(x + 10, y + 90); ctx.stroke(); }
+    } else if (i === 2) {
+      // Soft ice slowly churning, and pockets of trapped water
+      for (let k = 0; k < 8; k++) { const x = W * ((k * 0.37) % 1) + Math.sin(clock * 0.5 + k) * 20, y = top + 60 + k * 80; ctx.fillStyle = 'rgba(160,200,240,0.25)'; ctx.beginPath(); ctx.ellipse(x, y, 90, 30, Math.sin(clock * 0.3 + k) * 0.3, 0, TAU); ctx.fill(); }
+      for (let k = 0; k < 3; k++) { const x = W * (0.2 + k * 0.3), y = top + 200 + k * 160; ctx.fillStyle = '#1d4a7c'; ctx.beginPath(); ctx.ellipse(x, y, 60, 14, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(200,235,255,0.6)'; ctx.fillRect(x - 40, y - 2, 30, 2); }
+    } else if (i === 3) {
+      // Icicles under the ice, drifting specks, and (imagined) glowing life
+      ctx.fillStyle = '#cfe8ff';
+      for (let k = 0; k < 24; k++) { const x = (k * 41) % W; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x + 8, top + 14 + (k % 4) * 8); ctx.lineTo(x + 16, top); ctx.fill(); }
+      for (let k = 0; k < 40; k++) px((k * 97) % W, top + ((k * 53) % 2200), 2, 2, 'rgba(180,220,255,0.35)');
+      for (let k = 0; k < 5; k++) {
+        const x = W * ((k * 0.29 + 0.1) % 1) + Math.sin(clock + k) * 20, y = top + 600 + k * 330 + Math.sin(clock * 1.5 + k) * 10;
+        ctx.fillStyle = 'rgba(140,255,220,0.5)'; ctx.beginPath(); ctx.arc(x, y, 10, Math.PI, TAU); ctx.fill();
+        for (let j = 0; j < 4; j++) px(x - 7 + j * 4, y, 1.5, 10 + Math.sin(clock * 3 + j + k) * 3, 'rgba(140,255,220,0.5)');
+      }
+      ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,255,230,0.7)'; ctx.fillText('IMAGINED LIFE?', W * 0.39, top + 570); ctx.textAlign = 'start';
+    } else {
+      // The seafloor: rocks and pebbles
+      for (let k = 0; k < 14; k++) px((k * 67) % W, top + 6 + (k % 3) * 10, 10 + (k % 4) * 6, 5, '#3a3a44');
+    }
   }
 
   function render() {
