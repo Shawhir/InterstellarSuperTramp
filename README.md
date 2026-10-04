@@ -438,7 +438,12 @@ Reach the seafloor of Europa at the end of level 5 and carry straight on
   tiny bit of Jupiter's speed to fling you on faster (Cassini did this in
   2000). Then the long cruise, the years ticking by (Cassini took three and
   a half, arriving in 2004).
-- **Saturn, side on.** Saturn hangs in the sky behind you in the classic
+- **Saturn, side on.** You arrive right in the ring plane beside Saturn:
+  its huge curved edge fills the left of the view, the rings edge-on across
+  it, and the ice you skate on runs on from just past its cloud tops (the
+  faint D ring, then the C ring). As you skate out it shrinks and settles
+  into the sky, the rings opening up as you see them from a little above.
+  From there Saturn hangs in the sky behind you in the classic
   view, level, seen from just above the ring plane: the banded gold planet
   with its rings round it (C, B, the
   Cassini Division, A, the Encke Gap, F), the rings' shadow across it. It
