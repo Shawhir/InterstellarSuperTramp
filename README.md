@@ -383,14 +383,22 @@ you off: the run, straight through Jupiter, and on to Europa and its ocean.
   down into it, and climb away as its pull holds you back, Jupiter shrinking
   and its big moons wheeling round it, with Europa growing ahead. Then
   Europa slides up out of sight above you, the view turns right over (you
-  stay upright, Jupiter swings round into the sky), and you drift down
+  stay upright, and the one Jupiter you just left swings round into its
+  place in Europa's sky), and you drift down
   feet first onto the ice and land, the same way you land on every world:
   Europa's gravity is only about a seventh of Earth's.
 - **Europa.** You land on its ice: double ridges, chaos terrain, a water
-  plume on the horizon and Jupiter huge in the sky. Then you go down a crack,
-  through the ice shell (probably 15 to 25 km thick) and into the ocean
-  beneath, steering for glowing geoms, to the hot vents on the seafloor and
-  some imagined life. Facts on the way cover Lucy and the asteroid
+  plume on the horizon and Jupiter huge in the sky. Then the ice cracks
+  under your feet and you fall straight on down under the surface, like the
+  fall through the hollow Earth but not so deep: the camera follows you
+  down with no cut, and each layer's edge comes up at you with its name on
+  it as you crash through. The surface ice (about -160°C, streaked with
+  salts), the ice shell (probably 15 to 25 km thick, cracked by Jupiter's
+  squeeze), the warm ice (soft, slowly churning, with trapped lakes), then a
+  splash into the salty ocean (maybe 60 to 150 km deep), with icicles under
+  the ice and some imagined glowing life, and down onto the seafloor by its
+  hot vents. Steer for the glowing geoms on the way.
+  Facts on the way cover Lucy and the asteroid
   Dinkinesh's moon, the Hildas, Jupiter's insides, Europa's ocean and Europa
   Clipper (launched 2024, arriving 2030).
 
