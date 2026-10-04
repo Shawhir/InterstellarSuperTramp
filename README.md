@@ -402,6 +402,38 @@ you off: the run, straight through Jupiter, and on to Europa and its ocean.
   Dinkinesh's moon, the Hildas, Jupiter's insides, Europa's ocean and Europa
   Clipper (launched 2024, arriving 2030).
 
+## Level 7: Europa to Saturn's rings
+
+Reach the seafloor of Europa at the end of level 5 and carry straight on
+(score and all), or start from the title screen.
+
+- **Round Europa.** You start on Europa, shown as a round world in
+  cross-section: its ice shell, the salty ocean under it, a rocky mantle and
+  an iron core. Its surface is pale ice cracked with reddish-brown lines,
+  with chaos terrain, fields of ice spikes, a water plume and a lander to
+  walk past (each with a note), and Jupiter huge in the sky. Gravity is
+  softened from the real one-seventh of Earth's.
+- **Up out of Jupiter's grip.** Bounce up off puffs of Europa's plumes and
+  slabs of ice, out of its orbit and through Jupiter's radiation belts
+  (dodge the bursts), with Jupiter's pull getting stronger as you climb.
+- **Catch the comet.** At the top a comet swings back and forth across the
+  sky. Time it and land on it, and it carries you away. Miss it, and
+  Jupiter's pull drags you back down to Europa.
+- **The comet ride.** You ride the comet's frosty nucleus, its coma glowing
+  round you and its tail streaming out behind, while Jupiter falls away
+  behind you and Saturn grows ahead (both starting just where they were in
+  Europa's sky). Jupiter drags you back at first, then Saturn's pull takes
+  over and you speed up. Dodge comet debris and the icy Centaurs, skim close
+  for CLOSE CALLs, and lean against the pull of Saturn's moons: Phoebe
+  (which goes round backwards), hazy Titan, Rhea, Enceladus (spraying jets
+  of water) and Mimas (with a crater that makes it look like a certain space
+  station from the films).
+- **Into the rings.** At Saturn you leap off the comet and fall into the
+  rings, layer by layer, each edge labelled as you cross it: the braided F
+  ring, the A ring's ice from dust to house-sized boulders, the Encke Gap
+  (with little ravioli-shaped Pan), the Cassini Division, and the bright,
+  packed B ring, where you land on a boulder of ice and plant a flag.
+
 ## Secret: conspiracy mode
 
 When the menu opens, a shooting star streaks across it (and again now and
