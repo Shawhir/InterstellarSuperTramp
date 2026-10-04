@@ -357,8 +357,8 @@ you off: the run, straight through Jupiter, and on to Europa and its ocean.
   keep out of your path. Skim close past
   one for a CLOSE CALL and your multiplier goes up (every 5 in a row is a
   streak bonus); clip one and it costs you points. And Jupiter's four big
-  moons loom in from the side, each with its own pull dragging you towards
-  it, so you steer against it: Callisto, Ganymede (the biggest moon in the
+  moons loom in from the side, each with a gentle pull dragging you towards
+  it, so you lean against it: Callisto, Ganymede (the biggest moon in the
   Solar System, with the strongest pull), Europa and volcanic Io. Touch one
   and you bounce off and lose points. On the way: the outer belt, the Hilda
   asteroids, drifting comet pieces (like
@@ -378,6 +378,14 @@ you off: the run, straight through Jupiter, and on to Europa and its ocean.
   side and out through the cloud tops towards Europa. Each layer has its own
   look and a note the first time through. Storms and lightning weaken the
   field, and what's left is bonus points.
+- **Out the other side.** The way you went in, backwards: you burst out
+  through the cloud tops with Jupiter huge behind you, streaks pouring back
+  down into it, and climb away as its pull holds you back, Jupiter shrinking
+  and its big moons wheeling round it, with Europa growing ahead. Then
+  Europa slides up out of sight above you, the view turns right over (you
+  stay upright, Jupiter swings round into the sky), and you drift down
+  feet first onto the ice and land, the same way you land on every world:
+  Europa's gravity is only about a seventh of Earth's.
 - **Europa.** You land on its ice: double ridges, chaos terrain, a water
   plume on the horizon and Jupiter huge in the sky. Then you go down a crack,
   through the ice shell (probably 15 to 25 km thick) and into the ocean
