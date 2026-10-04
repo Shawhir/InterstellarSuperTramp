@@ -426,7 +426,10 @@ Reach the seafloor of Europa at the end of level 5 and carry straight on
   tiny bit of Jupiter's speed to fling you on faster (Cassini did this in
   2000). Then the long cruise, the years ticking by (Cassini took three and
   a half, arriving in 2004).
-- **Saturn, side on.** Saturn huge on the left, its rings stretching away
+- **Saturn, side on.** Saturn hangs in the sky behind you in the classic
+  view: the banded gold planet with its rings tilted round it (C, B, the
+  Cassini Division, A, the Encke Gap, F), the rings' shadow across it. It
+  drifts and shrinks as you head out. In front of it, the rings stretch away
   to the right as a band of ice. Jump off the spacecraft and bounce across
   chunks of ring ice, steering over the gaps: the C ring, the bright B ring,
   the Cassini Division (one stepping stone), the A ring, the Encke Gap
