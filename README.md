@@ -382,13 +382,19 @@ you off: the run, straight through Jupiter, and on to Europa and its ocean.
   through the cloud tops with Jupiter huge behind you, streaks pouring back
   down into it, and climb away as its pull holds you back, Jupiter shrinking
   and its big moons wheeling round it, with Europa growing ahead. Then
-  Europa slides up out of sight above you, the view turns right over (you
-  stay upright, and the one Jupiter you just left swings round into its
-  place in Europa's sky), and you drift down
-  feet first onto the ice and land, the same way you land on every world:
-  Europa's gravity is only about a seventh of Earth's.
-- **Europa.** You land on its ice: double ridges, chaos terrain, a water
-  plume on the horizon and Jupiter huge in the sky. Then the ice cracks
+  Europa slides up out of sight above you, and the stars turn right over
+  (you stay upright, and Jupiter, which has shrunk back to sit low behind
+  you, never turns: it stays put, and ends up looming over Europa's
+  horizon), and you drift down feet first onto the ice and land, the same
+  way you land on every world. Europa's gravity is only about a seventh of
+  Earth's.
+- **Europa.** Seen from space it's creamy ice, redder on the side that
+  trails in its orbit, criss-crossed by long reddish-brown bands that run
+  round it like great circles, with scalloped cycloid arcs, mottled chaos
+  terrain and the bright rayed crater Pwyll. You land on its ice: double
+  ridges (two bright crests and a brown-stained groove) running off to the
+  horizon and across the plain, tilted rafts of chaos terrain, frost glints,
+  a water plume, and Jupiter huge over the horizon. Then the ice cracks
   under your feet and you fall straight on down under the surface, like the
   fall through the hollow Earth but not so deep: the camera follows you
   down with no cut, and each layer's edge comes up at you with its name on
@@ -407,7 +413,13 @@ you off: the run, straight through Jupiter, and on to Europa and its ocean.
 Reach the seafloor of Europa at the end of level 5 and carry straight on
 (score and all), or start from the title screen.
 
-- **Round Europa.** You start on Europa, shown as a round world in
+- **Back up from the seafloor.** You start where level 5 left you, on
+  Europa's seafloor by its hot vents. One blows, and its warm water carries
+  you back up: through the ocean, the soft warm ice, up a crack in the ice
+  shell, and out in a plume of water vapour into Europa's sky, each layer
+  with a new note on the way up. Steer to stay in the warm rush (it sways
+  about) to go fastest and grab the geoms along it.
+- **Round Europa.** You come down onto Europa, shown as a round world in
   cross-section: its ice shell, the salty ocean under it, a rocky mantle and
   an iron core. Its surface is pale ice cracked with reddish-brown lines,
   with chaos terrain, fields of ice spikes, a water plume and a lander to
@@ -439,14 +451,28 @@ Reach the seafloor of Europa at the end of level 5 and carry straight on
   Gap, the Cassini Division (wide: you need speed), the Encke Gap (with
   little ravioli-shaped Pan in it), the Keeler Gap, and the gap out to the
   braided F ring. Too slow and you drop through, and go back for another
-  run-up. At the end of the F ring you launch off. Then on out
-  through the faint E ring from moon to moon: Mimas (the space-station
-  lookalike), Enceladus (spraying water from its south pole), Tethys and its
-  little companions Telesto and Calypso, Dione with Helene and Polydeuces,
-  and Rhea, to land on Titan, hazy and orange, Saturn's biggest moon. Fall
-  through the rings and you're back on the last chunk you landed on. Each
-  ring and moon has a note, and the HUD shows how far out from Saturn you
-  are.
+  run-up. Going flat out leaves speed lines and ghosts of you behind.
+- **Off the edge.** At the end of the F ring, the very edge of the rings
+  (marked), you launch off. Jump right at the last moment for a PERFECT
+  LAUNCH: higher, faster, in slow motion. The camera pulls back while you
+  fly. Press jump in the air to flip (as many as you can fit in before you
+  land; land halfway through one and you wobble).
+- **On to Titan.** Out through the faint E ring, from moon to moon, chaining
+  bounces for more each time:
+  - snowballs of loose ring ice, which fall apart after one bounce;
+  - Janus and Epimetheus, which really do share an orbit and swap every four
+    years: here they swap up and down, so time the hop;
+  - Mimas (the space-station lookalike);
+  - Enceladus, south pole up, whose jets come and go: land while they spray
+    and they launch you (GEYSER!);
+  - Tethys and Dione, each with two little Trojan moons (Telesto and
+    Calypso, Helene and Polydeuces) wandering back and forth about their
+    spots;
+  - Rhea, and then Titan. Over Titan a parachute pops open, like the Huygens
+    probe's in 2005, and you drift down through its orange haze to land.
+
+  Fall off and you're back on the last moon you landed on. Each ring and moon
+  has a note, and the HUD shows how far out from Saturn you are.
 
 ## Secret: conspiracy mode
 
