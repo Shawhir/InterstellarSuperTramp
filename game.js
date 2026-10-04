@@ -87,6 +87,23 @@
       { km: 37999950, type: 'cloudv', layer: 'Venus clouds', g: 0.75, note: "50 km up in Venus's clouds, the air is almost like Earth's. Down at the surface it's 465°C." },
       { km: 38000000, type: 'venus', layer: 'Venus' },
     ],
+    // The way home: back across the gap to Earth, its pull getting stronger
+    // all the way, through the radiation belts and down into the air
+    earth: [
+      ...MOON_TIERS,
+      { km: 100000, type: 'rocket', layer: 'Free return', g: 0.5, note: 'Apollo 13, 1970: after an oxygen tank exploded, the crew swung round the Moon and let its gravity sling them home. All three made it back.' },
+      { km: 150000, type: 'asteroid', layer: 'Earth–Moon space', g: 0.5, visitor: 'oumuamua' },
+      { km: 200000, type: 'asteroid', layer: 'Earth–Moon space', g: 0.52, note: 'Halfway home. On average Earth and the Moon are about 384,000 km apart: all the other planets could just about fit in the gap.' },
+      { km: 260000, type: 'rocket', layer: 'Earth–Moon space', g: 0.54, fact: { kind: 'earthrise', text: "Apollo 8, Christmas Eve 1968: the first people to see Earth rise over the Moon. Their photo, 'Earthrise', is one of the most famous ever taken." } },
+      { km: 320000, type: 'asteroid', layer: 'Earth–Moon space', g: 0.56, dust: 1, note: 'Bits of comet dust out here. Hang about in a cloud and it sandblasts you.' },
+      { km: 348600, type: 'satellite', layer: 'Geostationary orbit', g: 0.6, note: 'Back at geostationary orbit, 35,786 km up: weather satellites here watch the same half of Earth all day long.' },
+      { km: 364200, type: 'satellite', layer: 'Van Allen belts', g: 0.64, rad: 1, note: "The Van Allen belts: charged particles trapped by Earth's magnetic field. Apollo crews crossed them quickly to keep their radiation dose low. Dodge the bursts!" },
+      { km: 370000, type: 'satellite', layer: 'Van Allen belts', g: 0.68, rad: 1 },
+      { km: 374000, type: 'satellite', layer: 'Medium Earth orbit', g: 0.72, note: 'GPS satellites, 20,200 km up: your phone listens to several of them at once to work out where you are.' },
+      { km: 382000, type: 'station', layer: 'Low Earth orbit', g: 0.82, wind: 0.8, note: 'Low Earth orbit: home of the Space Station, thousands of satellites, and a lot of space junk zipping round. It pushes you about.' },
+      { km: 384200, type: 'satellite', layer: 'Re-entry', g: 0.92, note: "Re-entry! Coming home from the Moon you hit the air at about 11 km/s. Apollo's heat shield had to take around 2,800°C." },
+      { km: 384400, type: 'earth', layer: 'Earth' },
+    ],
   };
   const VISITORS = {
     oumuamua: "'Oumuamua, 2017: the first object seen visiting from another star. Its name means scout, or messenger from afar.",
@@ -204,7 +221,7 @@
     return sf[i] * (1 - k) + sf[(i + 1) % n] * k;
   }
   const gravAt = (k) => TIERS[Math.max(0, Math.min(TOP, k))].g || (level >= 2 ? 0.6 : 1);
-  const WIDTH = { trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220,
+  const WIDTH = { earth: 220, trampoline: 70, cloud: 130, balloon: 80, nlc: 120, satellite: 96, station: 150, asteroid: 84, moon: 220,
     pad: 80, haven: 180, shade: 150, mercury: 220, driver: 150, mush: 90, fern: 120, raft: 130, gold: 120, crystal: 110, sway: 120, girder: 130, neon: 120, ledge: 110, hole: 160, rubble: 104, ufo: 112, refinery: 230, rocket: 116, kamo: 84, car: 150, comet: 140, phobos: 110, deimos: 80, cloudv: 140, mars: 220, venus: 220,
     cloudm: 140, miner: 120, hauler: 160, outpost: 150, ceres: 160, vesta: 110, pallas: 106, hygiea: 96 };
   const MOON_R = 110; // the landing Moon's radius; its top is the last bouncy surface
@@ -408,15 +425,17 @@
     };
     // Mars is to the right of the base, Venus to the left; the routes head away
     // from each other so they never tangle.
-    for (const [rt, s] of [['mars', 1], ['venus', -1]]) {
+    // The way home to Earth starts from the pad right by the base, and heads
+    // straight up between them.
+    for (const [rt, s, a0, bias] of [['mars', 1, 0.62, 0.8], ['venus', -1, -0.62, 0.8], ['earth', 1, 0.2, 0.5]]) {
       const T = L2_ROUTES[rt], top = T.length - 1;
-      mk(rt, 0, s * 0.62).main = true;
-      mk(rt, 0, s * 1.7);
-      let prevA = s * 0.62;
+      mk(rt, 0, a0).main = true;
+      if (rt !== 'earth') mk(rt, 0, s * 1.7);
+      let prevA = a0;
       for (let k = 1; k <= top; k++) {
         const R = tierR(k), t = T[k];
         if (k === top) { mk(rt, k, prevA + (s * 170) / R).dest = true; break; }
-        const off = (110 + (rnd() * 200) / Math.sqrt(speedFor(k - 1))) * (rnd() < 0.8 ? s : -s);
+        const off = (110 + (rnd() * 200) / Math.sqrt(speedFor(k - 1))) * (rnd() < bias ? s : -s);
         const a = prevA + off / R;
         const mp = mk(rt, k, a);
         mp.main = true;
@@ -454,6 +473,7 @@
     decor.push(
       { a: -0.45, kind: 'sign', text: '< VENUS', col: '#ffd23f' },
       { a: 0.45, kind: 'sign', text: 'MARS >', col: '#ff6a4a' },
+      { a: 0.06, kind: 'sign', text: 'HOME ^', col: '#8fd0ff' },
       { a: 0.95, kind: 'solar' }, { a: -0.95, kind: 'solar' },
       { a: -1.25, kind: 'greenhouse' }, { a: 1.25, kind: 'antenna' },
       { a: 1.98, kind: 'lander' }, { a: 2.3, kind: 'mining' },
@@ -482,6 +502,7 @@
       return out;
     };
     const plains = [
+      { f: 0.16, sink: 0.5, top: 104, col: '#1e2a33', rx: [7, 10], craters: 2, peaks: true },
       { f: 0.3, sink: 0.6, top: 66, col: '#26343e', rx: [9, 14], craters: 5 },
       { f: 0.5, sink: 0.74, top: 42, col: '#2e3e49', rx: [13, 20], craters: 4 },
       { f: 0.72, sink: 0.87, top: 20, col: '#374955', rx: [17, 24], craters: 4 },
@@ -988,7 +1009,7 @@
     const f = (r - tierR(0)) / TIER_GAP;
     return clamp(f, 0, TOP);
   }
-  const destName = () => (level === 6 ? 'the surface' : level === 5 ? 'Europa' : level === 4 ? 'Mercury' : level === 3 ? (landedOn ? landedOn.name : 'the asteroid belt') : level === 2 ? (route === 'venus' ? 'Venus' : 'Mars') : 'the Moon');
+  const destName = () => (level === 6 ? 'the surface' : level === 5 ? 'Europa' : level === 4 ? 'Mercury' : level === 3 ? (landedOn ? landedOn.name : 'the asteroid belt') : level === 2 ? (route === 'venus' ? 'Venus' : route === 'earth' ? 'Earth' : 'Mars') : 'the Moon');
   function layerName() {
     if (fx.run) {
       const R = fx.run;
@@ -1055,6 +1076,9 @@
       const W = BELT_WORLDS[rt];
       banner(`TO ${W.name.toUpperCase()}`, W.kind);
       toast(`Heading for ${W.name}. ${W.way} awaits in the belt.`, 4);
+    } else if (rt === 'earth') {
+      banner('THE WAY HOME', 'BACK TO EARTH');
+      toast("Heading home: 384,400 km back to Earth. Its pull gets stronger the closer you get, and you'll have to get through the radiation belts and the space junk first.", 6);
     } else banner(rt === 'mars' ? 'TO MARS' : 'TO VENUS', rt === 'mars' ? 'THE RED PLANET' : 'THE HOTTEST PLANET');
     sfx.tier();
   }
@@ -2060,7 +2084,7 @@
     earth: { g: 1, cover: 'daylight', sky: ['#58b4f0', '#d4f0ff'], ground: ['#4fb34a', '#2f6f2a'], curve: 5, note: "Back in daylight! You climbed right out of the hollow Earth. Nobody's ever going to believe you." },
   };
   // Where each world leads on to: you land on the next level, ready to play
-  const nextLevel = () => (level === 1 ? 2 : level === 2 ? (route === 'venus' ? 4 : 3) : level === 3 ? 5 : level === 6 ? 1 : 0);
+  const nextLevel = () => (level === 1 ? 2 : level === 2 ? (route === 'venus' ? 4 : route === 'earth' ? 1 : 3) : level === 3 ? 5 : level === 6 ? 1 : 0);
   const ARR_PULL = 0.9;
   function reachDest(p) {
     if (p.world) landedOn = p.world;
@@ -2109,7 +2133,8 @@
   const climbOut = () => (level === 1 || level === 2 || level === 6) && nextLevel() > 0;
   const CLIMB_TURN = [0.35, 1.85], CLIMB_T = 1.9, DROP_H = 1250, CLIMB_VE = 420, CLIMB_BUMP = 1100;
   // The backdrop tramp on each world's starting ground takes you back the way you came
-  const PREV = { 2: 1, 3: 2, 4: 2, 5: 3 };
+  // (The Moon has no backdrop tramp: the way home to Earth is a whole route of its own)
+  const PREV = { 3: 2, 4: 2, 5: 3 };
   const WORLD_NAME = { 1: 'Earth', 2: 'the Moon', 3: 'Mars', 4: 'Venus', 5: 'the belt', 6: 'the hollow Earth' };
   // Worlds with air to fall through on the way down
   const AIRY = (lv) => lv === 1 || lv === 3 || lv === 4;
@@ -2172,11 +2197,11 @@
   function drawClimb() {
     const C = fx.climb, turn = climbTurn();
     const skyK = smooth(clamp((C.t - 0.3) / (CLIMB_T - 0.35), 0, 1));
-    // The sky stays put and slowly becomes the new world's; the worlds turn
-    // about the middle of the tramp, who stays put and upright
-    if (skyK < 1) drawSky();
-    if (skyK > 0) inState(C.G, () => { ctx.save(); ctx.globalAlpha = skyK; drawSky(); ctx.restore(); });
+    // Everything turns about the middle of the tramp, who stays put and
+    // upright: the worlds, and the sky with them (the old sky turning away,
+    // the new world's turning in, upside down to right way up)
     const px0 = W / 2, py0 = H * (cam.anchor || 0.5) - 24;
+    turnSkies(C, turn, skyK, px0, py0);
     const flip = () => { ctx.translate(px0, py0); ctx.rotate(Math.PI); ctx.translate(-px0, -py0); };
     ctx.save();
     ctx.translate(px0, py0); ctx.rotate(turn); ctx.translate(-px0, -py0);
@@ -2185,6 +2210,34 @@
     renderWorld();
     snapping = was; noSky = false;
     ctx.restore();
+  }
+  // The sky, turning: each sky is drawn, kept, and put back turned with soft
+  // edges, over an unturned copy that fills the corners
+  let skyA = null, skyB = null, feather = null;
+  const canvasLike = (c) => { c = c || document.createElement('canvas'); if (c.width !== canvas.width || c.height !== canvas.height) { c.width = canvas.width; c.height = canvas.height; c.made = false; } return c; };
+  function turnSkies(C, turn, skyK, px0, py0) {
+    skyA = canvasLike(skyA); skyB = canvasLike(skyB); feather = canvasLike(feather);
+    const keep = (buf) => { const b = buf.getContext('2d'); b.setTransform(1, 0, 0, 1, 0, 0); b.globalCompositeOperation = 'copy'; b.drawImage(canvas, 0, 0); b.globalCompositeOperation = 'source-over'; };
+    drawSky(); keep(skyA);
+    if (skyK > 0) { inState(C.G, () => drawSky()); keep(skyB); }
+    // Underneath, unturned
+    ctx.drawImage(skyA, 0, 0, W, H);
+    if (skyK > 0) { ctx.save(); ctx.globalAlpha = skyK; ctx.drawImage(skyB, 0, 0, W, H); ctx.restore(); }
+    if (turn < 0.002) return;
+    if (!feather.made) {
+      const f = feather.getContext('2d'), fw = feather.width, fh = feather.height, e = Math.min(fw, fh) * 0.22;
+      f.setTransform(1, 0, 0, 1, 0, 0); f.clearRect(0, 0, fw, fh); f.fillStyle = '#000'; f.fillRect(0, 0, fw, fh);
+      f.globalCompositeOperation = 'destination-out';
+      for (const [x0, y0, x1, y1, rx, ry, rw, rh] of [[0, 0, e, 0, 0, 0, e, fh], [fw, 0, fw - e, 0, fw - e, 0, e, fh], [0, 0, 0, e, 0, 0, fw, e], [0, fh, 0, fh - e, 0, fh - e, fw, e]]) {
+        const g = f.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+        f.fillStyle = g; f.fillRect(rx, ry, rw, rh);
+      }
+      f.globalCompositeOperation = 'source-over'; feather.made = true;
+    }
+    const soften = (buf) => { const b = buf.getContext('2d'); b.globalCompositeOperation = 'destination-in'; b.drawImage(feather, 0, 0); b.globalCompositeOperation = 'source-over'; };
+    const put = (buf, ang, a) => { ctx.save(); ctx.globalAlpha = a; ctx.translate(px0, py0); ctx.rotate(ang); ctx.translate(-px0, -py0); ctx.drawImage(buf, 0, 0, W, H); ctx.restore(); };
+    soften(skyA); put(skyA, turn, 1);
+    if (skyK > 0) { soften(skyB); put(skyB, turn - Math.PI, skyK); }
   }
   // The turn's done and you're falling towards the new world's ground: from
   // here on it's simply that level, already exactly as it was drawn
@@ -2197,7 +2250,7 @@
     const keep = fx; putState(C.G); fx = keep; // (startGame's banner and toast, the world as drawn)
     theta = 0; lastTier = -1; bestTier = -1;
     player.r = R0 + DROP_H; player.vr = -CLIMB_VE; player.onGround = false; player.apexR = player.r; player.spin = 0;
-    if (C.next === 2) player.suit = suit; // (no quick change on the way down to the Moon)
+    if (from !== 6) player.suit = suit; // (no quick change on the way down)
     cam.r = player.r; cam.zoom = 1;
     updateStarsHud();
     fx.drop = true;
@@ -2784,18 +2837,34 @@
       ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-20, yC - 400);
       for (let x = -20; x <= W + 40; x += 30) ctx.lineTo(x, yC + 14 + 18 * Math.sin((x + theta * Rm * pf) * 0.05 + z + L) + 10 * Math.sin((x + theta * Rm * pf) * 0.13));
       ctx.lineTo(W + 40, yC - 400); ctx.fill();
+      if (L === 0) {
+        // The far wall of the cavern: a long ridge of rock, with the odd light
+        const off = theta * Rm * pf, rh = (x) => 50 + 40 * Math.sin((x + off) * 0.011 + z * 2) + 26 * Math.sin((x + off) * 0.029 + z) + 12 * Math.sin((x + off) * 0.07);
+        ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(-20, yF + 10);
+        for (let x = -20; x <= W + 40; x += 20) ctx.lineTo(x, yF - rh(x) * 1.6);
+        ctx.lineTo(W + 40, yF + 10); ctx.fill();
+        for (let k = 0; k < 14; k++) {
+          const lx = ((k * 211 + off * 1) % (W + 200) + W + 200) % (W + 200) - 100;
+          if (hash3(k, z, 9) > 0.5) px(lx, yF - rh(lx) * 1.6 * hash3(k, z, 4), 3, 3, glow);
+        }
+      }
       const i0 = Math.floor((-theta - span) / step), i1 = Math.ceil((-theta + span) / step);
       for (let i = i0; i <= i1; i++) {
         const x = W / 2 + wrap(i * step + theta) * Rm * pf, h1 = hash3(i, z, L), h2 = hash3(i + 7, z, L), h3 = hash3(i, z + 3, L + 5);
-        const H1 = lerp(120, 70, nk) + h1 * lerp(170, 110, nk), w = lerp(26, 34, nk) + h2 * lerp(28, 44, nk);
+        // Gaps and clusters, and every size from runt to giant
+        if (h3 < (L === 0 ? 0.3 : L === 3 ? 0.4 : 0.15)) continue;
+        const sc = 0.55 + hash3(i, z + 9, L) * 0.95;
+        const H1 = (lerp(120, 70, nk) + h1 * lerp(170, 110, nk)) * sc, w = (lerp(26, 34, nk) + h2 * lerp(28, 44, nk)) * lerp(0.8, 1.25, sc - 0.55);
+        if (L === 3 && h1 > 0.72) { cavernColumn(x, yF, yC, w, dark, mid, glow, key); continue; }
         ctx.fillStyle = dark;
         // From the roof: stalactites, roots, vines, cables
         if (key === 'fungus' || key === 'shaft' || key === 'pellucidar') { ctx.fillStyle = key === 'pellucidar' ? '#1e3a18' : '#3a2a1a'; for (let k = 0; k < 3; k++) ctx.fillRect(x + (k - 1) * 9, yC + 10, 2, 30 + hash3(i, k, L) * 80); }
         else if (key === 'city') { ctx.strokeStyle = h3 > 0.5 ? glow : '#8fff6a'; ctx.globalAlpha = 0.4; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 60, yC + 20); ctx.quadraticCurveTo(x, yC + 60 + h1 * 40, x + 60, yC + 20); ctx.stroke(); ctx.globalAlpha = A; }
         else if (key === 'morlock') { ctx.fillRect(x - 70, yC + 30 + h1 * 30, 140, 6); px(x, yC + 10, 2, 40 + h2 * 40, dark); }
         else { ctx.beginPath(); ctx.moveTo(x - 8, yC + 10); ctx.lineTo(x + 8, yC + 10); ctx.lineTo(x, yC + 40 + h1 * 60); ctx.fill(); if (key === 'crystal' || key === 'agartha') px(x - 1, yC + 14, 2, 20 + h1 * 30, glow); if (key === 'lava' && Math.sin(clock * 3 + i) > 0.6) px(x - 1, yC + 40 + h1 * 60 + ((clock * 60 + i * 13) % 80), 2, 4, '#ff8a3a'); }
-        // From the floor: each cavern's own far-off shapes
+        // From the floor: each cavern's own far-off shapes (two kinds each)
         ctx.fillStyle = mid;
+        if ((L === 2 && h2 > 0.3) || (L === 1 && h2 > 0.75)) { ctx.save(); cavernAlt(key, x, yF, yC, H1, w, mid, dark, glow, i); ctx.restore(); ctx.globalAlpha = A; continue; }
         if (key === 'pellucidar') {
           ctx.fillRect(x - 4, yF - H1, 8, H1); for (const [ox, oy, r] of [[0, 0, 26], [-18, 14, 18], [18, 12, 20]]) { ctx.beginPath(); ctx.arc(x + ox, yF - H1 + oy, r * lerp(1.35, 1, nk), 0, TAU); ctx.fill(); }
         } else if (key === 'sea') {
@@ -2830,7 +2899,94 @@
       const fg = ctx.createLinearGradient(0, yF - 80, 0, yF + 10);
       fg.addColorStop(0, 'rgba(0,0,0,0)'); fg.addColorStop(1, hexOf(mix(Z.col, glow, 0.25)));
       ctx.fillStyle = fg; ctx.fillRect(0, yF - 80, W, 90);
+      // Mist lying between the layers, drifting, so each depth sits apart
+      if (L === 0 || L === 2) {
+        const c = mix(Z.col, glow, 0.35).match(/\d+/g), my = yF - (L ? 50 : 90), mh = L ? 120 : 170;
+        const mg = ctx.createLinearGradient(0, my - mh / 2, 0, my + mh / 2);
+        mg.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},0)`); mg.addColorStop(0.5, `rgba(${c[0]},${c[1]},${c[2]},${L ? 0.16 : 0.24})`); mg.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
+        ctx.globalAlpha = 1; ctx.fillStyle = mg; ctx.fillRect(0, my - mh / 2, W, mh);
+        for (let k = 0; k < 5; k++) {
+          const mx = (((k * 260 + clock * (8 + k * 3) + theta * Rm * pf) % (W + 400)) + W + 400) % (W + 400) - 200;
+          ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},0.08)`; ctx.beginPath(); ctx.ellipse(mx, my + Math.sin(k) * 14, 160, 22, 0, 0, TAU); ctx.fill();
+        }
+      }
       ctx.globalAlpha = 1;
+    }
+  }
+  // A great column where a stalactite and stalagmite have met, close by
+  function cavernColumn(x, yF, yC, w, dark, mid, glow, key) {
+    const cw = w * 0.7;
+    ctx.fillStyle = dark;
+    ctx.beginPath(); ctx.moveTo(x - cw * 1.6, yF); ctx.quadraticCurveTo(x - cw * 0.5, yF - 60, x - cw * 0.45, (yF + yC) / 2);
+    ctx.quadraticCurveTo(x - cw * 0.5, yC + 50, x - cw * 1.5, yC); ctx.lineTo(x + cw * 1.5, yC);
+    ctx.quadraticCurveTo(x + cw * 0.5, yC + 50, x + cw * 0.45, (yF + yC) / 2); ctx.quadraticCurveTo(x + cw * 0.5, yF - 60, x + cw * 1.6, yF); ctx.fill();
+    ctx.fillStyle = mid; ctx.fillRect(x - cw * 0.45, yC + 60, 3, Math.max(0, yF - yC - 120));
+    // Something growing on it
+    if (key === 'fungus' || key === 'pellucidar') for (let k = 0; k < 5; k++) px(x - cw * 0.5 - 4, yC + 80 + k * ((yF - yC - 160) / 5), 8, 4, key === 'fungus' ? glow : '#3f7a2a');
+    else if (key === 'crystal' || key === 'agartha') for (let k = 0; k < 4; k++) px(x + cw * 0.2, yC + 90 + k * ((yF - yC - 180) / 4), 3, 12, glow);
+  }
+  // Each cavern's second kind of far-off shape
+  function cavernAlt(key, x, yF, yC, H, w, mid, dark, glow, i) {
+    ctx.fillStyle = mid;
+    if (key === 'pellucidar') {
+      // A long-necked dinosaur, as in Burroughs's Pellucidar stories
+      const s = H / 120, wob = Math.sin(clock * 0.8 + i) * 4 * s;
+      ctx.beginPath(); ctx.ellipse(x, yF - 30 * s, 40 * s, 20 * s, 0, 0, TAU); ctx.fill();
+      ctx.lineWidth = 9 * s; ctx.strokeStyle = mid; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x + 30 * s, yF - 36 * s); ctx.quadraticCurveTo(x + 55 * s, yF - 80 * s, x + 50 * s + wob, yF - 110 * s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - 36 * s, yF - 30 * s); ctx.quadraticCurveTo(x - 70 * s, yF - 20 * s, x - 90 * s, yF - 8 * s); ctx.stroke();
+      ctx.lineCap = 'butt';
+      for (const lx of [-24, -10, 12, 26]) ctx.fillRect(x + lx * s, yF - 18 * s, 7 * s, 18 * s);
+    } else if (key === 'sea') {
+      // A sea arch, and a raft like Lidenbrock's
+      ctx.beginPath(); ctx.moveTo(x - w * 1.6, yF); ctx.lineTo(x - w * 1.3, yF - H); ctx.lineTo(x + w * 1.3, yF - H); ctx.lineTo(x + w * 1.6, yF);
+      ctx.lineTo(x + w * 0.7, yF); ctx.quadraticCurveTo(x, yF - H * 1.4, x - w * 0.7, yF); ctx.fill();
+      const rx = x + Math.sin(clock * 0.2 + i) * 40;
+      ctx.fillStyle = dark; ctx.fillRect(rx - 14, yF - 6, 28, 4); ctx.fillRect(rx - 1, yF - 26, 2, 20);
+      ctx.beginPath(); ctx.moveTo(rx + 1, yF - 25); ctx.lineTo(rx + 13, yF - 12); ctx.lineTo(rx + 1, yF - 10); ctx.fill();
+    } else if (key === 'agartha') {
+      // A stepped pyramid, its top alight
+      for (let k = 0; k < 5; k++) ctx.fillRect(x - w * (1.6 - k * 0.3), yF - (k + 1) * H * 0.18, w * (3.2 - k * 0.6), H * 0.18 + 1);
+      ctx.fillStyle = glow; ctx.globalAlpha *= 0.6 + 0.4 * Math.sin(clock * 2 + i);
+      ctx.beginPath(); ctx.arc(x, yF - H * 0.95, 6, 0, TAU); ctx.fill();
+    } else if (key === 'crystal') {
+      // A cluster of giant crystals leaning every way (like Naica's)
+      for (const [ang, len, ww] of [[-0.5, 1, 0.5], [0.1, 1.3, 0.6], [0.6, 0.8, 0.45], [-0.15, 0.6, 0.35]]) {
+        ctx.save(); ctx.translate(x, yF); ctx.rotate(ang);
+        ctx.beginPath(); ctx.moveTo(-w * ww, 0); ctx.lineTo(-w * ww * 0.8, -H * len); ctx.lineTo(0, -H * len - 14); ctx.lineTo(w * ww * 0.8, -H * len); ctx.lineTo(w * ww, 0); ctx.fill();
+        ctx.globalAlpha *= 0.5; px(-1, -H * len * 0.9, 2, H * len * 0.8, glow); ctx.restore();
+      }
+    } else if (key === 'fungus') {
+      // Puffballs, breathing out spores
+      for (const [ox, r] of [[-w * 0.8, 0.5], [0, 0.75], [w * 0.9, 0.42]]) {
+        const rr = H * r * 0.45; ctx.beginPath(); ctx.arc(x + ox, yF - rr, rr, 0, TAU); ctx.fill();
+        for (let k = 0; k < 3; k++) { const t = (clock * 0.4 + k / 3 + i * 0.13) % 1; px(x + ox + Math.sin(t * 6 + k) * 10, yF - rr * 2 - t * 60, 3, 3, glow); }
+      }
+    } else if (key === 'morlock') {
+      // A huge turning gear, and the pipe that feeds it
+      const r = H * 0.42, cxg = x, cyg = yF - r - 6, rot = clock * 0.5 * (i % 2 ? 1 : -1);
+      for (let k = 0; k < 10; k++) { const a = rot + (k / 10) * TAU; ctx.save(); ctx.translate(cxg + Math.cos(a) * r, cyg + Math.sin(a) * r); ctx.rotate(a); ctx.fillRect(-5, -7, 12, 14); ctx.restore(); }
+      ctx.beginPath(); ctx.arc(cxg, cyg, r, 0, TAU); ctx.arc(cxg, cyg, r * 0.35, 0, TAU, true); ctx.fill('evenodd');
+      ctx.fillRect(x + r, yF - 20, w * 2, 12); ctx.fillRect(x + r + w * 2 - 12, yC + 10, 12, yF - yC - 10);
+    } else if (key === 'lava') {
+      // A lavafall from the roof, into a glowing pool
+      const top = yC + 30, g = ctx.createLinearGradient(0, top, 0, yF);
+      g.addColorStop(0, 'rgba(255,200,80,0.9)'); g.addColorStop(1, 'rgba(255,90,20,0.8)');
+      ctx.fillStyle = g; ctx.fillRect(x - w * 0.25, top, w * 0.5, yF - top);
+      for (let k = 0; k < 4; k++) px(x - w * 0.25 + 2, top + ((clock * 140 + k * 70 + i * 23) % Math.max(1, yF - top)), w * 0.5 - 4, 8, '#ffd23f');
+      ctx.fillStyle = 'rgba(255,120,30,0.6)'; ctx.beginPath(); ctx.ellipse(x, yF - 2, w * 1.6, 8, 0, 0, TAU); ctx.fill();
+    } else if (key === 'city') {
+      // A dome and a skybridge between two towers
+      ctx.beginPath(); ctx.arc(x, yF, w * 1.4, Math.PI, TAU); ctx.fill();
+      ctx.fillRect(x - w * 2.4, yF - H * 1.1, w * 0.6, H * 1.1); ctx.fillRect(x + w * 1.8, yF - H * 0.9, w * 0.6, H * 0.9);
+      ctx.fillRect(x - w * 1.8, yF - H * 0.75, w * 3.6, 5);
+      for (let k = 0; k < 6; k++) px(x - w * 1.7 + k * w * 0.62, yF - H * 0.75 + 1, 3, 3, (Math.floor(clock * 3) + k) % 3 ? glow : '#ffffff');
+    } else {
+      // A mine's headframe, its wheel turning
+      ctx.beginPath(); ctx.moveTo(x - w, yF); ctx.lineTo(x - 3, yF - H); ctx.lineTo(x + 3, yF - H); ctx.lineTo(x + w, yF); ctx.lineTo(x + w - 6, yF); ctx.lineTo(x, yF - H + 10); ctx.lineTo(x - w + 6, yF); ctx.fill();
+      ctx.strokeStyle = mid; ctx.lineWidth = 3; const a = clock * 1.5;
+      ctx.beginPath(); ctx.arc(x, yF - H, 14, 0, TAU); ctx.moveTo(x + Math.cos(a) * 14, yF - H + Math.sin(a) * 14); ctx.lineTo(x - Math.cos(a) * 14, yF - H - Math.sin(a) * 14); ctx.stroke();
+      ctx.fillRect(x - 1, yF - H, 2, H);
     }
   }
   // How far from the middle of the world the screen reaches, nearest and furthest
@@ -3607,7 +3763,7 @@
         const d = pull(s, s.big ? 200 : 150);
         if (d < (s.big ? 60 : 28)) {
           s.taken = true;
-          if (s.fact) { toast(s.fact.text, 6); addScore(500); pop(s.fact.kind === 'marsrock' ? 'MARS ROCK!' : 'SPACE PROBE!', '#ffab3d', player.r + 140); }
+          if (s.fact) { toast(s.fact.text, 6); addScore(500); pop(s.fact.kind === 'marsrock' ? 'MARS ROCK!' : s.fact.kind === 'earthrise' ? 'EARTHRISE!' : 'SPACE PROBE!', '#ffab3d', player.r + 140); }
           sfx.star(mult);
           burst(s.a, s.R, '#6dff7a', 16, 170);
           ring(s.a, s.R, '#6dff7a', 0.8);
@@ -3929,7 +4085,7 @@
     ctx.fillStyle = sg; ctx.fillRect(sx - sr * 5, sy - sr * 5, sr * 10, sr * 10);
     ctx.fillStyle = '#fffbe8'; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
     // Earth hangs in the black sky, shrinking behind you as you go
-    drawPlanet('earth', W * 0.84, H * 0.17 + tf * 22, 46 / (1 + tf * 0.45));
+    if (route !== 'earth') drawPlanet('earth', W * 0.84, H * 0.17 + tf * 22, 46 / (1 + tf * 0.45));
     if (fx.visitor) drawVisitor(fx.visitor);
     if (route) drawSkyMoon();
     else {
@@ -4523,7 +4679,21 @@
       const seen = (a, m = 0) => Math.abs(wrap(a + rot)) < reach + m / R0;
       ctx.fillStyle = L.col;
       ctx.beginPath(); ctx.arc(cx, my, R0 - 6 + L.top, 0, TAU); ctx.fill();
-      if (L === world.plains[1]) drawBaseGroup(P(rot, L.top), rot, L.col);
+      if (L.peaks) {
+        // Far off, the lunar mountains (like the Apennines, up to 5 km high),
+        // lit along their tops by the Sun
+        const hgt = (a) => Math.max(0, 22 + 26 * Math.sin(a * 23 + 1) + 16 * Math.sin(a * 57 + 2) + 9 * Math.sin(a * 131)) + 30 * Math.max(0, Math.sin(a * 7 + 0.5)) ** 3;
+        const p0 = -reach - 0.05, p1 = reach + 0.05, st = 0.006;
+        ctx.beginPath(); ctx.moveTo(...P(p0, 0));
+        for (let ph = p0; ph <= p1; ph += st) ctx.lineTo(...P(ph, L.top + hgt(ph - rot)));
+        ctx.lineTo(...P(p1, 0)); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = light(L.col, 0.18); ctx.lineWidth = 2; ctx.beginPath();
+        for (let ph = p0; ph <= p1; ph += st) ctx.lineTo(...P(ph, L.top + hgt(ph - rot)));
+        ctx.stroke();
+      }
+      // The base, split across two layers that slide past each other
+      if (L === world.plains[2]) drawBaseGroup(P(rot, L.top), rot, L.col, BASE_FAR, 0.7);
+      if (L === world.plains[3]) drawBaseGroup(P(rot + 0.18, L.top), rot + 0.18, L.col, BASE_NEAR, 0.95);
       // Oval craters on the plain: lit far wall, shadow in the bowl
       for (const c of L.craters) {
         if (!seen(c.a, c.rx)) continue;
@@ -4538,17 +4708,19 @@
     ctx.globalAlpha = 1;
   }
   // The base, as one group standing on a flat stretch of the distant horizon
-  const BASE_LAYOUT = [
-    [-150, 'rocketpad'], [-108, 'dish2'], [-90, 'dome', { w: 26, h: 16, ant: true }], [-52, 'dome', { w: 54, h: 30, door: true }],
-    [-18, 'fence'], [26, 'dome', { w: 74, h: 30, wins: 3, ant: true }], [78, 'tower'], [122, 'dome', { w: 46, h: 24 }], [150, 'hover'],
+  // Far half: the landing pad and the small habitats; near half: the big
+  // dome, the tower and the hover pad
+  const BASE_FAR = [
+    [-110, 'rocketpad'], [-66, 'dish2'], [-46, 'dome', { w: 26, h: 16, ant: true }], [-6, 'dome', { w: 54, h: 30, door: true }], [40, 'fence'],
   ];
-  function drawBaseGroup([x, y], ph, ground) {
+  const BASE_NEAR = [[-60, 'dome', { w: 74, h: 30, wins: 3, ant: true }], [-4, 'tower'], [44, 'dome', { w: 46, h: 24 }], [80, 'hover']];
+  function drawBaseGroup([x, y], ph, ground, layout, sc) {
     if (Math.abs(wrap(ph)) * R0 > (view.x1 - view.x0) / 2 + 260) return;
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ph); ctx.scale(0.8, 0.8);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ph); ctx.scale(sc, sc);
     // A flat shelf of ground for the base to stand on
-    ctx.fillStyle = ground; ctx.fillRect(-190, -1, 380, 40);
-    ctx.fillStyle = hexOf(mix(ground, '#ffffff', 0.12)); ctx.fillRect(-190, -1, 380, 2);
-    for (const [bx, kind, opts] of BASE_LAYOUT) { ctx.save(); ctx.translate(bx, 0); MOON_DECOR[kind](opts || {}); ctx.restore(); }
+    ctx.fillStyle = ground; ctx.fillRect(-150, -1, 300, 40);
+    ctx.fillStyle = hexOf(mix(ground, '#ffffff', 0.12)); ctx.fillRect(-150, -1, 300, 2);
+    for (const [bx, kind, opts] of layout) { ctx.save(); ctx.translate(bx, 0); MOON_DECOR[kind](opts || {}); ctx.restore(); }
     ctx.restore();
   }
   const hexOf = (rgb) => '#' + rgb.match(/\d+/g).slice(0, 3).map((v) => (+v).toString(16).padStart(2, '0')).join('');
@@ -5247,7 +5419,7 @@
   }
   const L2_PLATS = {
     pad(p, w, sq) {
-      const col = p.world ? p.world.pad : p.route === 'venus' ? '#ffd23f' : '#ff6a4a';
+      const col = p.world ? p.world.pad : p.route === 'venus' ? '#ffd23f' : p.route === 'earth' ? '#8fd0ff' : '#ff6a4a';
       if (p.world) {
         // A signpost pointing the way to this one's world
         px(-w / 2 - 4, -46, 2, 46, '#c9ced9');
@@ -6363,7 +6535,7 @@
       // From the Moon at the bottom to Mars or Venus at the top
       ctx.fillStyle = '#c9c7cf'; ctx.beginPath(); ctx.arc(x, bottom + 10, 8, 0, TAU); ctx.fill();
       px(x - 4, bottom + 6, 3, 3, '#9e9caa'); px(x + 1, bottom + 11, 3, 3, '#9e9caa');
-      if (route) { ctx.fillStyle = route === 'venus' ? '#efd9a0' : '#c8553a'; ctx.beginPath(); ctx.arc(x, top - 10, 7, 0, TAU); ctx.fill(); }
+      if (route) { ctx.fillStyle = route === 'venus' ? '#efd9a0' : route === 'earth' ? '#2f6fd0' : '#c8553a'; ctx.beginPath(); ctx.arc(x, top - 10, 7, 0, TAU); ctx.fill(); }
       else {
         ctx.fillStyle = '#efd9a0'; ctx.beginPath(); ctx.arc(x - 6, top - 10, 5, 0, TAU); ctx.fill();
         ctx.fillStyle = '#c8553a'; ctx.beginPath(); ctx.arc(x + 6, top - 10, 5, 0, TAU); ctx.fill();
