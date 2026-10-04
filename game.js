@@ -1887,9 +1887,17 @@
     [RUN_LEN + 0.985 * DIVE_LEN, 'OUT THE OTHER SIDE', 'Out through the cloud tops on the far side of Jupiter! The force field held.'],
   ];
   const runLane = () => Math.min(W / 2 - 30, 330);
+  // Out of Jupiter and on to Europa: climbing away, then up and over it
+  const EXIT_T = 3.2, EU_UP = 1.0, EU_TURN = 1.6, EU_FALL = 1.9;
+  const EU_LAND = EU_UP + EU_TURN + EU_FALL;
   // Where you sit on the screen in the run: you start where you were when the
   // mass driver flung you, and glide down to make room to see what's coming
-  const runPY = () => H * lerp(0.46, RUN_Y, smooth(clamp(((fx.run && fx.run.age) || 0) / 1.3, 0, 1)));
+  const runPY = () => {
+    const R = fx.run, base = lerp(0.46, RUN_Y, smooth(clamp(((R && R.age) || 0) / 1.3, 0, 1)));
+    // Climbing away from Jupiter you rise to the middle, ready to go up and over Europa
+    if (R && R.phase === 'exit') return H * lerp(base, 0.45, smooth(clamp(R.pt / EXIT_T, 0, 1)));
+    return H * (R && R.phase === 'europa' ? 0.45 : base);
+  };
   const runF = () => (fx.run ? clamp(fx.run.d / RUN_LEN, 0, 1) : 0);
   // Inside Jupiter, layer by layer, like the fall through the hollow Earth:
   // down through each layer to the middle, then back up through them all on
@@ -1997,8 +2005,8 @@
         const my = py - (m.d - R.d), mx = W / 2 + m.side * (lane + m.r * 0.55);
         if (my > H + m.r + 200 || my < -m.r - 400) continue;
         const dist = Math.hypot(mx - bx, my - by);
-        const drift = Math.min(560, 1500 * m.pull * (190 / Math.max(dist, 190)) ** 2);
-        R.x += Math.sign(mx - bx) * drift * dt * clamp(1 - Math.abs(my - by) / 520, 0, 1) * 1.6;
+        const drift = Math.min(240, 620 * m.pull * (190 / Math.max(dist, 190)) ** 2);
+        R.x += Math.sign(mx - bx) * drift * dt * clamp(1 - Math.abs(my - by) / 520, 0, 1);
         if (Math.abs(R.x) > lane) R.x = Math.sign(R.x) * lane;
         if (!m.told && my > -m.r) { m.told = true; pop(`${m.name.toUpperCase()}'S PULL!`, '#ffd6a0', player.r + 120); }
         if (R.hitT <= 0 && dist < m.r + 14) {
@@ -2091,19 +2099,28 @@
         sfx.perfect();
       }
     } else if (R.phase === 'exit') {
+      // Bursting out of the far side, and climbing away: Jupiter's pull holds
+      // you back, so you slow as it shrinks behind you
       runSteer(dt, lane);
-      if (R.pt > 2.4) {
+      R.v = approach(R.v, 380, 700 * dt); R.vis = R.v * 1.4; R.vd = (R.vd || 0) + R.vis * dt;
+      if (R.pt < 0.6) shake = Math.max(shake, 8 * (1 - R.pt / 0.6));
+      if (R.pt > EXIT_T) {
         R.phase = 'europa'; R.pt = 0;
         banner('EUROPA', 'AN OCEAN UNDER THE ICE');
         toast("Europa: a moon of ice, a bit smaller than ours. Under the ice is a salty ocean that may hold twice as much water as all of Earth's oceans.", 6);
         sfx.tier();
       }
     } else if (R.phase === 'europa') {
-      if (R.pt > 3.5 && !R.landed) {
-        R.landed = true; addShake(6); sfx.thud();
-        for (let i = 0; i < 16; i++) R.trail.push({ x: W / 2, y: H * 0.72, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 120, t: 0, life: 0.9, c: '#eef4ff' });
+      // Up after it as it slides out of sight above you, over you go, and
+      // down you drift onto its ice, the same as landing on any other world
+      R.x = approach(R.x, 0, 400 * dt);
+      if (R.pt > EU_UP && !R.turnTold) { R.turnTold = true; banner("EUROPA'S PULL", 'UP AND OVER'); sfx.whoosh(); }
+      if (R.pt > EU_LAND && !R.landed) {
+        R.landed = true; addShake(6); sfx.thud(); buzz(30);
+        for (let i = 0; i < 22; i++) R.trail.push({ x: W / 2, y: H * 0.72, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 120, t: 0, life: 1.3, c: '#eef4ff' });
+        toast("On Europa! Its gravity is only about a seventh of Earth's, so you drift down slowly. Jupiter fills the sky, and it never moves: Europa always keeps the same face towards it.", 6);
       }
-      if (R.pt > 5) {
+      if (R.pt > EU_LAND + 1.9) {
         // Down a crack in the ice, into the ocean
         R.phase = 'ocean'; R.pt = 0; R.od = 0; R.x = 0; R.vx = 0;
         banner('INTO THE OCEAN', 'UNDER THE ICE');
@@ -7075,7 +7092,7 @@
     ctx.save();
     if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
     if (R.phase === 'ocean') { drawOcean(R); ctx.restore(); return; }
-    if (R.phase === 'europa' && R.pt > 1.6) { drawEuropaLanding(R); ctx.restore(); return; }
+    if (R.phase === 'europa') { drawEuropaArrival(R); ctx.restore(); return; }
     const inJ = R.phase === 'run' && R.d >= RUN_LEN;
     const sp = R.phase === 'run' ? R.v : 400;
     const scroll = R.phase === 'run' ? R.d : RUN_LEN + DIVE_LEN + R.pt * 400;
@@ -7113,16 +7130,19 @@
         drawJupiter(W / 2, H * 0.2, jr);
         if (f < 0.95) drawGalileans(W / 2, H * 0.2, jr, clamp((f - 0.6) * 4, 0, 1));
       } else {
-        // Out the far side: Jupiter dropping away behind you, Europa ahead
-        const k = clamp(R.pt / 2.4, 0, 1);
-        drawJupiter(W / 2, H + Math.min(W, H) * lerp(0.2, 1.1, k), Math.min(W, H) * lerp(1.6, 0.9, k), 0.6);
-        if (R.pt < 0.5) { ctx.fillStyle = `rgba(233,216,180,${1 - R.pt / 0.5})`; ctx.fillRect(0, 0, W, H); }
-        if (R.phase === 'europa') drawEuropaApproach(R);
-        else {
-          const er = lerp(3, 14, k);
-          ctx.fillStyle = '#eee6d6'; ctx.beginPath(); ctx.arc(W / 2, H * 0.14, er, 0, TAU); ctx.fill();
-          ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#eef1ff'; ctx.fillText('EUROPA', W / 2, H * 0.14 - er - 6); ctx.textAlign = 'start';
+        // Out the far side, the way you went in but backwards: Jupiter huge
+        // behind you and shrinking, streaks pouring back down into it, the
+        // big moons wheeling round, and Europa growing ahead
+        const k = clamp(R.pt / EXIT_T, 0, 1);
+        drawExitSpace(R, k);
+        if (R.pt < 0.6) {
+          // Bursting out through the cloud tops
+          ctx.fillStyle = `rgba(244,234,210,${1 - R.pt / 0.6})`; ctx.fillRect(0, 0, W, H);
+          for (let i = 0; i < 12; i++) { const y = H - ((i * 83 + R.pt * 1400) % (H + 200)); ctx.fillStyle = `rgba(255,250,235,${0.5 * (1 - R.pt / 0.6)})`; ctx.fillRect(0, y, W, 20 + (i % 3) * 12); }
         }
+        const er = lerp(4, Math.min(W, H) * 0.12, k * k);
+        drawEuropaGlobe(W / 2, H * 0.16, er);
+        ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#eef1ff'; ctx.fillText('EUROPA', W / 2, H * 0.16 - er - 8); ctx.textAlign = 'start';
       }
     }
     if (R.phase === 'run') {
@@ -7364,20 +7384,66 @@
     ctx.fillStyle = 'rgba(10,10,30,0.35)'; ctx.beginPath(); ctx.arc(x + r * 0.45, y + r * 0.4, r * 1.05, 0, TAU); ctx.arc(x - r * 0.15, y - r * 0.15, r * 1.05, 0, TAU, true); ctx.fill('evenodd');
     ctx.restore();
   }
-  function drawEuropaApproach(R) {
-    const k = clamp(R.pt / 1.6, 0, 1), er = lerp(14, Math.max(W, H) * 1.2, Math.pow(k, 3)), ey = lerp(H * 0.14, H * 0.45, k);
-    drawEuropaGlobe(W / 2, ey, er);
-    drawSprite('jump', W / 2, H * 0.66, false, 1, 1, 1, SUIT, 0);
-    if (conspiracy) drawFoilHat(W / 2, H * 0.66, 0);
+  // Space behind you on the way out of Jupiter: stars streaming down past
+  // you, Jupiter huge at the bottom and shrinking (k: 0 just out, 1 well away)
+  function drawExitSpace(R, k) {
+    const vis = R.vis || 400;
+    for (const st of world.sky) { const y = (st.y * H + (R.vd || 0) * (0.15 + st.s * 0.18)) % H; px(st.x * W, y, st.s, st.s * (1 + vis / 220), st.s > 1 ? '#fff3c4' : '#c9d7f0'); }
+    const jr = lerp(Math.max(W, H) * 1.1, Math.min(W, H) * 0.3, smooth(k)), jy = H + jr * lerp(0.15, 0.55, smooth(k));
+    // Streaks pouring back down into it behind you
+    ctx.strokeStyle = `rgba(255,235,200,${0.25 * (1 - k)})`; ctx.lineWidth = 2;
+    for (let i = 0; i < 40; i++) {
+      const a = Math.PI + 0.2 + (i / 40) * (Math.PI - 0.4), kk = ((clock * 1.2 + i * 0.137) % 1), r1 = jr + (1 - kk) * (1 - kk) * W, r0 = r1 + 20 + (1 - k) * 60;
+      ctx.beginPath(); ctx.moveTo(W / 2 + Math.cos(a) * r0, jy + Math.sin(a) * r0); ctx.lineTo(W / 2 + Math.cos(a) * r1, jy + Math.sin(a) * r1); ctx.stroke();
+    }
+    drawJupiter(W / 2, jy, jr, 0.55);
+    drawGalileans(W / 2, jy, jr, clamp(k * 2, 0, 1));
+    // Speed lines down the sides, slowing
+    ctx.fillStyle = `rgba(220,235,255,${0.25 * (1 - k)})`;
+    for (let i = 0; i < 18; i++) { const x = ((i * 0.618) % 1) * W, y = (i * 211 + (R.vd || 0) * 1.2) % (H + 300) - 150; ctx.fillRect(x, y, 2, 20 + vis * 0.06); }
+  }
+  // Europa: it slides up out of sight above you, the view turns right over,
+  // and you drift down onto its ice (the same way you land on every world)
+  function drawEuropaArrival(R) {
+    const t = R.pt, py0 = H * 0.45, pc = py0 - 24;
+    const turn = Math.PI * smooth(clamp((t - EU_UP) / EU_TURN, 0, 1));
+    const skyK = smooth(clamp((t - EU_UP - 0.2) / (EU_TURN - 0.2), 0, 1));
+    // Space and Jupiter behind you, turning away
+    ctx.save(); ctx.translate(W / 2, pc); ctx.rotate(turn); ctx.translate(-W / 2, -pc);
+    ctx.fillStyle = '#04050b'; ctx.fillRect(-W, -H, W * 3, H * 3);
+    drawExitSpace(R, 1);
+    if (t < EU_UP) {
+      // Europa, close now, filling the view and sliding up out of sight
+      const k = t / EU_UP, er = lerp(Math.min(W, H) * 0.12, Math.max(W, H) * 0.9, k * k), ey = lerp(H * 0.16, -er - 30, smooth(k));
+      drawEuropaGlobe(W / 2, ey, er);
+    }
+    ctx.restore();
+    // Europa's ground, turning in from above to right way up under you
+    if (t >= EU_UP) {
+      ctx.save(); ctx.translate(W / 2, pc); ctx.rotate(turn - Math.PI); ctx.translate(-W / 2, -pc);
+      drawEuropaLanding(R, skyK);
+      ctx.restore();
+    }
+    // You, upright all the way, then drifting down onto the ice
+    const fk = clamp((t - EU_UP - EU_TURN) / EU_FALL, 0, 1);
+    let y = lerp(py0, H * 0.72, fk * fk);
+    if (R.landed && t > EU_LAND + 1.1) y += (t - EU_LAND - 1.1) * 500; // and down the crack you go
+    const squash = R.landed ? Math.max(0, 1 - (t - EU_LAND) * 4) : 0;
+    drawSprite(R.landed && t < EU_LAND + 1.1 ? 'stand' : 'jump', W / 2 + R.x * (1 - fk), y, false, 1 - squash * 0.2, 1 + squash * 0.15, 1, SUIT);
+    if (conspiracy) drawFoilHat(W / 2 + R.x * (1 - fk), y, 0);
+    for (const q of R.trail) { ctx.globalAlpha = 1 - q.t / q.life; px(q.x - 3, q.y - 3, 6, 6, q.c); }
+    ctx.globalAlpha = 1;
   }
   // On Europa: down you come onto its cracked, ridged ice, with Jupiter huge
   // in the sky, Io beside it, and a plume of water vapour on the horizon
-  function drawEuropaLanding(R) {
-    const t = R.pt - 1.6;
+  function drawEuropaLanding(R, skyA = 1) {
+    ctx.save(); ctx.globalAlpha = skyA;
+    ctx.fillStyle = '#04050b'; ctx.fillRect(-W, -H * 2, W * 3, H * 2.72);
     for (const st of world.sky) px(st.x * W, st.y * H * 0.7, st.s, st.s, '#c9d7f0');
     drawJupiter(W * 0.68, H * 0.26, Math.min(W, H) * 0.32, 0.7);
     ctx.fillStyle = '#e8d27a'; ctx.beginPath(); ctx.arc(W * 0.22, H * 0.18, 5, 0, TAU); ctx.fill();
     ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(238,241,255,0.7)'; ctx.fillText('IO', W * 0.22, H * 0.18 - 10); ctx.textAlign = 'start';
+    ctx.restore();
     const ER = Math.max(W, H) * 1.4, ecx = W / 2, ecy = H * 0.72 + ER;
     // A plume, maybe: Hubble may have spotted water vapour spraying out
     const px0 = W * 0.84, py0 = H * 0.72 - 8;
@@ -7403,15 +7469,6 @@
     if (R.landed) { ctx.fillStyle = '#1a3a5a'; ctx.beginPath(); ctx.moveTo(W / 2 - 40, H * 0.73); ctx.lineTo(W / 2 + 40, H * 0.73); ctx.lineTo(W / 2 + 6, H); ctx.lineTo(W / 2 - 6, H); ctx.fill(); }
     ctx.restore();
     if (conspiracy) drawMonolith(W * 0.24, H * 0.72);
-    const k = clamp(t / 1.9, 0, 1), e = 1 - Math.pow(1 - k, 2);
-    let y = lerp(H * 0.05, H * 0.72, e);
-    if (R.landed && R.pt > 4.2) y += (R.pt - 4.2) * 500; // and down the crack you go
-    const squash = R.landed ? Math.max(0, 1 - (R.pt - 3.5) * 4) : 0;
-    drawSprite(R.landed && R.pt < 4.2 ? 'stand' : 'jump', W / 2, y, false, 1 - squash * 0.2, 1 + squash * 0.15, 1, SUIT);
-    if (conspiracy) drawFoilHat(W / 2, y, 0);
-    for (const q of R.trail) { ctx.globalAlpha = 1 - q.t / q.life; px(q.x - 3, q.y - 3, 6, 6, q.c); }
-    ctx.globalAlpha = 1;
-    if (t < 0.4) { ctx.fillStyle = `rgba(255,255,255,${1 - t / 0.4})`; ctx.fillRect(0, 0, W, H); }
   }
   // Under Europa's ice: through the ice shell, down through the dark ocean,
   // to the seafloor and its hot vents
