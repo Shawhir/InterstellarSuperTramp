@@ -382,13 +382,19 @@ you off: the run, straight through Jupiter, and on to Europa and its ocean.
   through the cloud tops with Jupiter huge behind you, streaks pouring back
   down into it, and climb away as its pull holds you back, Jupiter shrinking
   and its big moons wheeling round it, with Europa growing ahead. Then
-  Europa slides up out of sight above you, the view turns right over (you
-  stay upright, and the one Jupiter you just left swings round into its
-  place in Europa's sky), and you drift down
-  feet first onto the ice and land, the same way you land on every world:
-  Europa's gravity is only about a seventh of Earth's.
-- **Europa.** You land on its ice: double ridges, chaos terrain, a water
-  plume on the horizon and Jupiter huge in the sky. Then the ice cracks
+  Europa slides up out of sight above you, and the stars turn right over
+  (you stay upright, and Jupiter, which has shrunk back to sit low behind
+  you, never turns: it stays put, and ends up looming over Europa's
+  horizon), and you drift down feet first onto the ice and land, the same
+  way you land on every world. Europa's gravity is only about a seventh of
+  Earth's.
+- **Europa.** Seen from space it's creamy ice, redder on the side that
+  trails in its orbit, criss-crossed by long reddish-brown bands that run
+  round it like great circles, with scalloped cycloid arcs, mottled chaos
+  terrain and the bright rayed crater Pwyll. You land on its ice: double
+  ridges (two bright crests and a brown-stained groove) running off to the
+  horizon and across the plain, tilted rafts of chaos terrain, frost glints,
+  a water plume, and Jupiter huge over the horizon. Then the ice cracks
   under your feet and you fall straight on down under the surface, like the
   fall through the hollow Earth but not so deep: the camera follows you
   down with no cut, and each layer's edge comes up at you with its name on

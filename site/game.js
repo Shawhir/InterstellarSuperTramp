@@ -1975,7 +1975,7 @@
   ];
   const runLane = () => Math.min(W / 2 - 30, 330);
   // Out of Jupiter and on to Europa: climbing away, then up and over it
-  const EXIT_T = 3.2, EU_UP = 1.0, EU_TURN = 1.6, EU_FALL = 1.9;
+  const EXIT_T = 2.6, EU_UP = 0.8, EU_TURN = 1.3, EU_FALL = 1.1;
   const EU_LAND = EU_UP + EU_TURN + EU_FALL;
   // Where you sit on the screen in the run: you start where you were when the
   // mass driver flung you, and glide down to make room to see what's coming
@@ -2206,10 +2206,10 @@
       if (R.pt > EU_LAND && !R.landed) {
         R.landed = true; addShake(6); sfx.thud(); buzz(30);
         for (let i = 0; i < 22; i++) R.trail.push({ x: W / 2, y: H * 0.72, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 120, t: 0, life: 1.3, c: '#eef4ff' });
-        toast("On Europa! Its gravity is only about a seventh of Earth's, so you drift down slowly. Jupiter fills the sky, and it never moves: Europa always keeps the same face towards it.", 6);
+        toast("On Europa! Its gravity is only about a seventh of Earth's. Jupiter looms over the horizon, and never moves: Europa always keeps the same face towards it, so from here Jupiter never rises or sets.", 6);
       }
-      if (R.landed) R.crack = clamp((R.pt - EU_LAND - 0.7) / 0.6, 0, 1);
-      if (R.pt > EU_LAND + 1.3) {
+      if (R.landed) R.crack = clamp((R.pt - EU_LAND - 0.45) / 0.5, 0, 1);
+      if (R.pt > EU_LAND + 1.0) {
         // The ice gives way under you, and down you go
         R.phase = 'ocean'; R.pt = 0; R.od = 0; R.ov = 0; R.x = 0; R.vx = 0; R.euL = 0;
         addShake(10); sfx.thud(); buzz([40, 30, 60]); pop('CRACK!', '#eef4ff', player.r + 90);
@@ -8162,41 +8162,71 @@
     if (kind === 'frag' || kind === 'spark' || kind === 'storm') { ctx.strokeStyle = 'rgba(11,11,20,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, (kind === 'storm' ? o.r + 6 : o.r * 0.75 + 2), 0, TAU); ctx.stroke(); }
     ctx.restore();
   }
-  // Europa, as seen from space: pale ice criss-crossed with reddish-brown
-  // cracks (lineae), and patches of jumbled "chaos" terrain
+  // Europa, as seen from space: creamy ice, redder and darker on the side
+  // that trails in its orbit (sulphur from Io, baked by Jupiter's radiation),
+  // criss-crossed by long reddish-brown bands (lineae) that run round it like
+  // great circles, scalloped chains of arcs (cycloids), mottled patches of
+  // chaos terrain, and the bright young crater Pwyll with its rays
+  // [squash of the great circle, its turn, from, to, width]
+  const EU_GREAT = [[0.18, 0.5, 0.2, 2.9, 0.016], [0.42, -0.6, 3.4, 6.0, 0.013], [0.7, 1.25, 0.1, 2.4, 0.011], [0.08, -0.15, 3.3, 5.9, 0.018], [0.55, 2.3, 0.6, 3.0, 0.01], [0.3, 0.95, 3.6, 5.6, 0.009], [0.86, -1.1, 0.3, 1.9, 0.008], [0.24, -0.9, 0.5, 2.6, 0.012]];
+  // [x, y, r, how far round] for the scalloped cycloid chains
+  const EU_CYCLOIDS = [[-0.5, -0.35, 0.16, 4], [0.15, 0.45, 0.12, 5], [0.42, -0.1, 0.1, 3]];
+  const EU_CHAOS = [[-0.45, 0.25, 0.22], [-0.15, -0.5, 0.14], [0.3, 0.55, 0.12], [-0.62, -0.1, 0.16]];
   function drawEuropaGlobe(x, y, r) {
     ctx.save();
-    const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-    g.addColorStop(0, '#fbf8f0'); g.addColorStop(0.7, '#e6dccb'); g.addColorStop(1, '#b9ad98');
+    const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.35, r * 0.05, x, y, r);
+    g.addColorStop(0, '#fffcf4'); g.addColorStop(0.55, '#efe6d4'); g.addColorStop(1, '#cdbc9e');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.clip();
-    ctx.strokeStyle = 'rgba(150,80,50,0.7)'; ctx.lineWidth = Math.max(1, r * 0.018);
-    for (let i = 0; i < 12; i++) {
-      const a = i * 0.9, ox = Math.cos(a) * r * 0.4, oy = Math.sin(a * 1.3) * r * 0.4;
-      ctx.beginPath(); ctx.arc(x + ox + r, y + oy - r * 0.5, r * (1 + (i % 3) * 0.3), Math.PI * 0.8, Math.PI * 1.25); ctx.stroke();
+    // The trailing side, stained reddish-brown
+    const tg = ctx.createLinearGradient(x - r, 0, x + r * 0.4, 0);
+    tg.addColorStop(0, 'rgba(150,92,58,0.42)'); tg.addColorStop(1, 'rgba(150,92,58,0)');
+    ctx.fillStyle = tg; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    // Mottled chaos terrain: blotches of jumbled, darker ice
+    for (const [u, v, cr] of EU_CHAOS) {
+      const cg = ctx.createRadialGradient(x + u * r, y + v * r, 0, x + u * r, y + v * r, cr * r);
+      cg.addColorStop(0, 'rgba(130,78,48,0.45)'); cg.addColorStop(0.6, 'rgba(150,95,62,0.25)'); cg.addColorStop(1, 'rgba(150,95,62,0)');
+      ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(x + u * r, y + v * r, cr * r, 0, TAU); ctx.fill();
+      if (r > 60) for (let i = 0; i < 7; i++) { const a = i * 2.4 + u * 9, d = cr * r * (0.2 + (i % 3) * 0.2); ctx.fillStyle = 'rgba(250,244,232,0.55)'; ctx.fillRect(x + u * r + Math.cos(a) * d, y + v * r + Math.sin(a) * d, cr * r * 0.12, cr * r * 0.08); }
     }
-    ctx.fillStyle = 'rgba(160,100,70,0.35)';
-    for (const [cxo, cyo, cr] of [[-0.3, 0.2, 0.18], [0.35, -0.25, 0.12], [0.1, 0.5, 0.1]]) { ctx.beginPath(); ctx.arc(x + cxo * r, y + cyo * r, cr * r, 0, TAU); ctx.fill(); }
-    ctx.fillStyle = 'rgba(10,10,30,0.35)'; ctx.beginPath(); ctx.arc(x + r * 0.45, y + r * 0.4, r * 1.05, 0, TAU); ctx.arc(x - r * 0.15, y - r * 0.15, r * 1.05, 0, TAU, true); ctx.fill('evenodd');
+    // Lineae: a dark brown band with a bright line down its middle
+    const band = (path, w) => {
+      ctx.strokeStyle = 'rgba(120,62,36,0.32)'; ctx.lineWidth = Math.max(1, r * w * 2.4); path(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(158,84,50,0.75)'; ctx.lineWidth = Math.max(0.8, r * w); path(); ctx.stroke();
+      if (r > 40) { ctx.strokeStyle = 'rgba(255,248,236,0.65)'; ctx.lineWidth = Math.max(0.5, r * w * 0.28); path(); ctx.stroke(); }
+    };
+    for (const [b, rot, a0, a1, w] of EU_GREAT) band(() => { ctx.beginPath(); ctx.ellipse(x, y, r * 0.98, r * b, rot, a0, a1); }, w);
+    for (const [u, v, cr, n] of EU_CYCLOIDS) band(() => { ctx.beginPath(); for (let i = 0; i < n; i++) { const cx = x + (u + i * cr * 1.5) * r, cy = y + (v + i * cr * 0.35) * r; ctx.moveTo(cx - cr * r * 0.75, cy); ctx.arc(cx, cy - cr * r * 0.05, cr * r * 0.78, Math.PI, TAU); } }, 0.008);
+    // Pwyll: a bright young crater and the rays of ice it splashed out
+    { const cx = x + r * 0.2, cy = y + r * 0.12;
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = Math.max(0.5, r * 0.006);
+      for (let i = 0; i < 9; i++) { const a = i * 0.7 + 0.3, l = r * (0.18 + (i % 3) * 0.1); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * l, cy + Math.sin(a) * l); ctx.stroke(); }
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx, cy, Math.max(1, r * 0.035), 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(120,80,60,0.6)'; ctx.beginPath(); ctx.arc(cx, cy, Math.max(0.5, r * 0.012), 0, TAU); ctx.fill(); }
+    // Darker towards the edge, and the night side
+    const lg = ctx.createRadialGradient(x, y, r * 0.6, x, y, r);
+    lg.addColorStop(0, 'rgba(60,45,35,0)'); lg.addColorStop(1, 'rgba(60,45,35,0.35)');
+    ctx.fillStyle = lg; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    ctx.fillStyle = 'rgba(10,10,30,0.4)'; ctx.beginPath(); ctx.arc(x + r * 0.45, y + r * 0.4, r * 1.05, 0, TAU); ctx.arc(x - r * 0.15, y - r * 0.15, r * 1.05, 0, TAU, true); ctx.fill('evenodd');
     ctx.restore();
   }
   // Space behind you on the way out of Jupiter: stars streaming down past
   // you, Jupiter huge at the bottom and shrinking (k: 0 just out, 1 well away)
-  function drawExitSpace(R, k) {
+  function drawExitSpace(R, k, noJupiter = false) {
     const vis = R.vis || 400;
     for (const st of world.sky) { const y = (st.y * H + (R.vd || 0) * (0.15 + st.s * 0.18)) % H; px(st.x * W, y, st.s, st.s * (1 + vis / 220), st.s > 1 ? '#fff3c4' : '#c9d7f0'); }
     // One Jupiter all the way: it falls away behind you, and ends up just
     // where, once the view has turned over, it hangs in Europa's sky
     const e = smooth(k), J = euJupiter();
     const jr = Math.exp(lerp(Math.log(Math.max(W, H) * 1.1), Math.log(J.r), e));
-    const jx = lerp(W / 2, W - J.x, e), jy = lerp(H + Math.max(W, H) * 0.16, 2 * (H * 0.45 - 24) - J.y, e);
+    const jx = lerp(W / 2, J.x, e), jy = lerp(H + Math.max(W, H) * 0.16, J.y, e);
     // Streaks pouring back down into it behind you
     ctx.strokeStyle = `rgba(255,235,200,${0.25 * (1 - k)})`; ctx.lineWidth = 2;
     for (let i = 0; i < 40; i++) {
       const a = i * 2.39996, kk = ((clock * 1.2 + i * 0.137) % 1), r1 = jr + (1 - kk) * (1 - kk) * W, r0 = r1 + 20 + (1 - k) * 60;
       ctx.beginPath(); ctx.moveTo(jx + Math.cos(a) * r0, jy + Math.sin(a) * r0); ctx.lineTo(jx + Math.cos(a) * r1, jy + Math.sin(a) * r1); ctx.stroke();
     }
-    drawJupiter(jx, jy, jr, 0.7);
+    if (!noJupiter) drawJupiter(jx, jy, jr, 0.7);
     // Speed lines down the sides, slowing
     ctx.fillStyle = `rgba(220,235,255,${0.25 * (1 - k)})`;
     for (let i = 0; i < 18; i++) { const x = ((i * 0.618) % 1) * W, y = (i * 211 + (R.vd || 0) * 1.2) % (H + 300) - 150; ctx.fillRect(x, y, 2, 20 + vis * 0.06); }
@@ -8207,15 +8237,16 @@
     const pc = H * 0.45 - 24;
     ctx.save(); ctx.translate(W / 2, pc); ctx.rotate(Math.PI); ctx.translate(-W / 2, -pc);
     ctx.fillStyle = '#04050b'; ctx.fillRect(-W, -H * 3, W * 3, H * 7);
-    drawExitSpace(R, 1);
+    drawExitSpace(R, 1, true);
     ctx.restore();
+    const J = euJupiter(); drawJupiter(J.x, J.y, J.r, 0.7);
     drawEuropaLanding(R, 1, false);
   }
   // Where your feet are on the screen on the way down: from the surface you
   // landed on, gliding up to leave room to see what's below
   const euFeetY = (R) => R.fy || H * lerp(0.72, 0.4, smooth(clamp(R.pt / 1.2, 0, 1)));
   // Where Jupiter hangs in Europa's sky
-  const euJupiter = () => ({ x: W * 0.68, y: H * 0.26, r: Math.min(W, H) * 0.32 });
+  const euJupiter = () => ({ x: W * 0.66, y: H * 0.6, r: Math.min(W, H) * 0.36 });
   // Europa: it slides up out of sight above you, the view turns right over,
   // and you drift down onto its ice (the same way you land on every world)
   function drawEuropaArrival(R) {
@@ -8225,13 +8256,15 @@
     // Space and Jupiter behind you, turning away
     ctx.save(); ctx.translate(W / 2, pc); ctx.rotate(turn); ctx.translate(-W / 2, -pc);
     ctx.fillStyle = '#04050b'; ctx.fillRect(-W, -H, W * 3, H * 3);
-    drawExitSpace(R, 1);
+    drawExitSpace(R, 1, true);
+    ctx.restore();
+    // Jupiter stays just where it is: only the stars turn
+    { const J = euJupiter(); drawJupiter(J.x, J.y, J.r, 0.7); }
     if (t < EU_UP) {
       // Europa, close now, filling the view and sliding up out of sight
       const k = t / EU_UP, er = lerp(Math.min(W, H) * 0.12, Math.max(W, H) * 0.9, k * k), ey = lerp(H * 0.16, -er - 30, smooth(k));
       drawEuropaGlobe(W / 2, ey, er);
     }
-    ctx.restore();
     // Europa's ground, turning in from above to right way up under you
     if (t >= EU_UP) {
       ctx.save(); ctx.translate(W / 2, pc); ctx.rotate(turn - Math.PI); ctx.translate(-W / 2, -pc);
@@ -8264,19 +8297,53 @@
       ctx.fillStyle = `rgba(230,240,255,${0.35 * (1 - k)})`; ctx.beginPath(); ctx.arc(sx, sy, 4 + k * 14, 0, TAU); ctx.fill();
     }
     const ice = ctx.createLinearGradient(0, H * 0.7, 0, H);
-    ice.addColorStop(0, '#f4f1ea'); ice.addColorStop(0.4, '#ddd3c0'); ice.addColorStop(1, '#a9b8c8');
+    ice.addColorStop(0, '#f7f3ea'); ice.addColorStop(0.3, '#e6ddcb'); ice.addColorStop(1, '#b4c4d4');
     ctx.fillStyle = ice; ctx.beginPath(); ctx.arc(ecx, ecy, ER, 0, TAU); ctx.fill();
     ctx.save(); ctx.beginPath(); ctx.arc(ecx, ecy, ER, 0, TAU); ctx.clip();
-    // Double ridges: pairs of raised lines with a groove down the middle
-    for (let i = 0; i < 6; i++) {
-      const x0 = ((i * 173) % (W + 200)) - 100, y0 = H * 0.74 + (i % 3) * 22;
-      for (const [dy, col, lw] of [[0, 'rgba(120,70,45,0.75)', 5], [-4, 'rgba(255,255,255,0.7)', 2], [4, 'rgba(255,255,255,0.5)', 2]]) {
-        ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); ctx.moveTo(x0, y0 + dy); ctx.bezierCurveTo(x0 + 130, y0 + 30 + dy, x0 + 260, y0 - 10 + dy, x0 + 420, y0 + 70 + dy); ctx.stroke();
+    const hy = H * 0.72, gy = (t) => hy + (H + 60 - hy) * Math.pow(t, 1.7); // nearer is lower down, and bigger
+    // A haze of reddish-brown far off along the horizon
+    const hz = ctx.createLinearGradient(0, hy, 0, hy + 34);
+    hz.addColorStop(0, 'rgba(160,100,68,0.35)'); hz.addColorStop(1, 'rgba(160,100,68,0)');
+    ctx.fillStyle = hz; ctx.fillRect(0, hy - 4, W, 40);
+    // Big reddish-brown stains, broadest close to you
+    for (const [u, v, sw] of [[0.3, 0.55, 0.26], [0.78, 0.8, 0.3], [0.55, 0.25, 0.14]]) {
+      const yy = gy(v), rr = sw * W * (0.4 + v);
+      const sg = ctx.createRadialGradient(u * W, yy, 0, u * W, yy, rr);
+      sg.addColorStop(0, 'rgba(150,90,58,0.3)'); sg.addColorStop(1, 'rgba(150,90,58,0)');
+      ctx.fillStyle = sg; ctx.beginPath(); ctx.ellipse(u * W, yy, rr, rr * 0.3, 0, 0, TAU); ctx.fill();
+    }
+    // Double ridges: two bright crests with a groove between and a stain of
+    // brown either side, some running off to the horizon, some across the
+    // plain, all getting bigger as they come towards you
+    const ridge = (pt, n, wMax) => {
+      for (let i = 0; i < n; i++) {
+        const t0 = i / n, t1 = (i + 1) / n, [x0, y0, d0] = pt(t0), [x1, y1, d1] = pt(t1), w0 = 1 + wMax * d0, w = 1 + wMax * d1;
+        ctx.strokeStyle = 'rgba(140,80,48,0.22)'; ctx.lineWidth = w * 3; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.strokeStyle = 'rgba(122,66,40,0.55)'; ctx.lineWidth = Math.max(1, w * 0.4); ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        for (const sgn of [-1, 1]) { ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = Math.max(1, w * 0.18); ctx.beginPath(); ctx.moveTo(x0 + w0 * 0.55 * sgn, y0 - w0 * 0.1); ctx.lineTo(x1 + w * 0.55 * sgn, y1 - w * 0.1); ctx.stroke(); }
+      }
+    };
+    for (const [u0, du, sd] of [[0.3, -0.7, 1], [0.6, 0.9, 2]]) ridge((t) => [W * (u0 + du * t) + Math.sin(t * 4 + sd) * 18 * t, gy(t), t], 16, 9);
+    for (const [d, tilt, sd] of [[0.12, 0.02, 1], [0.3, -0.05, 2], [0.62, 0.04, 3]]) ridge((t) => [-40 + (W + 80) * t, gy(d) + (t - 0.5) * tilt * W + Math.sin(t * 5 + sd) * 10 * d, d], 20, 10);
+    // Thin cracks across the plains, near the horizon
+    ctx.strokeStyle = 'rgba(130,72,44,0.55)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 7; i++) { const y = gy(0.05 + i * 0.05), x0 = ((i * 0.37) % 1) * W; ctx.beginPath(); ctx.moveTo(x0 - 80, y); ctx.lineTo(x0 + 40, y + 2); ctx.lineTo(x0 + 160, y - 1); ctx.stroke(); }
+    // Chaos terrain off to the left: rafts of old crust, broken and tilted,
+    // frozen into a jumble of darker ice
+    { const mx = W * 0.14, my = gy(0.42);
+      ctx.fillStyle = 'rgba(140,86,56,0.45)'; ctx.beginPath(); ctx.ellipse(mx, my, W * 0.16, 26, 0, 0, TAU); ctx.fill();
+      for (let i = 0; i < 9; i++) {
+        const bx = mx + (((i * 0.53) % 1) - 0.5) * W * 0.26, by = my + ((i * 0.31) % 1 - 0.5) * 36, bw = 14 + (i % 4) * 7, tl = ((i % 3) - 1) * 0.25, hh = 5 + (i % 3) * 3;
+        ctx.fillStyle = '#9fb3c8'; ctx.beginPath(); ctx.moveTo(bx - bw / 2, by); ctx.lineTo(bx + bw / 2, by + tl * bw); ctx.lineTo(bx + bw / 2, by + tl * bw + hh); ctx.lineTo(bx - bw / 2, by + hh); ctx.fill();
+        ctx.fillStyle = i % 2 ? '#f1ebdf' : '#e3dccd'; ctx.beginPath(); ctx.moveTo(bx - bw / 2, by); ctx.lineTo(bx + bw / 2, by + tl * bw); ctx.lineTo(bx + bw / 2 - 5, by + tl * bw - 5); ctx.lineTo(bx - bw / 2 - 5, by - 5); ctx.fill();
       }
     }
-    // Chaos terrain: broken blocks of ice that refroze
-    for (let i = 0; i < 9; i++) { const x = W * 0.08 + i * 26, y = H * 0.8 + (i % 3) * 14; px(x, y, 20, 12, i % 2 ? '#cfd8e2' : '#e9e2d4'); px(x, y, 20, 2, '#ffffff'); }
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(0, H * 0.72, W, 3);
+    // Glints of frost
+    for (let i = 0; i < 40; i++) { const t = ((i * 0.618) % 1), x = ((i * 0.377) % 1) * W; px(x, gy(t), 1 + t * 3, 1 + t * 2, `rgba(255,255,255,${0.4 + 0.4 * Math.sin(clock * 2 + i)})`); }
+    // The bright rim of the horizon
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ecx, ecy, ER - 1, Math.PI * 1.2, Math.PI * 1.8); ctx.stroke();
     // Cracks spreading out from under your feet as the ice gives way
     const ck = R.phase === 'ocean' ? 1 : R.crack || 0;
     if (ck > 0) {
