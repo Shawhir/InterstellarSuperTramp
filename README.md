@@ -402,7 +402,7 @@ you off: the run, straight through Jupiter, and on to Europa and its ocean.
   Dinkinesh's moon, the Hildas, Jupiter's insides, Europa's ocean and Europa
   Clipper (launched 2024, arriving 2030).
 
-## Level 7: Europa to Saturn's rings
+## Level 7: Europa to Titan, by way of Saturn's rings
 
 Reach the seafloor of Europa at the end of level 5 and carry straight on
 (score and all), or start from the title screen.
@@ -416,23 +416,28 @@ Reach the seafloor of Europa at the end of level 5 and carry straight on
 - **Up out of Jupiter's grip.** Bounce up off puffs of Europa's plumes and
   slabs of ice, out of its orbit and through Jupiter's radiation belts
   (dodge the bursts), with Jupiter's pull getting stronger as you climb.
-- **Catch the comet.** At the top a comet swings back and forth across the
-  sky. Time it and land on it, and it carries you away. Miss it, and
-  Jupiter's pull drags you back down to Europa.
-- **The comet ride.** You ride the comet's frosty nucleus, its coma glowing
-  round you and its tail streaming out behind, while Jupiter falls away
-  behind you and Saturn grows ahead (both starting just where they were in
-  Europa's sky). Jupiter drags you back at first, then Saturn's pull takes
-  over and you speed up. Dodge comet debris and the icy Centaurs, skim close
-  for CLOSE CALLs, and lean against the pull of Saturn's moons: Phoebe
-  (which goes round backwards), hazy Titan, Rhea, Enceladus (spraying jets
-  of water) and Mimas (with a crater that makes it look like a certain space
-  station from the films).
-- **Into the rings.** At Saturn you leap off the comet and fall into the
-  rings, layer by layer, each edge labelled as you cross it: the braided F
-  ring, the A ring's ice from dust to house-sized boulders, the Encke Gap
-  (with little ravioli-shaped Pan), the Cassini Division, and the bright,
-  packed B ring, where you land on a boulder of ice and plant a flag.
+- **Hitch a ride.** At the top a Cassini-style spacecraft (big white dish,
+  gold-foil body, a little probe on its side) sweeps back and forth across
+  the sky on its way to a slingshot round Jupiter. Land on its dish and it
+  carries you off. Miss it, and Jupiter's pull drags you back down.
+- **The slingshot.** Jupiter starts just where it hung in Europa's sky. The
+  spacecraft swings right round it, fastest at the closest point, while you
+  steer to grab the geoms along the way: a gravity assist, which steals a
+  tiny bit of Jupiter's speed to fling you on faster (Cassini did this in
+  2000). Then the long cruise, the years ticking by (Cassini took three and
+  a half, arriving in 2004).
+- **Saturn, side on.** Saturn huge on the left, its rings stretching away
+  to the right as a band of ice. Jump off the spacecraft and bounce across
+  chunks of ring ice, steering over the gaps: the C ring, the bright B ring,
+  the Cassini Division (one stepping stone), the A ring, the Encke Gap
+  (bounce on little ravioli-shaped Pan) and the braided F ring. Then on out
+  through the faint E ring from moon to moon: Mimas (the space-station
+  lookalike), Enceladus (spraying water from its south pole), Tethys and its
+  little companions Telesto and Calypso, Dione with Helene and Polydeuces,
+  and Rhea, to land on Titan, hazy and orange, Saturn's biggest moon. Fall
+  through the rings and you're back on the last chunk you landed on. Each
+  ring and moon has a note, and the HUD shows how far out from Saturn you
+  are.
 
 ## Secret: conspiracy mode
 
