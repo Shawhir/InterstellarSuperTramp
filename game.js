@@ -810,28 +810,28 @@
     for (const p of plats.filter((q) => q.tier === 0)) for (let i = 0; i < 3; i++) stars.push({ a: p.a + 0.03 * i, R: tierR(0) + 90 + i * 50, taken: false });
     // The mass drivers: long rails with magnet coils that fling ore (and you) out
     for (let i = 0; i < 6; i++) { const d = mk(TOP, 0.55 + (i * TAU) / 6 + (rnd() - 0.5) * 0.2, 'driver'); d.main = true; d.launch = true; }
-    // The run: bands of asteroids (then comet pieces, radiation, and storms
-    // inside Jupiter) right across the way, each with a gap. Through cleanly
-    // and your multiplier goes up; hit one and it costs you points.
+    // The run: no walls, just loose asteroids (then comet pieces, radiation,
+    // and storms inside Jupiter) scattered in your way. Skim close past one for
+    // a close call and your multiplier goes up; hit one and it costs points.
+    // And Jupiter's big moons, whose gravity drags you towards them.
     const run = [];
-    let d = 900, gap = 0;
+    let d = 900;
     while (d < RUN_LEN + DIVE_LEN - 300) {
       const f = d / RUN_LEN, dive = d >= RUN_LEN;
       const kind = dive ? 'storm' : f < 0.3 ? 'rock' : f < 0.45 ? 'open' : f < 0.6 ? 'hilda' : f < 0.75 ? 'frag' : 'spark';
-      gap = clamp(gap + (rnd() - 0.5) * 1.1, -0.72, 0.72);
-      const gw = kind === 'open' ? 0.42 : dive ? 0.34 : 0.3, rocks = [];
-      const gaps = kind === 'open' ? [gap, gap > 0 ? gap - 1.1 : gap + 1.1] : [gap];
-      for (let u = -1.2; u <= 1.2;) {
+      const n = dive ? 1 + (rnd() < 0.4 ? 1 : 0) : 1 + Math.floor(rnd() * (f < 0.25 ? 2 : 3)), rocks = [];
+      for (let k = 0; k < n; k++) {
         const r = kind === 'spark' ? 11 : kind === 'frag' ? 10 + rnd() * 6 : 14 + rnd() * 14;
-        const step = (r * 2 + 10) / 330;
-        if (!gaps.some((g) => Math.abs(u - g) < gw + step / 2)) rocks.push({ u, r, spin: rnd() * TAU, turn: (rnd() - 0.5) * 3, ph: rnd() * TAU, shape: Array.from({ length: 9 }, () => 0.72 + rnd() * 0.28) });
-        u += step;
+        let u = 0, tries = 0;
+        do { u = rnd() * 2.1 - 1.05; } while (rocks.some((o) => Math.abs(o.u - u) < 0.4) && ++tries < 10);
+        rocks.push({ u, r, spin: rnd() * TAU, turn: (rnd() - 0.5) * 3, ph: rnd() * TAU, shape: Array.from({ length: 9 }, () => 0.72 + rnd() * 0.28) });
       }
-      run.push({ d, kind, rocks, gap, vu: kind === 'frag' ? (rnd() < 0.5 ? -1 : 1) * (0.1 + rnd() * 0.08) : 0, off: 0 });
-      if (run.length % 2 === 0) stars.push({ run: true, d: d + 2, u: gap, taken: false });
-      // Further apart the faster you're going, so there's always time to react
-      d += dive ? 700 + rnd() * 80 : (lerp(380, 900, f * f) + rnd() * 80) * (kind === 'open' ? 1.5 : 1);
+      run.push({ d, kind, rocks, gap: 0, vu: kind === 'frag' ? (rnd() < 0.5 ? -1 : 1) * (0.1 + rnd() * 0.08) : 0, off: 0 });
+      if (run.length % 3 === 0) stars.push({ run: true, d: d + 170, u: rnd() * 1.6 - 0.8, taken: false });
+      d += dive ? 480 + rnd() * 160 : lerp(300, 460, f) + rnd() * 140;
     }
+    const moons = [['callisto', 0.33, -1, 130, 1], ['ganymede', 0.52, 1, 150, 1.3], ['europa', 0.7, -1, 105, 0.9], ['io', 0.86, 1, 112, 1]]
+      .map(([name, f, side, r, pull]) => ({ name, d: f * RUN_LEN, side, r, pull }));
     // Europa's ocean: glowing geoms to grab on the way down
     for (let od = 500; od < OCEAN_LEN - 400; od += 380 + rnd() * 200) stars.push({ ocean: true, d: od, u: rnd() * 1.6 - 0.8, taken: false });
     stars.forEach((st, i) => { st.id = i; });
@@ -854,7 +854,7 @@
       for (let i = 0; i < n; i++) far.push({ x: rnd(), y: rnd(), r: r0 + rnd() * (r1 - r0), depth: d0 + rnd() * (d1 - d0), spin: rnd() * TAU, turn: (rnd() - 0.5) * 0.5, shape: Array.from({ length: 9 }, () => 0.72 + rnd() * 0.28) });
     }
     far.sort((p, q) => p.depth - q.depth);
-    return { seed, plats, stars, decor, crust, swirls: [], sky, ranges: [], issPlat: null, beams: [], dust: [], rocks, pops, far, run };
+    return { seed, plats, stars, decor, crust, swirls: [], sky, ranges: [], issPlat: null, beams: [], dust: [], rocks, pops, far, run, moons };
   }
 
   // ---- State ----------------------------------------------------------------
@@ -1013,7 +1013,7 @@
       if (R.phase !== 'run') return R.phase === 'exit' ? 'Past Jupiter' : R.phase === 'ocean' ? "Europa's ocean" : 'Europa';
       const f = runF(), k = diveK();
       const name = R.d >= RUN_LEN ? (k < 0.2 || k > 0.85 ? 'Jupiter: cloud tops' : k < 0.4 || k > 0.65 ? 'Jupiter: deep down' : 'Jupiter: the middle') : f < 0.26 ? 'Outer belt' : f < 0.44 ? 'Past the belt' : f < 0.6 ? 'Hilda asteroids' : f < 0.75 ? 'Comet pieces' : 'Radiation belts';
-      return `${name} · ${Math.round(R.v * 0.045)} km/s`;
+      return `${name} · ${Math.round(R.v * 0.03)} km/s`;
     }
     if (level === 6 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? (player.r <= R0 + 1 ? 'In Pellucidar' : `On the floor: ${HOLLOW[hollowZone(tierFloat(player.r) + 0.5)].name}`) : 'Pellucidar';
     if (level === 5 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? `On ${l5Start.name}` : `${l5Start.name} base`;
@@ -1871,14 +1871,18 @@
   // and out the other side, down onto Europa, and into the ocean under its ice.
   const RUN_Y = 0.76; // where you fly on the screen, from the top
   const RUN_NOTES = [
-    [0.03 * RUN_LEN, 'EMPTY SPACE', "Coasting through empty space. Slow going… but Jupiter's gravity is already starting to pull."],
-    [0.16 * RUN_LEN, 'OUTER BELT', 'The last of the asteroid belt. Thread the gaps: every band you get through cleanly adds to your multiplier.'],
+    [0.03 * RUN_LEN, 'EMPTY SPACE', "Out into empty space, and Jupiter's gravity is already pulling you in."],
+    [0.12 * RUN_LEN, 'OUTER BELT', 'The last stray asteroids of the belt. Skim close past one for a CLOSE CALL and your multiplier goes up. Clip one and it costs you points.'],
     [0.26 * RUN_LEN, 'EDGE OF THE BELT', "The outer edge of the main belt. Beyond here, Jupiter's pull has swept most of the asteroids away."],
     [0.36 * RUN_LEN, "JUPITER'S PULL", "Jupiter's gravity has you now: from here it pulls you in faster and faster."],
+    [0.29 * RUN_LEN, 'CALLISTO', "Callisto, one of the most heavily cratered worlds we know of. Its gravity drags you sideways: steer against it!"],
     [0.44 * RUN_LEN, 'HILDA ASTEROIDS', "The Hildas go round the Sun three times for every two of Jupiter's orbits, and bunch up in a giant triangle. Here comes a corner of it!"],
-    [0.6 * RUN_LEN, 'COMET PIECES', "A comet torn apart by Jupiter's gravity, like Shoemaker-Levy 9: its pieces smashed into Jupiter in 1994. These bands drift!"],
+    [0.48 * RUN_LEN, 'GANYMEDE', 'Ganymede: the biggest moon in the Solar System, bigger than the planet Mercury. Its pull is the strongest. Keep away!'],
+    [0.6 * RUN_LEN, 'COMET PIECES', "A comet torn apart by Jupiter's gravity, like Shoemaker-Levy 9: its pieces smashed into Jupiter in 1994. They drift across your path!"],
+    [0.66 * RUN_LEN, 'EUROPA', "Europa, with an ocean hidden under its ice. You'll be back soon, so don't let it catch you yet."],
     [0.75 * RUN_LEN, 'RADIATION BELTS', "Jupiter's radiation belts are the fiercest of any planet. Europa Clipper keeps its electronics in a thick metal vault."],
-    [0.84 * RUN_LEN, 'FALLING FAST', 'Falling towards Jupiter, the Juno probe reached about 265,000 km/h: one of the fastest speeds any spacecraft has ever hit.'],
+    [0.81 * RUN_LEN, 'IO', 'Io: the most volcanic place in the Solar System, squeezed and stretched by the pull of Jupiter and its other moons.'],
+    [0.89 * RUN_LEN, 'FALLING FAST', 'Falling towards Jupiter, the Juno probe reached about 265,000 km/h: one of the fastest speeds any spacecraft has ever hit.'],
     [0.93 * RUN_LEN, 'JUPITER', "Jupiter: so big that all the other planets would fit inside it. It has no solid surface to hit… so you're going in."],
     [RUN_LEN + 0.12 * DIVE_LEN, 'LIGHTNING', 'Jupiter has lightning too: the Juno probe has seen flashes deep in its clouds.'],
     [RUN_LEN + 0.3 * DIVE_LEN, 'LIQUID HYDROGEN', 'Deeper in, the squeeze is so huge that hydrogen turns to liquid. Some scientists think it may even rain diamonds deep inside giant planets.'],
@@ -1896,8 +1900,8 @@
     fx.pops = []; particles = [];
     addScore(1000);
     banner('MASS DRIVER!', 'FLAT OUT FOR JUPITER');
-    toast(touch ? "Flung off a mass driver, out into empty space. Steer with ◀ ▶ (or tilt) through the gap in each band. Jupiter's gravity will soon pick you up."
-      : "Flung off a mass driver, out into empty space. Steer with ← → through the gap in each band. Jupiter's gravity will soon pick you up.", 6);
+    toast(touch ? "Flung off a mass driver, and Jupiter's gravity has you. Steer with ◀ ▶ (or tilt): dodge the asteroids, and keep clear of the big moons' pull."
+      : "Flung off a mass driver, and Jupiter's gravity has you. Steer with ← →: dodge the asteroids, and keep clear of the big moons' pull.", 6);
     sfx.whoosh(); sfx.tier(); addShake(10); fx.flash = 0.5; buzz([30, 30, 60]);
   }
   function runSteer(dt, lane) {
@@ -1917,19 +1921,38 @@
       // Jupiter's gravity: slow going in empty space at first, then it pulls
       // you in faster and faster the closer you get (speed rises as one over
       // the square root of the distance left). Climbing out the far side, you slow.
-      const want = R.d < RUN_LEN ? 240 + 264 * (1 / Math.sqrt(1 - runF() + 0.04) - 1 / Math.sqrt(1.04)) : lerp(1300, 700, diveK());
-      R.v = approach(R.v, want, 900 * dt);
+      // (It's a fall: as fast as dropping through the hollow Earth, and faster.)
+      const want = R.d < RUN_LEN ? Math.min(2400, 900 + 600 * (1 / Math.sqrt(1 - runF() + 0.04) - 1 / Math.sqrt(1.04))) : lerp(2100, 900, diveK());
+      R.v = approach(R.v, want, 1500 * dt);
       // How fast it *looks*: the stars and dust stream by far faster than the
-      // bands come at you, so near Jupiter it feels like a fall from the sky
-      R.vis = R.v * (R.d < RUN_LEN ? 1 + 2.4 * runF() * runF() : 2.6 - 1.4 * diveK());
+      // asteroids come at you (they stay dodgeable), so it feels like a fall
+      R.vis = R.v * (R.d < RUN_LEN ? 1.3 + 1.2 * runF() * runF() : 2.2 - 1.0 * diveK());
       R.vd = (R.vd || 0) + R.vis * dt;
-      if (R.v > 600) shake = Math.max(shake, (R.v - 600) / 70);
+      if (R.v > 500) shake = Math.max(shake, (R.v - 500) / 60);
+      R.adv = Math.min(R.v, R.d < RUN_LEN ? lerp(620, 960, runF()) : 900);
       // Hitting Jupiter's air at this speed: a fireball, just like falling to Earth
       R.heat = R.d < RUN_LEN ? clamp((runF() - 0.86) / 0.14, 0, 1) : clamp(1 - diveK() / 0.3, 0, 1);
-      R.d += R.v * dt;
+      R.d += R.adv * dt;
       R.hitT = Math.max(0, R.hitT - dt);
       runSteer(dt, lane);
       const bx = W / 2 + R.x, by = py - 24;
+      // The big moons: each one's gravity drags you sideways towards it
+      for (const m of world.moons || []) {
+        const my = py - (m.d - R.d), mx = W / 2 + m.side * (lane + m.r * 0.55);
+        if (my > H + m.r + 200 || my < -m.r - 400) continue;
+        const dist = Math.hypot(mx - bx, my - by);
+        const drift = Math.min(560, 1500 * m.pull * (190 / Math.max(dist, 190)) ** 2);
+        R.x += Math.sign(mx - bx) * drift * dt * clamp(1 - Math.abs(my - by) / 520, 0, 1) * 1.6;
+        if (Math.abs(R.x) > lane) R.x = Math.sign(R.x) * lane;
+        if (!m.told && my > -m.r) { m.told = true; pop(`${m.name.toUpperCase()}'S PULL!`, '#ffd6a0', player.r + 120); }
+        if (R.hitT <= 0 && dist < m.r + 14) {
+          R.hitT = 0.7; R.vx = -m.side * 560; R.x -= m.side * 20;
+          const loss = Math.min(Math.round(score), 300 + Math.round(score * 0.05));
+          score -= loss; updateScoreHud(); R.streak = 0;
+          fx.flash = 0.3; addShake(12); sfx.thud(); buzz([40, 30, 80]);
+          pop(`CAUGHT BY ${m.name.toUpperCase()}! -${fmtScore(loss)}`, '#ff5a4a', player.r + 90);
+        }
+      }
       for (const b of world.run) {
         const y = py - (b.d - R.d);
         if (y > H + 80 || y < -120) continue;
@@ -1952,11 +1975,14 @@
         }
         if (!b.passed && y > by + 10) {
           b.passed = true;
-          if (!b.hit) {
+          // Skimmed one without touching: a close call
+          const near = !b.hit && b.rocks.some((o) => Math.abs(W / 2 + bandU(b, o) * lane - bx) < o.r + 58);
+          if (near) {
             addMult(); addScore(50); R.streak = (R.streak || 0) + 1;
             if (R.streak % 5 === 0) { addScore(50 * R.streak); pop(`STREAK ${R.streak}!`, '#ffd23f', player.r + 110); sfx.perfect(); for (let i = 0; i < 14; i++) R.trail.push({ x: bx, y: by, vx: (Math.random() - 0.5) * 360, vy: (Math.random() - 0.5) * 360, t: 0, life: 0.6, c: '#ffd23f' }); }
-            else pop(`x${mult}`, '#6dff7a', player.r + 70);
-          } else R.streak = 0;
+            else pop(`CLOSE CALL! x${mult}`, '#6dff7a', player.r + 70);
+          } else if (b.hit) R.streak = 0;
+          else addScore(10);
         }
       }
       for (const g of world.stars) {
@@ -7028,18 +7054,14 @@
         if (Math.abs(x - W / 2) < lane * 0.5 && i % 3) continue;
         ctx.fillRect(x, y, 2, 30 + vis * 0.09);
       }
-      // Where the next band's gap is, before it comes on screen
-      const nb = world.run.find((b) => py - (b.d - R.d) < -20);
-      if (nb && !nb.passed) {
-        const gx = W / 2 + (nb.gap + nb.off) * lane, al = 0.5 + 0.4 * Math.sin(clock * 8);
-        ctx.fillStyle = `rgba(109,255,122,${al})`; ctx.beginPath(); ctx.moveTo(gx - 12, 6); ctx.lineTo(gx + 12, 6); ctx.lineTo(gx, 20); ctx.fill();
+      for (const m of world.moons || []) {
+        const my = py - (m.d - R.d);
+        if (my > H + m.r + 40 || my < -m.r - 40) continue;
+        drawRunMoon(m, W / 2 + m.side * (lane + m.r * 0.55), my);
       }
       for (const b of world.run) {
         const y = py - (b.d - R.d);
         if (y > H + 60 || y < -60) continue;
-        // A faint line marks the band, green once you're through it
-        ctx.fillStyle = b.passed ? (b.hit ? 'rgba(255,90,74,0.25)' : 'rgba(109,255,122,0.3)') : 'rgba(238,241,255,0.08)';
-        ctx.fillRect(W / 2 - lane - 30, y, lane * 2 + 60, 2);
         for (const o of b.rocks) drawRunThing(b.kind, o, W / 2 + bandU(b, o) * lane, y);
       }
       for (const g of world.stars) {
@@ -7134,6 +7156,37 @@
         ctx.stroke();
       }
     }
+  }
+  // Jupiter's four big moons, and the pull of their gravity rippling in
+  const RUN_MOONS = {
+    callisto: { body: '#5a4d42', spots: '#a89a88' },
+    ganymede: { body: '#8a7d70', spots: '#c9bfae' },
+    europa: { body: '#e8dfcf', spots: '#a8603a' },
+    io: { body: '#e9c84a', spots: '#b8501a' },
+  };
+  function drawRunMoon(m, x, y) {
+    const C = RUN_MOONS[m.name];
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 4; i++) {
+      const k = (clock * 0.7 + i / 4) % 1, rr = m.r * (1.1 + (1 - k) * 2.4);
+      ctx.strokeStyle = `rgba(255,214,160,${0.22 * k})`; ctx.beginPath(); ctx.arc(x, y, rr, 0, TAU); ctx.stroke();
+    }
+    ctx.fillStyle = C.body; ctx.beginPath(); ctx.arc(x, y, m.r, 0, TAU); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, m.r, 0, TAU); ctx.clip();
+    ctx.fillStyle = C.spots;
+    for (let i = 0; i < 18; i++) {
+      const a = i * 2.39996, d = Math.sqrt((i + 0.5) / 18) * m.r * 0.92, r = m.r * (0.05 + ((i * 37) % 7) * 0.012);
+      if (m.name === 'europa') { ctx.strokeStyle = C.spots; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * d, y + Math.sin(a) * d); ctx.lineTo(x + Math.cos(a + 1.4) * d, y + Math.sin(a + 1.4) * d); ctx.stroke(); }
+      else { ctx.beginPath(); ctx.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r, 0, TAU); ctx.fill(); }
+    }
+    if (m.name === 'io') for (let i = 0; i < 3; i++) { const a = i * 2.1 + 0.5, t = (clock * 0.8 + i / 3) % 1, vx = x + Math.cos(a) * m.r * 0.5, vy = y + Math.sin(a) * m.r * 0.5; ctx.fillStyle = `rgba(255,200,120,${0.6 * (1 - t)})`; ctx.beginPath(); ctx.arc(vx, vy - t * 30, 4 + t * 14, 0, TAU); ctx.fill(); }
+    // Lit from the Sun on one side, in shadow on the other
+    const sh = ctx.createLinearGradient(x - m.r, y, x + m.r, y);
+    sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.45)');
+    ctx.fillStyle = sh; ctx.fillRect(x - m.r, y - m.r, m.r * 2, m.r * 2);
+    ctx.restore();
+    ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,240,220,0.85)';
+    ctx.fillText(m.name.toUpperCase(), x - m.side * m.r * 0.3, y - m.r - 10); ctx.textAlign = 'start';
   }
   function drawRunThing(kind, o, x, y) {
     ctx.save(); ctx.translate(x, y);
