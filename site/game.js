@@ -768,7 +768,7 @@
   // dark asteroids scattered through its whole depth, with pinball and pop
   // bumpers between, and the miners' mass drivers along the top.
   const RUN_LEN = 16000; // how far the run to Jupiter goes, px
-  const DIVE_LEN = 7000; // then right through Jupiter
+  const DIVE_LEN = 11000; // then right through Jupiter, layer by layer
   const OCEAN_LEN = 5200; // and at the end, down into Europa's ocean
   function buildWorld5(seed) {
     const rnd = mulberry32(seed);
@@ -1012,7 +1012,7 @@
       const R = fx.run;
       if (R.phase !== 'run') return R.phase === 'exit' ? 'Past Jupiter' : R.phase === 'ocean' ? "Europa's ocean" : 'Europa';
       const f = runF(), k = diveK();
-      const name = R.d >= RUN_LEN ? (k < 0.2 || k > 0.85 ? 'Jupiter: cloud tops' : k < 0.4 || k > 0.65 ? 'Jupiter: deep down' : 'Jupiter: the middle') : f < 0.26 ? 'Outer belt' : f < 0.44 ? 'Past the belt' : f < 0.6 ? 'Hilda asteroids' : f < 0.75 ? 'Comet pieces' : 'Radiation belts';
+      const name = R.d >= RUN_LEN ? `Jupiter: ${JUP_LAYERS[jupLayer(R.d)].name.toLowerCase()}` : f < 0.26 ? 'Outer belt' : f < 0.44 ? 'Past the belt' : f < 0.6 ? 'Hilda asteroids' : f < 0.75 ? 'Comet pieces' : 'Radiation belts';
       return `${name} · ${Math.round(R.v * 0.03)} km/s`;
     }
     if (level === 6 && (player.onGround || tierFloat(player.r) < 1)) return player.onGround ? (player.r <= R0 + 1 ? 'In Pellucidar' : `On the floor: ${HOLLOW[hollowZone(tierFloat(player.r) + 0.5)].name}`) : 'Pellucidar';
@@ -1884,16 +1884,32 @@
     [0.81 * RUN_LEN, 'IO', 'Io: the most volcanic place in the Solar System, squeezed and stretched by the pull of Jupiter and its other moons.'],
     [0.89 * RUN_LEN, 'FALLING FAST', 'Falling towards Jupiter, the Juno probe reached about 265,000 km/h: one of the fastest speeds any spacecraft has ever hit.'],
     [0.93 * RUN_LEN, 'JUPITER', "Jupiter: so big that all the other planets would fit inside it. It has no solid surface to hit… so you're going in."],
-    [RUN_LEN + 0.12 * DIVE_LEN, 'LIGHTNING', 'Jupiter has lightning too: the Juno probe has seen flashes deep in its clouds.'],
-    [RUN_LEN + 0.3 * DIVE_LEN, 'LIQUID HYDROGEN', 'Deeper in, the squeeze is so huge that hydrogen turns to liquid. Some scientists think it may even rain diamonds deep inside giant planets.'],
-    [RUN_LEN + 0.48 * DIVE_LEN, 'METALLIC HYDROGEN', "The middle: hydrogen squeezed so hard it carries electricity like a metal, powering Jupiter's huge magnetic field. (Game physics: nothing could really fly through here!)"],
-    [RUN_LEN + 0.88 * DIVE_LEN, 'OUT THE OTHER SIDE', 'Out through the cloud tops on the far side of Jupiter! The force field held.'],
+    [RUN_LEN + 0.985 * DIVE_LEN, 'OUT THE OTHER SIDE', 'Out through the cloud tops on the far side of Jupiter! The force field held.'],
   ];
   const runLane = () => Math.min(W / 2 - 30, 330);
   // Where you sit on the screen in the run: you start where you were when the
   // mass driver flung you, and glide down to make room to see what's coming
   const runPY = () => H * lerp(0.46, RUN_Y, smooth(clamp(((fx.run && fx.run.age) || 0) / 1.3, 0, 1)));
   const runF = () => (fx.run ? clamp(fx.run.d / RUN_LEN, 0, 1) : 0);
+  // Inside Jupiter, layer by layer, like the fall through the hollow Earth:
+  // down through each layer to the middle, then back up through them all on
+  // the far side. 'at' is how deep each starts (0 the cloud tops, 1 the middle).
+  const JUP_LAYERS = [
+    { at: 0, name: 'AMMONIA ICE CLOUDS', sub: 'THE CLOUD TOPS, ABOUT -145°C', c: ['#f4ead2', '#e2cfa6'], fact: "The cloud tops: white clouds of ammonia ice, at about -145°C. Jupiter's stripes get their colours from what's mixed into them." },
+    { at: 0.1, name: 'AMMONIUM HYDROSULFIDE', sub: 'BROWN CLOUDS', c: ['#c99a6a', '#a26a3a'], fact: 'Lower down: brownish clouds of ammonium hydrosulfide, ammonia mixed with hydrogen sulfide, the gas that smells of rotten eggs.' },
+    { at: 0.2, name: 'WATER CLOUDS', sub: 'WHERE THE LIGHTNING IS', c: ['#7f8ea6', '#525c76'], fact: "Deeper still: clouds of water, where a lot of Jupiter's lightning flashes. (The Juno probe has spotted flashes higher up too.) Mind the bolts!" },
+    { at: 0.32, name: 'HYDROGEN AND HELIUM', sub: 'NO SURFACE, JUST DEEPER', c: ['#8a4a24', '#5a2a14'], fact: "Below the clouds: just hydrogen and helium gas, hotter and thicker the deeper you go. There's no surface to land on." },
+    { at: 0.5, name: 'LIQUID HYDROGEN', sub: 'AN OCEAN WITH NO SHORE', c: ['#6a1e14', '#3e1010'], fact: 'Squeezed so hard the hydrogen turns to liquid: an ocean with no shore. Drops of helium may rain down through it.' },
+    { at: 0.7, name: 'METALLIC HYDROGEN', sub: "WHERE JUPITER'S MAGNETISM COMES FROM", c: ['#222a5a', '#10142e'], fact: "Hydrogen squeezed so hard it carries electricity like a metal. Swirling about, it makes Jupiter's huge magnetic field. (Game physics: nothing could really fly through here!)" },
+    { at: 0.9, name: 'THE CORE', sub: 'THOUSANDS OF DEGREES', c: ['#fff0c0', '#ffa860'], fact: "The middle. The Juno probe found Jupiter's core may be big and 'fuzzy': not a solid ball, but mixed into the hydrogen round it." },
+  ];
+  const jupDepth = (d) => { const k = clamp((d - RUN_LEN) / DIVE_LEN, 0, 1); return 1 - Math.abs(k * 2 - 1); };
+  const jupLayer = (d) => { const dp = jupDepth(d); let i = 0; while (i < JUP_LAYERS.length - 1 && JUP_LAYERS[i + 1].at <= dp) i++; return i; };
+  // Where each boundary is: [distance, layer beyond it, layer before it], in and out
+  const JUP_BOUNDS = [
+    ...JUP_LAYERS.slice(1).map((L, i) => [RUN_LEN + (DIVE_LEN * L.at) / 2, i + 1, i]),
+    ...JUP_LAYERS.slice(1).map((L, i) => [RUN_LEN + DIVE_LEN * (1 - L.at / 2), i, i + 1]).reverse(),
+  ];
   const diveK = () => (fx.run ? clamp((fx.run.d - RUN_LEN) / DIVE_LEN, 0, 1) : 0);
   const bandU = (b, o) => o.u + b.off;
   // The mass driver: it grabs you, its coils charge one after another, then it
@@ -1962,14 +1978,14 @@
       // you in faster and faster the closer you get (speed rises as one over
       // the square root of the distance left). Climbing out the far side, you slow.
       // (It's a fall: as fast as dropping through the hollow Earth, and faster.)
-      const want = R.d < RUN_LEN ? Math.min(2400, 900 + 600 * (1 / Math.sqrt(1 - runF() + 0.04) - 1 / Math.sqrt(1.04))) : lerp(2100, 900, diveK());
+      const want = R.d < RUN_LEN ? Math.min(2600, 1100 + 650 * (1 / Math.sqrt(1 - runF() + 0.04) - 1 / Math.sqrt(1.04))) : 2400 - 900 * diveK();
       R.v = approach(R.v, want, 1500 * dt);
       // How fast it *looks*: the stars and dust stream by far faster than the
       // asteroids come at you (they stay dodgeable), so it feels like a fall
       R.vis = R.v * (R.d < RUN_LEN ? 1.3 + 1.2 * runF() * runF() : 2.2 - 1.0 * diveK());
       R.vd = (R.vd || 0) + R.vis * dt;
       if (R.v > 500) shake = Math.max(shake, (R.v - 500) / 60);
-      R.adv = Math.min(R.v, R.d < RUN_LEN ? lerp(620, 960, runF()) : 900);
+      R.adv = Math.min(R.v, R.d < RUN_LEN ? lerp(780, 1180, runF()) : 1150);
       // Hitting Jupiter's air at this speed: a fireball, just like falling to Earth
       R.heat = R.d < RUN_LEN ? clamp((runF() - 0.86) / 0.14, 0, 1) : clamp(1 - diveK() / 0.3, 0, 1);
       R.d += R.adv * dt;
@@ -2048,7 +2064,16 @@
       if (R.inJ) {
         R.field = Math.min(100, R.field + 3 * dt);
         // Lightning: a warning flicker down a column, then a bolt
-        if (!R.bolt && Math.random() < dt * 0.5 && diveK() < 0.8) R.bolt = { u: R.x / lane + (Math.random() - 0.5) * 0.6, t: 0 };
+        // Crashing through into each new layer
+        const li = jupLayer(R.d);
+        if (li !== R.layer) {
+          const L = JUP_LAYERS[li], deeper = R.layer === undefined || li > R.layer;
+          R.layer = li; R.flashT = 0.15; addShake(10); sfx.thud(); buzz(25);
+          banner(L.name, L.sub);
+          for (let i = 0; i < 24; i++) R.trail.push({ x: W / 2 + R.x + (Math.random() - 0.5) * 160, y: py - 24, vx: (Math.random() - 0.5) * 520, vy: (Math.random() - 0.7) * 420, t: 0, life: 0.7, c: L.c[0] });
+          if (deeper && !(R.seenL || (R.seenL = {}))[li]) { R.seenL[li] = true; toast(L.fact, 6); }
+        }
+        if (!R.bolt && Math.random() < dt * 1.2 && li === 2) R.bolt = { u: R.x / lane + (Math.random() - 0.5) * 0.6, t: 0 };
         if (R.bolt) {
           R.bolt.t += dt;
           if (R.bolt.t > 0.9 && !R.bolt.hit) {
@@ -7117,7 +7142,7 @@
       for (const b of world.run) {
         const y = py - (b.d - R.d);
         // Coming up: a red arrow at the top edge where each one will appear
-        if (y < -10 && y > -320) for (const o of b.rocks) { const x = W / 2 + bandU(b, o) * lane, a = 0.4 + 0.5 * (1 + y / 320); ctx.fillStyle = `rgba(255,90,74,${a})`; ctx.beginPath(); ctx.moveTo(x - 9, 4); ctx.lineTo(x + 9, 4); ctx.lineTo(x, 16); ctx.fill(); }
+        if (y < -10 && y > -460) for (const o of b.rocks) { const x = W / 2 + bandU(b, o) * lane, a = 0.4 + 0.5 * (1 + y / 460); ctx.fillStyle = `rgba(255,90,74,${a})`; ctx.beginPath(); ctx.moveTo(x - 9, 4); ctx.lineTo(x + 9, 4); ctx.lineTo(x, 16); ctx.fill(); }
         if (y > H + 60 || y < -60) continue;
         for (const o of b.rocks) drawRunThing(b.kind, o, W / 2 + bandU(b, o) * lane, y);
       }
@@ -7184,34 +7209,72 @@
   // Inside Jupiter: cloud layers rushing past, then deep orange, then the dark,
   // electric metallic hydrogen at the middle, and back out the far side
   function drawJupiterInside(R) {
-    const k = diveK(), depth = 1 - Math.abs(k - 0.5) * 2; // 0 at the cloud tops, 1 in the middle
-    const top = depth < 0.35 ? mix('#e9d8b4', '#b5794a', depth / 0.35) : depth < 0.75 ? mix('#b5794a', '#5a1a10', (depth - 0.35) / 0.4) : mix('#5a1a10', '#0a0c24', (depth - 0.75) / 0.25);
-    const bot = depth < 0.35 ? mix('#f2e6cf', '#c9a37a', depth / 0.35) : depth < 0.75 ? mix('#c9a37a', '#7a2a14', (depth - 0.35) / 0.4) : mix('#7a2a14', '#141a3a', (depth - 0.75) / 0.25);
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, top); g.addColorStop(1, bot);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    // Cloud bands streaming past, thinning out the deeper you go
-    const scroll = R.d * 0.9;
-    for (let i = 0; i < 9; i++) {
-      const y = ((i * 97 + scroll) % (H + 120)) - 60, h = 18 + (i % 4) * 10;
-      ctx.fillStyle = `rgba(255,248,230,${0.35 * (1 - depth)})`;
-      ctx.fillRect(0, y, W, h);
-      ctx.fillStyle = `rgba(150,90,50,${0.25 * (1 - depth)})`;
-      ctx.fillRect(0, y + h, W, 6);
-    }
-    // Deep down: glowing, and sparkles of (maybe) diamond rain
-    if (depth > 0.4) for (let i = 0; i < 30; i++) {
-      const x = (i * 131) % W, y = (i * 71 + R.d * (0.3 + (i % 3) * 0.2)) % H;
-      px(x, y, 2, 4, `rgba(220,240,255,${(depth - 0.4) * 1.2})`);
-    }
-    // The middle: blue electric shimmer
-    if (depth > 0.75) {
-      ctx.strokeStyle = `rgba(120,170,255,${(depth - 0.75) * 2})`; ctx.lineWidth = 2;
-      for (let i = 0; i < 5; i++) {
-        ctx.beginPath(); let x = (i * 223 + clock * 60) % W; ctx.moveTo(x, 0);
-        for (let y = 0; y < H; y += 40) { x += Math.sin(clock * 7 + i + y) * 18; ctx.lineTo(x, y); }
-        ctx.stroke();
+    const py = runPY(), li = jupLayer(R.d), L = JUP_LAYERS[li], depth = jupDepth(R.d);
+    const fillLayer = (Lr, y0, y1) => { if (y1 <= y0) return; const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, Lr.c[0]); g.addColorStop(1, Lr.c[1]); ctx.fillStyle = g; ctx.fillRect(0, y0, W, y1 - y0); };
+    fillLayer(L, 0, H);
+    jupLayerFx(li, R, 0, H);
+    // The edges of the layers, coming at you with their names on
+    for (const [bd, after, before] of JUP_BOUNDS) {
+      const y = py - (bd - R.d);
+      if (y < -140 || y > H + 140) continue;
+      const ahead = bd > R.d, other = JUP_LAYERS[before];
+      const edge = (x) => y + Math.sin(x * 0.02 + bd) * 10 + Math.sin(x * 0.051 + bd * 2) * 5;
+      ctx.save(); ctx.beginPath();
+      if (ahead) { ctx.moveTo(0, 0); ctx.lineTo(W, 0); for (let x = W; x >= 0; x -= 20) ctx.lineTo(x, edge(x)); }
+      else { ctx.moveTo(0, H); ctx.lineTo(W, H); for (let x = W; x >= 0; x -= 20) ctx.lineTo(x, edge(x)); }
+      ctx.closePath(); ctx.clip();
+      fillLayer(ahead ? JUP_LAYERS[after] : other, 0, H);
+      jupLayerFx(ahead ? after : before, R, 0, H);
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,250,235,0.85)'; ctx.lineWidth = 3; ctx.beginPath();
+      for (let x = 0; x <= W; x += 20) x ? ctx.lineTo(x, edge(x)) : ctx.moveTo(x, edge(x));
+      ctx.stroke();
+      if (ahead) {
+        const Ln = JUP_LAYERS[after];
+        ctx.font = '10px "Press Start 2P", monospace'; ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(10,8,20,0.75)'; ctx.fillText(Ln.name, W / 2 + 1, y - 13);
+        ctx.fillStyle = '#ffffff'; ctx.fillText(Ln.name, W / 2, y - 14);
+        ctx.font = '7px "Press Start 2P", monospace'; ctx.fillStyle = 'rgba(255,245,220,0.9)'; ctx.fillText(Ln.sub, W / 2, y - 30);
+        ctx.textAlign = 'start';
       }
+    }
+    // The deeper you go, the more it glows
+    if (depth > 0.5) { const g = ctx.createRadialGradient(W / 2, H * 0.3, 10, W / 2, H * 0.3, Math.max(W, H)); g.addColorStop(0, `rgba(255,220,160,${(depth - 0.5) * 0.4})`); g.addColorStop(1, 'rgba(255,160,80,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+  }
+  // What each layer looks like as you fall through it
+  function jupLayerFx(li, R, y0, y1) {
+    const sc = R.d;
+    if (li <= 1) {
+      // Cloud bands and wisps streaming past (white ammonia, brown below)
+      for (let i = 0; i < 9; i++) {
+        const y = ((i * 97 + sc * 0.9) % (H + 120)) - 60, h = 18 + (i % 4) * 10;
+        ctx.fillStyle = li === 0 ? 'rgba(255,252,240,0.45)' : 'rgba(120,70,36,0.35)'; ctx.fillRect(0, y, W, h);
+        ctx.fillStyle = li === 0 ? 'rgba(200,150,100,0.25)' : 'rgba(240,200,150,0.25)'; ctx.fillRect(0, y + h, W, 6);
+      }
+      if (li === 0) for (let i = 0; i < 40; i++) px((i * 137) % W, (i * 61 + sc * 1.2) % H, 2, 2, 'rgba(255,255,255,0.8)');
+    } else if (li === 2) {
+      // Water cloud: rain streaks, and the cloud lighting up now and then
+      ctx.fillStyle = 'rgba(200,220,255,0.45)';
+      for (let i = 0; i < 60; i++) ctx.fillRect((i * 151) % W, (i * 89 + sc * 1.6) % H, 1.5, 14);
+      if (Math.sin(clock * 3.1) > 0.97 || Math.sin(clock * 4.7 + 1) > 0.985) { ctx.fillStyle = 'rgba(230,240,255,0.35)'; ctx.fillRect(0, 0, W, H); }
+    } else if (li === 3) {
+      // Hot haze, thicker and thicker
+      for (let i = 0; i < 8; i++) { const y = ((i * 131 + sc * 0.5) % (H + 200)) - 100; ctx.fillStyle = 'rgba(255,170,100,0.12)'; ctx.beginPath(); ctx.ellipse(W * ((i * 0.37) % 1), y, 220, 40, 0, 0, TAU); ctx.fill(); }
+    } else if (li === 4) {
+      // A sea of liquid hydrogen: bubbles rising, helium drops raining down
+      for (let i = 0; i < 30; i++) { ctx.strokeStyle = 'rgba(255,190,150,0.4)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc((i * 173) % W, H - ((i * 67 + sc * 0.7) % H), 3 + (i % 4) * 2, 0, TAU); ctx.stroke(); }
+      for (let i = 0; i < 30; i++) px((i * 211) % W, (i * 53 + sc * 1.3) % H, 2, 5, 'rgba(220,240,255,0.7)');
+    } else if (li === 5) {
+      // Metallic hydrogen: electric currents crackling through it
+      ctx.strokeStyle = 'rgba(140,180,255,0.7)'; ctx.lineWidth = 2;
+      for (let i = 0; i < 6; i++) { ctx.beginPath(); let x = (i * 223 + clock * 60) % W; ctx.moveTo(x, 0); for (let y = 0; y < H; y += 40) { x += Math.sin(clock * 7 + i + y) * 18; ctx.lineTo(x, y); } ctx.stroke(); }
+      for (let i = 0; i < 20; i++) px((i * 97 + clock * 300) % W, (i * 71 + sc) % H, 3, 3, '#cfe0ff');
+    } else {
+      // The core: white-hot, pulsing
+      const g = ctx.createRadialGradient(W / 2, H * 0.35, 10, W / 2, H * 0.35, Math.max(W, H) * 0.7);
+      g.addColorStop(0, `rgba(255,255,255,${0.6 + 0.2 * Math.sin(clock * 4)})`); g.addColorStop(1, 'rgba(255,160,80,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      for (let i = 0; i < 24; i++) { const a = i * 2.39996, r = ((clock * 200 + i * 50) % Math.max(W, H)); px(W / 2 + Math.cos(a) * r, H * 0.35 + Math.sin(a) * r, 3, 3, 'rgba(255,240,200,0.8)'); }
     }
   }
   // Jupiter's four big moons, and the pull of their gravity rippling in
