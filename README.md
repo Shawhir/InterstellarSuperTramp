@@ -331,7 +331,9 @@ and all) towards the Sun, or start here from the title screen.
 ## Level 5: the outer belt to Jupiter and Europa
 
 Land on a belt world at the end of level 3 and carry straight on (score and all),
-or start from the title screen (you start on Ceres).
+or start from the title screen (you start on Ceres). Or pick "The Jupiter run"
+on the title screen to start right on a mass driver as it charges and flings
+you off: the run, straight through Jupiter, and on to Europa and its ocean.
 
 - **The outer belt.** Start on the world you reached, shown in cross-section:
   Ceres with its muddy, salty mantle, Vesta with its iron core. Ceres has
