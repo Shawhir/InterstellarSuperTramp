@@ -7548,10 +7548,10 @@
   }
   // Saturn with its rings (tilted), the back half of the rings behind it
   function drawSaturn(x, y, r, alpha = 1) {
-    ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, y); ctx.rotate(-0.28);
+    ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, y);
     const rings = (from, to) => {
       for (const [k, w, col] of [[1.32, 0.1, 'rgba(180,160,130,0.5)'], [1.55, 0.3, 'rgba(236,220,186,0.95)'], [1.88, 0.05, 'rgba(10,10,20,0.6)'], [2.05, 0.22, 'rgba(214,198,166,0.9)']]) {
-        ctx.strokeStyle = col; ctx.lineWidth = Math.max(1, r * w); ctx.beginPath(); ctx.ellipse(0, 0, r * k, r * k * 0.28, 0, from, to); ctx.stroke();
+        ctx.strokeStyle = col; ctx.lineWidth = Math.max(1, r * w); ctx.beginPath(); ctx.ellipse(0, 0, r * k, r * k * 0.2, 0, from, to); ctx.stroke();
       }
     };
     rings(Math.PI, TAU);
@@ -7566,7 +7566,7 @@
   // round it (C, B, the Cassini Division, A, the Encke Gap, F) and the
   // rings' shadow across the planet
   function drawSaturnBig(x, y, r) {
-    const T = -0.32, E = 0.3;
+    const T = 0, E = 0.2; // level, seen from just above the ring plane
     ctx.save(); ctx.translate(x, y); ctx.rotate(T);
     const RINGS = [[1.24, 1.52, 'rgba(150,135,115,0.45)'], [1.52, 1.95, 'rgba(238,224,192,0.95)'], [1.95, 2.02, 'rgba(10,10,20,0.35)'], [2.02, 2.27, 'rgba(214,198,166,0.92)'], [2.19, 2.2, 'rgba(10,10,20,0.6)'], [2.32, 2.34, 'rgba(240,230,210,0.8)']];
     const ringHalf = (back) => {
@@ -7589,7 +7589,7 @@
     // The pale blue-grey north, and the hexagon storm at the pole
     ctx.fillStyle = 'rgba(150,175,190,0.35)'; ctx.fillRect(-r, -r, r * 2, r * 0.35);
     // The rings' shadow on the planet
-    ctx.fillStyle = 'rgba(40,30,20,0.35)'; ctx.beginPath(); ctx.ellipse(0, -r * 0.1, r * 1.9, r * 0.12, 0, Math.PI, TAU); ctx.ellipse(0, -r * 0.1, r * 1.9, r * 0.05, 0, TAU, Math.PI, true); ctx.fill();
+    ctx.fillStyle = 'rgba(40,30,20,0.35)'; ctx.beginPath(); ctx.ellipse(0, r * 0.06, r * 1.9, r * 0.08, 0, 0, Math.PI); ctx.ellipse(0, r * 0.06, r * 1.9, r * 0.03, 0, Math.PI, 0, true); ctx.fill();
     const sh = ctx.createLinearGradient(-r, 0, r, 0); sh.addColorStop(0, 'rgba(0,0,10,0)'); sh.addColorStop(0.55, 'rgba(0,0,10,0)'); sh.addColorStop(1, 'rgba(0,0,10,0.55)');
     ctx.fillStyle = sh; ctx.fillRect(-r, -r, r * 2, r * 2);
     ctx.restore();

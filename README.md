@@ -427,7 +427,8 @@ Reach the seafloor of Europa at the end of level 5 and carry straight on
   2000). Then the long cruise, the years ticking by (Cassini took three and
   a half, arriving in 2004).
 - **Saturn, side on.** Saturn hangs in the sky behind you in the classic
-  view: the banded gold planet with its rings tilted round it (C, B, the
+  view, level, seen from just above the ring plane: the banded gold planet
+  with its rings round it (C, B, the
   Cassini Division, A, the Encke Gap, F), the rings' shadow across it. It
   drifts and shrinks as you head out. In front of it, the rings stretch away
   to the right as a band of ice. Jump off the spacecraft and bounce across
