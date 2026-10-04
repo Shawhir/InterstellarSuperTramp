@@ -1111,7 +1111,7 @@
       p.breakAt = clock + 0.3;
       if (!fx.crumbleTold) { fx.crumbleTold = true; toast('Cracked asteroids are loose rubble: bounce off one and it falls apart behind you. No going back down that way!', 5); }
     }
-    if (p.launch) { lastTier = TOP; bestTier = TOP; startRun(p); return; }
+    if (p.launch) { lastTier = TOP; bestTier = TOP; startLaunch(p); return; }
     if (p.dest) {
       player.vr = 0; player.onGround = true;
       reachDest(p);
@@ -1890,9 +1890,49 @@
     [RUN_LEN + 0.88 * DIVE_LEN, 'OUT THE OTHER SIDE', 'Out through the cloud tops on the far side of Jupiter! The force field held.'],
   ];
   const runLane = () => Math.min(W / 2 - 30, 330);
+  // Where you sit on the screen in the run: you start where you were when the
+  // mass driver flung you, and glide down to make room to see what's coming
+  const runPY = () => H * lerp(0.46, RUN_Y, smooth(clamp(((fx.run && fx.run.age) || 0) / 1.3, 0, 1)));
   const runF = () => (fx.run ? clamp(fx.run.d / RUN_LEN, 0, 1) : 0);
   const diveK = () => (fx.run ? clamp((fx.run.d - RUN_LEN) / DIVE_LEN, 0, 1) : 0);
   const bandU = (b, o) => o.u + b.off;
+  // The mass driver: it grabs you, its coils charge one after another, then it
+  // flings you up and away; the view fades into the run as you go
+  const LAUNCH_CHARGE = 0.8, LAUNCH_HAND = 1.15, LAUNCH_END = 1.75;
+  function startLaunch(p) {
+    fx.launch = { t: 0, p, coil: 0 };
+    player.vr = 0; player.vx = 0; player.onGround = true; player.r = p.R; player.heat = 0; fx.flames = [];
+    banner('MASS DRIVER', 'CHARGING...'); sfx.tier(); buzz(20);
+  }
+  function updateLaunch(dt) {
+    const L = fx.launch, p = L.p;
+    L.t += dt;
+    if (L.t < LAUNCH_CHARGE) {
+      theta += wrap(-p.a - theta) * Math.min(1, dt * 8);
+      player.squash = 0.5 * (L.t / LAUNCH_CHARGE);
+      shake = Math.max(shake, 1 + 6 * (L.t / LAUNCH_CHARGE));
+      const coil = Math.floor((L.t / LAUNCH_CHARGE) * 6);
+      if (coil > L.coil) { L.coil = coil; sfx.boing(coil, 1 + coil * 0.15); burst(-theta, p.R + 10, '#6dd3ff', 4, 160); }
+    } else {
+      if (!L.flung) {
+        L.flung = true; player.vr = 2200; player.onGround = false; player.squash = -0.8;
+        fx.flash = 0.6; addShake(12); sfx.whoosh(); buzz([30, 30, 60]);
+        burst(-theta, p.R, '#6dd3ff', 24, 520); ring(-theta, p.R, '#6dd3ff', 2.2);
+        banner('MASS DRIVER!', 'FLAT OUT FOR JUPITER');
+      }
+      player.vr += 2500 * dt; player.r += player.vr * dt;
+      cam.r += (player.r - cam.r) * Math.min(1, dt * 14); cam.anchor = lerp(cam.anchor || 0.46, 0.46, dt * 4);
+    }
+    for (const q of particles) { q.R += q.vr * dt; q.a += (q.vt * dt) / q.R; q.vr -= 380 * dt; q.life -= dt; }
+    particles = particles.filter((q) => q.life > 0);
+    for (const q of fx.pops) q.t += dt;
+    fx.pops = fx.pops.filter((q) => q.t < 1.1);
+    if (fx.banner) { fx.banner.t += dt; if (fx.banner.t > 2.6) fx.banner = null; }
+    shake = Math.max(0, shake - dt * 20); fx.flash = Math.max(0, fx.flash - dt * 1.5);
+    player.squash = player.squash < 0 ? Math.min(0, player.squash + dt * 3) : player.squash;
+    if (L.t >= LAUNCH_HAND) startRun(p);
+  }
+  let runFade = null;
   function startRun(p) {
     fx.run = { d: 0, v: 300, x: 0, vx: 0, t: 0, hitT: 0, phase: 'run', pt: 0, told: 0, trail: [], from: p, field: 0, od: 0, flashT: 0, bolt: null };
     document.body.classList.add('run');
@@ -1916,7 +1956,7 @@
   function updateRun(dt) {
     const R = fx.run, lane = runLane();
     R.pt += dt; R.flashT = Math.max(0, R.flashT - dt);
-    const py = H * RUN_Y;
+    const py = runPY();
     if (R.phase === 'run') {
       // Jupiter's gravity: slow going in empty space at first, then it pulls
       // you in faster and faster the closer you get (speed rises as one over
@@ -2073,6 +2113,13 @@
   // The parts of the frame update that still matter during the run
   function updateRunFrame(dt) {
     if (state === 'play') playTime += dt;
+    fx.run.age = (fx.run.age || 0) + dt;
+    if (fx.launch) {
+      // Still rocketing away from the belt in the old view while the run fades in
+      const L = fx.launch; L.t += dt;
+      player.vr += 2500 * dt; player.r += player.vr * dt; cam.r = player.r;
+      if (L.t >= LAUNCH_END) fx.launch = null;
+    }
     updateRun(dt);
     if (snd) { snd.music.set({ tierF: 9 + TOP + runF() * 6, speed: 1 + runF(), won: state === 'won', belt: state === 'play' }); snd.sfx.burn(fx.run.phase === 'run' ? fx.run.heat || 0 : 0); }
     for (const q of fx.pops) q.t += dt;
@@ -3607,6 +3654,7 @@
   function update(dt) {
     clock += dt;
     if (state === 'splash' || state === 'tour' || state === 'descend') { updateIntro(dt); return; }
+    if (fx.launch && !fx.run) { updateLaunch(dt); return; }
     if (fx.run) { updateRunFrame(dt); return; }
     if (fx.arrive) { updateArriveFrame(dt); return; }
     if (fx.climb) { updateClimb(dt); return; }
@@ -5738,11 +5786,18 @@
     driver(p, w) {
       // A mass driver: a magnet rail with glowing coils, pointing up and out
       px(-w / 2, 0, w, 6, '#5d6472'); px(-w / 2, 6, w, 8, '#2a2a36'); px(-w / 2, 0, w, 2, '#c9ced9');
+      const L = fx.launch && fx.launch.p === p ? fx.launch : null, ch = L ? clamp(L.t / LAUNCH_CHARGE, 0, 1) : 0;
       for (let i = 0; i < 6; i++) {
-        const on = (Math.floor(clock * 10) - i) % 6 === 0;
+        const on = L ? i < ch * 6 : (Math.floor(clock * 10) - i) % 6 === 0;
         const x = -w / 2 + 10 + i * ((w - 20) / 5);
-        ctx.strokeStyle = on ? '#6dd3ff' : '#3b6fd8'; ctx.lineWidth = 3;
+        ctx.strokeStyle = on ? (L ? '#ffffff' : '#6dd3ff') : '#3b6fd8'; ctx.lineWidth = L && on ? 4 : 3;
         ctx.beginPath(); ctx.ellipse(x, -10, 6, 14, 0, 0, TAU); ctx.stroke();
+        if (L && on && Math.random() < 0.5) { ctx.strokeStyle = '#bff0ff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, -24); ctx.lineTo(x + (Math.random() - 0.5) * 16, -34 - Math.random() * 14); ctx.stroke(); }
+      }
+      if (L) {
+        const g2 = ctx.createRadialGradient(0, -20, 4, 0, -20, 40 + 80 * ch);
+        g2.addColorStop(0, `rgba(190,240,255,${0.3 + 0.5 * ch})`); g2.addColorStop(1, 'rgba(109,211,255,0)');
+        ctx.fillStyle = g2; ctx.fillRect(-w, -140, w * 2, 160);
       }
       const g = ctx.createLinearGradient(0, 0, 0, -60);
       g.addColorStop(0, 'rgba(109,211,255,0.35)'); g.addColorStop(1, 'rgba(109,211,255,0)');
@@ -6990,7 +7045,7 @@
   // falling behind, the bands coming at you, and Jupiter growing ahead
   function drawRun() {
     const R = fx.run, f = runF(), lane = runLane();
-    const py = H * RUN_Y;
+    const py = runPY();
     ctx.fillStyle = '#04050b'; ctx.fillRect(0, 0, W, H);
     ctx.save();
     if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
@@ -7024,7 +7079,7 @@
         }
         // Warp streaks pouring out of Jupiter as you fall towards it
         if (f > 0.35) {
-          ctx.strokeStyle = `rgba(255,235,200,${Math.min(0.5, (f - 0.35) * 0.9)})`; ctx.lineWidth = 2;
+          ctx.strokeStyle = `rgba(255,235,200,${Math.min(0.28, (f - 0.35) * 0.6)})`; ctx.lineWidth = 2;
           for (let i = 0; i < 46; i++) {
             const a = i * 2.39996, k = ((clock * (0.6 + f * 1.6) + i * 0.137) % 1), r0 = jr + k * k * W, r1 = r0 + 20 + k * (R.vis || sp) * 0.08;
             ctx.beginPath(); ctx.moveTo(W / 2 + Math.cos(a) * r0, H * 0.2 + Math.sin(a) * r0 * 0.8); ctx.lineTo(W / 2 + Math.cos(a) * r1, H * 0.2 + Math.sin(a) * r1 * 0.8); ctx.stroke();
@@ -7051,7 +7106,7 @@
       const vis = R.vis || sp, nLines = Math.round(14 + vis / 120);
       for (let i = 0; i < nLines; i++) {
         const x = ((i * 0.618) % 1) * W, y = (i * 211 + (R.vd || scroll) * 1.2) % (H + 300) - 150;
-        if (Math.abs(x - W / 2) < lane * 0.5 && i % 3) continue;
+        if (Math.abs(x - W / 2) < lane + 20 && i % 4) continue; // keep your path clear to see
         ctx.fillRect(x, y, 2, 30 + vis * 0.09);
       }
       for (const m of world.moons || []) {
@@ -7061,6 +7116,8 @@
       }
       for (const b of world.run) {
         const y = py - (b.d - R.d);
+        // Coming up: a red arrow at the top edge where each one will appear
+        if (y < -10 && y > -320) for (const o of b.rocks) { const x = W / 2 + bandU(b, o) * lane, a = 0.4 + 0.5 * (1 + y / 320); ctx.fillStyle = `rgba(255,90,74,${a})`; ctx.beginPath(); ctx.moveTo(x - 9, 4); ctx.lineTo(x + 9, 4); ctx.lineTo(x, 16); ctx.fill(); }
         if (y > H + 60 || y < -60) continue;
         for (const o of b.rocks) drawRunThing(b.kind, o, W / 2 + bandU(b, o) * lane, y);
       }
@@ -7211,13 +7268,19 @@
       ctx.strokeStyle = Math.sin(clock * 6 + o.ph * 3) > 0.9 ? '#eef4ff' : 'rgba(200,140,90,0.8)'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(0, 0, o.r * 0.6, 0, 4.5); ctx.stroke();
     } else {
+      // A warm danger glow behind, so it stands out against anything
+      const hg = ctx.createRadialGradient(0, 0, o.r * 0.6, 0, 0, o.r * 2);
+      hg.addColorStop(0, 'rgba(255,150,90,0.35)'); hg.addColorStop(1, 'rgba(255,120,80,0)');
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(0, 0, o.r * 2, 0, TAU); ctx.fill();
       ctx.rotate(o.spin + clock * o.turn);
-      ctx.fillStyle = kind === 'hilda' ? '#7a5a48' : '#4e4954';
-      ctx.beginPath(); o.shape.forEach((k, j) => { const ang = (j * TAU) / 9; j ? ctx.lineTo(Math.cos(ang) * o.r * k, Math.sin(ang) * o.r * k) : ctx.moveTo(o.r * k, 0); }); ctx.closePath(); ctx.fill();
+      const path = () => { ctx.beginPath(); o.shape.forEach((k, j) => { const ang = (j * TAU) / 9; j ? ctx.lineTo(Math.cos(ang) * o.r * k, Math.sin(ang) * o.r * k) : ctx.moveTo(o.r * k, 0); }); ctx.closePath(); };
+      path(); ctx.fillStyle = kind === 'hilda' ? '#b88462' : '#9a92a8'; ctx.fill();
+      ctx.strokeStyle = '#0b0b14'; ctx.lineWidth = 3; ctx.stroke();
       ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.arc(-o.r * 0.3, -o.r * 0.2, o.r * 0.25, 0, TAU); ctx.fill();
       ctx.rotate(-(o.spin + clock * o.turn));
-      ctx.strokeStyle = 'rgba(255,240,210,0.3)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, o.r * 0.85, 0.4, Math.PI - 0.4); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,240,210,0.9)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(0, 0, o.r * 0.8, 3.6, 5.6); ctx.stroke();
     }
+    if (kind === 'frag' || kind === 'spark' || kind === 'storm') { ctx.strokeStyle = 'rgba(11,11,20,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, (kind === 'storm' ? o.r + 6 : o.r * 0.75 + 2), 0, TAU); ctx.stroke(); }
     ctx.restore();
   }
   // Europa, as seen from space: pale ice criss-crossed with reddish-brown
@@ -7354,6 +7417,15 @@
       return;
     }
     if (fx.climb) { drawClimb(); drawBanner(); drawRail(); return; }
+    if (fx.launch && fx.run) {
+      // The old view, flying away, fading out over the run
+      const R = fx.run; fx.run = null; renderWorld(); fx.run = R;
+      runFade = canvasLike(runFade);
+      const b = runFade.getContext('2d'); b.setTransform(1, 0, 0, 1, 0, 0); b.globalCompositeOperation = 'copy'; b.drawImage(canvas, 0, 0); b.globalCompositeOperation = 'source-over';
+      renderWorld();
+      ctx.save(); ctx.globalAlpha = 1 - smooth(clamp((fx.launch.t - LAUNCH_HAND) / (LAUNCH_END - LAUNCH_HAND), 0, 1)); ctx.drawImage(runFade, 0, 0, W, H); ctx.restore();
+      return;
+    }
     renderWorld();
     if (fx.land) drawLandSnap();
     if (fx.burrow) {
