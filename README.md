@@ -344,7 +344,7 @@ or start from the title screen (you start on Ceres).
   coils charge one after another with sparks, and it flings you up and away
   in a flash, the view blending into the run as you go. From there it's a fall: Jupiter's
   gravity has you, and it's all about the thrill. You start fast and it pulls
-  you in faster and faster, up to about 2,400 px/s, faster than the fall
+  you in faster and faster, up to about 2,600 px/s, faster than the fall
   through the hollow Earth (your speed shows in km/s, up to about 72, near
   the real Juno probe's 265,000 km/h). Stars, dust, speed lines and warp
   streaks pour past, the screen shakes, and you hit Jupiter's air as a
@@ -364,10 +364,18 @@ or start from the title screen (you start on Ceres).
   sit in a slim strip at the bottom and banners are see-through, so nothing
   hides what's coming.
 - **Through Jupiter.** Jupiter grows ahead the whole way. When you reach it,
-  a force field comes on and you go straight in: through the cloud tops,
-  lightning, liquid hydrogen (where it may rain diamonds) and the metallic
-  hydrogen at the middle, then out the other side. Storms and lightning
-  weaken the field, and what's left is bonus points.
+  a force field comes on and you fall straight in, layer by layer, like the
+  fall through the hollow Earth: each layer's edge comes up at you with its
+  name on it, and you crash through with a burst and a banner. Down through
+  the white ammonia ice clouds (about -145°C), the brown ammonium
+  hydrosulfide clouds, the water clouds (rain, and lightning bolts to dodge),
+  the hydrogen and helium below (no surface, just deeper), the ocean of
+  liquid hydrogen (helium raining through it), the metallic hydrogen that
+  makes Jupiter's magnetism (crackling with currents), to the white-hot
+  "fuzzy" core at the middle. Then back up through every layer on the far
+  side and out through the cloud tops towards Europa. Each layer has its own
+  look and a note the first time through. Storms and lightning weaken the
+  field, and what's left is bonus points.
 - **Europa.** You land on its ice: double ridges, chaos terrain, a water
   plume on the horizon and Jupiter huge in the sky. Then you go down a crack,
   through the ice shell (probably 15 to 25 km thick) and into the ocean
