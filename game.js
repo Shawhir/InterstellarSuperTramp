@@ -7548,10 +7548,10 @@
   }
   // Saturn with its rings (tilted), the back half of the rings behind it
   function drawSaturn(x, y, r, alpha = 1) {
-    ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, y); ctx.rotate(-0.28);
+    ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(x, y);
     const rings = (from, to) => {
       for (const [k, w, col] of [[1.32, 0.1, 'rgba(180,160,130,0.5)'], [1.55, 0.3, 'rgba(236,220,186,0.95)'], [1.88, 0.05, 'rgba(10,10,20,0.6)'], [2.05, 0.22, 'rgba(214,198,166,0.9)']]) {
-        ctx.strokeStyle = col; ctx.lineWidth = Math.max(1, r * w); ctx.beginPath(); ctx.ellipse(0, 0, r * k, r * k * 0.28, 0, from, to); ctx.stroke();
+        ctx.strokeStyle = col; ctx.lineWidth = Math.max(1, r * w); ctx.beginPath(); ctx.ellipse(0, 0, r * k, r * k * 0.2, 0, from, to); ctx.stroke();
       }
     };
     rings(Math.PI, TAU);
@@ -7561,6 +7561,41 @@
     if (r > 8) { ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.clip(); for (let i = -3; i <= 3; i++) { ctx.fillStyle = i % 2 ? 'rgba(170,130,80,0.35)' : 'rgba(255,240,210,0.3)'; ctx.fillRect(-r, i * r * 0.25, r * 2, r * 0.1); } ctx.restore(); }
     rings(0, Math.PI);
     ctx.restore();
+  }
+  // Saturn up close, the classic view: banded gold planet, the rings tilted
+  // round it (C, B, the Cassini Division, A, the Encke Gap, F) and the
+  // rings' shadow across the planet
+  function drawSaturnBig(x, y, r) {
+    const T = 0, E = 0.2; // level, seen from just above the ring plane
+    ctx.save(); ctx.translate(x, y); ctx.rotate(T);
+    const RINGS = [[1.24, 1.52, 'rgba(150,135,115,0.45)'], [1.52, 1.95, 'rgba(238,224,192,0.95)'], [1.95, 2.02, 'rgba(10,10,20,0.35)'], [2.02, 2.27, 'rgba(214,198,166,0.92)'], [2.19, 2.2, 'rgba(10,10,20,0.6)'], [2.32, 2.34, 'rgba(240,230,210,0.8)']];
+    const ringHalf = (back) => {
+      for (const [a, b, col] of RINGS) {
+        ctx.fillStyle = col; ctx.beginPath();
+        if (back) { ctx.ellipse(0, 0, r * b, r * b * E, 0, Math.PI, TAU); ctx.ellipse(0, 0, r * a, r * a * E, 0, TAU, Math.PI, true); }
+        else { ctx.ellipse(0, 0, r * b, r * b * E, 0, 0, Math.PI); ctx.ellipse(0, 0, r * a, r * a * E, 0, Math.PI, 0, true); }
+        ctx.fill();
+        // fine ringlets
+        if (r > 60) { ctx.strokeStyle = 'rgba(255,250,235,0.15)'; ctx.lineWidth = 1; for (let k = a + 0.05; k < b; k += 0.07) { ctx.beginPath(); ctx.ellipse(0, 0, r * k, r * k * E, 0, back ? Math.PI : 0, back ? TAU : Math.PI); ctx.stroke(); } }
+      }
+    };
+    ringHalf(true);
+    // The planet, lit from the left
+    const g = ctx.createLinearGradient(0, -r, 0, r);
+    g.addColorStop(0, '#e9d6a2'); g.addColorStop(0.45, '#e2c488'); g.addColorStop(0.7, '#cfa868'); g.addColorStop(1, '#a8844a');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.clip();
+    for (let i = -8; i <= 8; i++) { ctx.fillStyle = i % 2 ? 'rgba(170,130,80,0.22)' : 'rgba(255,245,215,0.18)'; ctx.fillRect(-r, i * r * 0.11, r * 2, r * 0.05); }
+    // The pale blue-grey north, and the hexagon storm at the pole
+    ctx.fillStyle = 'rgba(150,175,190,0.35)'; ctx.fillRect(-r, -r, r * 2, r * 0.35);
+    // The rings' shadow on the planet
+    ctx.fillStyle = 'rgba(40,30,20,0.35)'; ctx.beginPath(); ctx.ellipse(0, r * 0.06, r * 1.9, r * 0.08, 0, 0, Math.PI); ctx.ellipse(0, r * 0.06, r * 1.9, r * 0.03, 0, Math.PI, 0, true); ctx.fill();
+    const sh = ctx.createLinearGradient(-r, 0, r, 0); sh.addColorStop(0, 'rgba(0,0,10,0)'); sh.addColorStop(0.55, 'rgba(0,0,10,0)'); sh.addColorStop(1, 'rgba(0,0,10,0.55)');
+    ctx.fillStyle = sh; ctx.fillRect(-r, -r, r * 2, r * 2);
+    ctx.restore();
+    ringHalf(false);
+    ctx.restore();
+    if (r > 30) { ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.75)'; ctx.fillText('SATURN', x, y - r * 1.25); ctx.textAlign = 'start'; }
   }
   // ---- Level 7: the slingshot round Jupiter, then across Saturn's rings --------
   // The things every frame needs while the world itself is paused
@@ -7817,30 +7852,23 @@
     for (const st of world.sky) { const x = (((st.x * W - Z.camX * 0.05) % W) + W) % W; ctx.fillRect(x, st.y * H, st.s + streak * 20, st.s); }
     if (o.zoom) { ctx.translate(o.ax, o.ay); ctx.scale(o.zoom, o.zoom); ctx.translate(-o.ax, -o.ay); }
     const SX = (wx) => wx - Z.camX, SY = (wy) => H * 0.66 + (wy - Z.camY), plane = SY(0);
-    // Saturn, huge, off to the left (sliding past more slowly than the rings)
-    const sR = 700, sX = -600 - Z.camX * 0.35, sY = plane;
-    if (sX + sR > -50) {
-      const g = ctx.createLinearGradient(0, sY - sR, 0, sY + sR);
-      g.addColorStop(0, '#f0dca8'); g.addColorStop(0.5, '#d8b878'); g.addColorStop(1, '#a8844a');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sX, sY, sR, 0, TAU); ctx.fill();
-      ctx.save(); ctx.beginPath(); ctx.arc(sX, sY, sR, 0, TAU); ctx.clip();
-      for (let i = -6; i <= 6; i++) { ctx.fillStyle = i % 2 ? 'rgba(170,130,80,0.3)' : 'rgba(255,240,210,0.25)'; ctx.fillRect(sX - sR, sY + i * sR * 0.13, sR * 2, sR * 0.05); }
-      ctx.fillStyle = 'rgba(0,0,10,0.35)'; ctx.fillRect(sX + sR * 0.2, sY - sR, sR, sR * 2);
-      ctx.restore();
-      ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.7)'; ctx.fillText('SATURN', sX + sR * 0.55, sY - sR * 0.55); ctx.textAlign = 'start';
+    // Saturn, the whole planet and its tilted rings, hanging in the sky
+    // behind; it drifts slowly and shrinks as you head out towards Titan
+    {
+      const k = clamp(Z.x / TITAN_X, 0, 1), sr = Math.min(W, H) * lerp(0.26, 0.11, k);
+      drawSaturnBig(lerp(W * 0.42, W * 0.22, k) - Z.camX * 0.02, plane - H * lerp(0.36, 0.42, k), sr);
     }
     // The rings, side on: a band of ice right across, darker in the gaps,
     // fading out into the faint E ring
     for (let wx = Math.floor((Z.camX - 200) / 24) * 24; wx < Z.camX + W / (o.zoom || 1) + 200; wx += 24) {
       const gap = (wx > 4300 && wx < 4900) || (wx > 6000 && wx < 6300) || (wx > 6900 && wx < 6950) || (wx > 7150 && wx < 7300);
-      const sx = SX(wx), sxs = sX + (wx + 600) * 1; // (the band starts at Saturn)
-      if (wx < -600 || sx < -40 || sx > W / (o.zoom || 1) + W) continue;
+      const sx = SX(wx);
+      if (wx < -260 || sx < -40 || sx > W / (o.zoom || 1) + W) continue;
       const zi = wx < 1800 ? 0 : wx < 4300 ? 1 : wx < 6950 ? 3 : wx < 7300 ? 6 : 7;
       const a = wx > 7300 ? 0.12 : gap ? 0.08 : zi === 1 ? 0.75 : zi === 0 ? 0.35 : 0.55;
       ctx.fillStyle = zi === 7 ? `rgba(160,200,240,${a})` : `rgba(236,224,200,${a})`;
       ctx.fillRect(sx, plane - (zi === 7 ? 30 : 6), 24, zi === 7 ? 60 : 12);
       if (!gap && zi < 7) for (let k = 0; k < 3; k++) { const h = hash3(wx, k, 7); px(sx + h * 24, plane - 8 + hash3(k, wx, 3) * 16, 2 + (h * 3 | 0), 2, 'rgba(255,250,240,0.7)'); }
-      void sxs;
     }
     // Chunks of ring ice, little moons and the big moons
     for (const p of Z.plats) {
