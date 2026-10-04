@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
-<link rel="stylesheet" href="style.css?v=0f7c308">
+<link rel="stylesheet" href="style.css?v=d9375ed">
 </head>
 <body>
 <canvas id="game" tabindex="0" aria-label="Interstellar SuperTramp game"></canvas>
@@ -70,6 +70,7 @@
     <button id="l5-start" class="level2" type="button">Level 5: start in the belt<span>Flat out for Jupiter and Europa</span></button>
     <button id="l6-start" class="level2" type="button" hidden>Secret: the hollow Earth<span>Climb out through seven caverns</span></button>
     <button id="belt-start" class="level2" type="button">Straight to the asteroid belt<span>Skip ahead to the turn</span></button>
+    <button id="l7-start" class="level2" type="button">Level 7: start on Europa<span>Catch a comet to Saturn's rings</span></button>
     <button id="jupiter-start" class="level2" type="button">The Jupiter run<span>Mass driver, straight through Jupiter, on to Europa</span></button>
     <button id="open-board" class="secondary" type="button" hidden>Full scoreboard</button>
     <p>The world turns under your feet. Hop on a trampoline and bounce from cloud to balloon to satellite, all the way to the Moon.</p>
@@ -101,6 +102,7 @@
       <button id="to-l3" class="level2" type="button" hidden>On to the asteroid belt<span>Level 3, score carried on</span></button>
       <button id="to-l4" class="level2" type="button" hidden>On to Mercury<span>Level 4, score carried on</span></button>
       <button id="to-l5" class="level2" type="button" hidden>On to Jupiter<span>Level 5, score carried on</span></button>
+      <button id="to-l7" class="level2" type="button" hidden>On to Saturn<span>Level 7, score carried on</span></button>
       <button id="to-surface" class="level2" type="button" hidden>Back up to the Moon<span>Level 1, score carried on</span></button>
       <button id="again" type="button">Bounce again</button>
       <button id="change-mode" class="secondary" type="button">Change mode</button>
@@ -127,10 +129,10 @@
   <button type="button" data-key="right" aria-label="Walk right">▶</button>
 </div>
 
-<script src="scoreboard-config.js?v=0f7c308"></script>
-<script src="scoreboard.js?v=0f7c308"></script>
-<script src="audio.js?v=0f7c308"></script>
-<script src="game.js?v=0f7c308"></script>
+<script src="scoreboard-config.js?v=d9375ed"></script>
+<script src="scoreboard.js?v=d9375ed"></script>
+<script src="audio.js?v=d9375ed"></script>
+<script src="game.js?v=d9375ed"></script>
 <script>
   // Play offline once the game has been opened (on the public site only)
   if ('serviceWorker' in navigator && /github\.io$|^localhost$|^127\.0\.0\.1$/.test(location.hostname)) {
