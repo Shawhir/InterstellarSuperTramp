@@ -7576,11 +7576,16 @@
   // Saturn up close, the classic view: banded gold planet, the rings tilted
   // round it (C, B, the Cassini Division, A, the Encke Gap, F) and the
   // rings' shadow across the planet
-  function drawSaturnBig(x, y, r) {
-    const T = 0, E = 0.2; // level, seen from just above the ring plane
+  // E: how open the rings look (0.2 from just above the ring plane, nearly 0
+  // from right in it); clipX: the rings stop there (when they're the ice
+  // under your feet from there on); dark: how dark the night side is
+  function drawSaturnBig(x, y, r, E = 0.2, clipX = null, dark = 0.55) {
+    const T = 0;
     ctx.save(); ctx.translate(x, y); ctx.rotate(T);
     const RINGS = [[1.24, 1.52, 'rgba(150,135,115,0.45)'], [1.52, 1.95, 'rgba(238,224,192,0.95)'], [1.95, 2.02, 'rgba(10,10,20,0.35)'], [2.02, 2.27, 'rgba(214,198,166,0.92)'], [2.19, 2.2, 'rgba(10,10,20,0.6)'], [2.32, 2.34, 'rgba(240,230,210,0.8)']];
     const ringHalf = (back) => {
+      ctx.save();
+      if (clipX !== null) { ctx.beginPath(); ctx.rect(-r * 3, -r * 3, clipX - x + r * 3, r * 6); ctx.clip(); }
       for (const [a, b, col] of RINGS) {
         ctx.fillStyle = col; ctx.beginPath();
         if (back) { ctx.ellipse(0, 0, r * b, r * b * E, 0, Math.PI, TAU); ctx.ellipse(0, 0, r * a, r * a * E, 0, TAU, Math.PI, true); }
@@ -7589,6 +7594,7 @@
         // fine ringlets
         if (r > 60) { ctx.strokeStyle = 'rgba(255,250,235,0.15)'; ctx.lineWidth = 1; for (let k = a + 0.05; k < b; k += 0.07) { ctx.beginPath(); ctx.ellipse(0, 0, r * k, r * k * E, 0, back ? Math.PI : 0, back ? TAU : Math.PI); ctx.stroke(); } }
       }
+      ctx.restore();
     };
     ringHalf(true);
     // The planet, lit from the left
@@ -7600,8 +7606,8 @@
     // The pale blue-grey north, and the hexagon storm at the pole
     ctx.fillStyle = 'rgba(150,175,190,0.35)'; ctx.fillRect(-r, -r, r * 2, r * 0.35);
     // The rings' shadow on the planet
-    ctx.fillStyle = 'rgba(40,30,20,0.35)'; ctx.beginPath(); ctx.ellipse(0, r * 0.06, r * 1.9, r * 0.08, 0, 0, Math.PI); ctx.ellipse(0, r * 0.06, r * 1.9, r * 0.03, 0, Math.PI, 0, true); ctx.fill();
-    const sh = ctx.createLinearGradient(-r, 0, r, 0); sh.addColorStop(0, 'rgba(0,0,10,0)'); sh.addColorStop(0.55, 'rgba(0,0,10,0)'); sh.addColorStop(1, 'rgba(0,0,10,0.55)');
+    ctx.fillStyle = 'rgba(40,30,20,0.35)'; ctx.beginPath(); ctx.ellipse(0, r * 0.3 * E, r * 1.9, r * 0.4 * E + 2, 0, 0, Math.PI); ctx.ellipse(0, r * 0.3 * E, r * 1.9, r * 0.15 * E + 1, 0, Math.PI, 0, true); ctx.fill();
+    const sh = ctx.createLinearGradient(-r, 0, r, 0); sh.addColorStop(0, 'rgba(0,0,10,0)'); sh.addColorStop(0.55, 'rgba(0,0,10,0)'); sh.addColorStop(1, `rgba(0,0,10,${dark})`);
     ctx.fillStyle = sh; ctx.fillRect(-r, -r, r * 2, r * 2);
     ctx.restore();
     ringHalf(false);
@@ -7612,7 +7618,7 @@
   // edges, from where they run round Saturn's far side (the ellipse) to where
   // they cross the band you hop along (x from x0 to x1)
   const SHEET = [
-    [-300, 2000, 1.24, 1.52, [150, 135, 115], 0.45], [2000, 4300, 1.52, 1.95, [238, 224, 192], 0.85],
+    [200, 2000, 1.24, 1.52, [150, 135, 115], 0.45], [2000, 4300, 1.52, 1.95, [238, 224, 192], 0.85],
     [4820, 5900, 2.02, 2.19, [214, 198, 166], 0.8], [6160, 6800, 2.2, 2.27, [214, 198, 166], 0.8], [6980, 7700, 2.32, 2.34, [240, 230, 210], 0.75],
   ];
   function drawRingSheet(SX, plane, sx, sy, sr) {
@@ -7734,7 +7740,7 @@
     if (t >= SL_ARR) {
       // Arriving: Saturn's rings, side on, coming up to meet you
       const k = clamp((t - SL_ARR) / (SL_END - SL_ARR), 0, 1), z = Math.exp(lerp(Math.log(0.05), 0, smooth(k)));
-      const Z = S.Z, ax = W * 0.38, ay = H * 0.66;
+      const Z = S.Z, ax = W * R7_ANCHOR0, ay = H * 0.66;
       drawRings7(Z, { zoom: z, ax, ay, noPlayer: true, streak: (1 - k) * 2 });
       const C = [W * 0.6, H * 0.42], e = smooth(k), x = lerp(C[0], ax, e), y = lerp(C[1], ay, e);
       drawRide(x, y + 4); drawSprite('stand', x, y, false, 1, 1, 1, SUIT); if (conspiracy) drawFoilHat(x, y, 0);
@@ -7778,11 +7784,12 @@
   // speed. Past the F ring you launch out and hop from moon to moon to Titan.
   const R7_G = 1500, R7_BOUNCE = 860, R7_VX = 440, TITAN_X = 13000;
   const R7_JUMP = 720, R7_TOP = 780, F_END = 7700;
+  const SAT_LIMB = 120; // Saturn's cloud tops, where the ring plane starts (the faint D ring, then the C ring)
   // The ring surfaces: [from, to, ring]
-  const R7_SURF = [[-300, 1500, 0], [1620, 2000, 0], [2000, 4300, 1], [4820, 5900, 3], [6160, 6650, 3], [6730, 6800, 3], [6980, F_END, 6]];
+  const R7_SURF = [[200, 1500, 0], [1620, 2000, 0], [2000, 4300, 1], [4820, 5900, 3], [6160, 6650, 3], [6730, 6800, 3], [6980, F_END, 6]];
   const R7_GAPS = { 1500: 'the Maxwell Gap', 4300: 'the Cassini Division', 5900: 'the Encke Gap', 6650: 'the Keeler Gap', 6800: 'the gap to the F ring' };
   const R7_ZONES = [
-    { x: -300, name: 'THE C RING', sub: 'FAINT, CLOSE TO SATURN', fact: "The C ring, the closest of the main rings to Saturn: fainter, with dustier ice. Skate! Hold right to build up speed, and you'll jump the gaps by yourself (or jump when you like with Space, ↑ or a tap)." },
+    { x: 200, name: 'THE C RING', sub: 'FAINT, CLOSE TO SATURN', fact: "The C ring, the closest of the main rings to Saturn: fainter, with dustier ice. Skate! Hold right to build up speed, and you'll jump the gaps by yourself (or jump when you like with Space, ↑ or a tap)." },
     { x: 2000, name: 'THE B RING', sub: 'THE BIGGEST AND BRIGHTEST', fact: 'The B ring: the biggest, brightest and most packed ring of all. Chunks of water ice, from specks of dust to boulders as big as a house. Build up speed: the Cassini Division is coming!' },
     { x: 4300, name: 'THE CASSINI DIVISION', sub: 'ABOUT 4,800 KM WIDE', fact: "The Cassini Division: a gap about 4,800 km wide, first spotted by Giovanni Cassini in 1675. It isn't empty, just much thinner." },
     { x: 4820, name: 'THE A RING', sub: 'ICE, FROM DUST TO BOULDERS', fact: 'The A ring. At the end of its mission in 2017, the Cassini spacecraft dived between Saturn and its rings 22 times, then plunged into Saturn.' },
@@ -7808,6 +7815,7 @@
   // When the jets of Enceladus are spraying (they do vary: they're brighter when
   // it's furthest from Saturn, on its slightly oval orbit)
   const r7Jets = () => Math.sin(clock * TAU / 4) > -0.25;
+  const R7_ANCHOR0 = 0.55; // where you are across the screen at first, to leave room for Saturn
   function buildRings7() {
     const plats = [], geoms = [];
     const chunk = (x, w) => plats.push({ x, w, top: -(8 + Math.random() * 22), kind: 'chunk', zone: 7, ph: Math.random() * TAU, shape: Array.from({ length: 9 }, () => 0.75 + Math.random() * 0.25) });
@@ -7830,7 +7838,8 @@
     for (const [a, b] of R7_SURF) for (let x = a + 300; x < b - 200; x += 420 + Math.random() * 300) geoms.push({ x, y: -30, taken: false });
     for (let i = 0; i < R7_SURF.length - 1; i++) { const g0 = R7_SURF[i][1], g1 = R7_SURF[i + 1][0]; geoms.push({ x: (g0 + g1) / 2, y: -150, taken: false }); }
     for (let i = 0; i < plats.length - 1; i++) if (Math.random() < 0.6) geoms.push({ x: (plats[i].x + plats[i + 1].x) / 2, y: -230, taken: false });
-    return { plats, geoms, x: 60, y: 0, vx: 0, vy: 0, ground: true, mode: 'skate', camX: 60 - W * 0.38, camY: 0, zone: -1, seen: {}, cleared: {}, last: null, standT: 0, probeT: 0, done: false, doneT: 0, bits: [], squash: 0, warned: false, skate: 0, wantJump: false, startX: 60, slow: 0, zoom: 1, flip: 0, flips: 0, chain: 0, chute: false, edgeHint: false, seenKind: {} };
+    const x0 = SAT_LIMB + W * 0.4;
+    return { plats, geoms, x: x0, y: 0, vx: 0, vy: 0, ground: true, mode: 'skate', camX: x0 - W * R7_ANCHOR0, anchor: R7_ANCHOR0, camY: 0, zone: -1, seen: {}, cleared: {}, last: null, standT: 0, probeT: 0, done: false, doneT: 0, bits: [], squash: 0, warned: false, skate: 0, wantJump: false, startX: x0, slow: 0, zoom: 1, flip: 0, flips: 0, chain: 0, chute: false, edgeHint: false, seenKind: {} };
   }
   const r7Top = (p) => p.top + (p.kind === 'chunk' || p.kind === 'crumble' ? Math.sin(clock * 1.3 + p.ph) * 3 : p.kind === 'swap' ? Math.cos(clock * TAU / 5 + p.ph) * 55 : 0);
   const r7Surf = (x) => R7_SURF.find(([a, b]) => x >= a && x <= b);
@@ -7974,11 +7983,12 @@
     // The camera pulls back while you fly, and closes in again when you land
     const zoomTo = Z.done ? 1.15 : Z.chute ? 1.1 : Z.mode === 'hop' || !Z.ground ? clamp(1 + Z.y / 900, 0.72, 1) : 1;
     Z.zoom += (zoomTo - Z.zoom) * Math.min(1, dt * 2.5);
-    Z.camX += (Z.x - W * 0.38 - Z.camX) * Math.min(1, dt * 6);
+    Z.anchor = lerp(R7_ANCHOR0, 0.38, smooth(clamp((Z.x - Z.startX) / 900, 0, 1)));
+    Z.camX += (Z.x - W * Z.anchor - Z.camX) * Math.min(1, dt * 6);
     Z.camY += (Math.min(0, Z.y + 160) - Z.camY) * Math.min(1, dt * 4);
     if (snd) snd.music.set({ tierF: 13 + TOP + clamp(Z.x / TITAN_X, 0, 1) * 4, speed: 1 + Math.abs(Z.vx) / 1000, won: state === 'won', belt: state === 'play' });
     // How far out from Saturn's middle you are
-    const marks = [[-300, 74500], [F_END, 140200], [8330, 151450], [8860, 185500], [9480, 238000], [10420, 294700], [11360, 377400], [12280, 527100], [TITAN_X, 1221900]];
+    const marks = [[SAT_LIMB, 60300], [200, 74500], [F_END, 140200], [8330, 151450], [8860, 185500], [9480, 238000], [10420, 294700], [11360, 377400], [12280, 527100], [TITAN_X, 1221900]];
     let km = marks[marks.length - 1][1];
     for (let i = 0; i < marks.length - 1; i++) if (Z.x < marks[i + 1][0]) { km = lerp(marks[i][1], marks[i + 1][1], clamp((Z.x - marks[i][0]) / (marks[i + 1][0] - marks[i][0]), 0, 1)); break; }
     hud.alt.textContent = `${fmtKm(km)} from Saturn`;
@@ -7994,17 +8004,28 @@
     for (const st of world.sky) { const x = (((st.x * W - Z.camX * 0.05) % W) + W) % W; ctx.fillRect(x, st.y * H, st.s + streak * 20, st.s); }
     if (shake > 0 && !o.zoom) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
     if (o.zoom) { ctx.translate(o.ax, o.ay); ctx.scale(o.zoom, o.zoom); ctx.translate(-o.ax, -o.ay); }
-    else if (Z.zoom && Math.abs(Z.zoom - 1) > 0.002) { const ax = W * 0.38, ay = H * 0.6; ctx.translate(ax, ay); ctx.scale(Z.zoom, Z.zoom); ctx.translate(-ax, -ay); }
+    else if (Z.zoom && Math.abs(Z.zoom - 1) > 0.002) { const ax = W * (Z.anchor || 0.38), ay = H * 0.6; ctx.translate(ax, ay); ctx.scale(Z.zoom, Z.zoom); ctx.translate(-ax, -ay); }
     const SX = (wx) => wx - Z.camX, SY = (wy) => H * 0.66 + (wy - Z.camY), plane = SY(0);
     // Saturn, the whole planet and its rings, hanging in the sky behind; it
     // drifts slowly and shrinks as you head out towards Titan. The rings you're
     // on are its own: each one sweeps from its place round Saturn down to the
     // stretch of ring under your feet, as one sheet of ice seen from just above
+    // At first you're right in the ring plane beside Saturn: its huge curved
+    // edge on your left, the rings edge-on across it, and the ice you skate on
+    // running on from just past its cloud tops. As you head out it shrinks
+    // and settles into the sky, seen from a little above the rings.
     {
-      const k = clamp(Z.x / TITAN_X, 0, 1), sr = Math.min(W, H) * lerp(0.26, 0.11, k);
-      const sx = lerp(W * 0.36, W * 0.16, k) - Z.camX * 0.02, sy = plane - H * lerp(0.36, 0.42, k);
-      drawSaturnBig(sx, sy, sr);
-      drawRingSheet(SX, plane, sx, sy, sr);
+      const k = clamp(Z.x / TITAN_X, 0, 1), b = smooth(clamp((Z.x - Z.startX) / 1700, 0, 1));
+      const fr = Math.min(W, H) * lerp(0.26, 0.11, k), fx_ = lerp(W * 0.36, W * 0.16, k) - Z.camX * 0.02, fy = plane - H * lerp(0.36, 0.42, k);
+      // (so big it slides away slower than the ice under you)
+      const cam0 = Z.startX - W * R7_ANCHOR0, limb = SAT_LIMB - cam0 - Math.max(0, Z.camX - cam0) * 0.15;
+      const nr = H * 1.3, nx = limb - nr;
+      const sr = Math.exp(lerp(Math.log(nr), Math.log(fr), b)), sx = lerp(nx, fx_, b), sy = lerp(plane, fy, b);
+      drawSaturnBig(sx, sy, sr, lerp(0.025, 0.2, b), null, lerp(0.12, 0.55, b));
+      { const sa = smooth(clamp((b - 0.55) / 0.45, 0, 1)); if (sa > 0.01) { ctx.globalAlpha = sa; drawRingSheet(SX, plane, sx, sy, sr); ctx.globalAlpha = 1; } }
+      // The faint, dusty D ring between Saturn and the C ring
+      const d0 = lerp(limb, sx + sr, b) + 6, d1 = SX(200);
+      if (d1 > d0 + 10) { ctx.fillStyle = 'rgba(150,135,115,0.28)'; ctx.fillRect(d0, plane - 2, d1 - d0, 10); ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(220,210,190,0.6)'; ctx.fillText('D RING', (d0 + d1) / 2, plane + 26); ctx.textAlign = 'start'; }
     }
     // The ring surfaces you skate on: the near edge of the ice, with the gaps
     // between them open to the stars; past the F ring, the faint E ring
