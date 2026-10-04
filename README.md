@@ -430,11 +430,16 @@ Reach the seafloor of Europa at the end of level 5 and carry straight on
   view, level, seen from just above the ring plane: the banded gold planet
   with its rings round it (C, B, the
   Cassini Division, A, the Encke Gap, F), the rings' shadow across it. It
-  drifts and shrinks as you head out. In front of it, the rings stretch away
-  to the right as a band of ice. Jump off the spacecraft and bounce across
-  chunks of ring ice, steering over the gaps: the C ring, the bright B ring,
-  the Cassini Division (one stepping stone), the A ring, the Encke Gap
-  (bounce on little ravioli-shaped Pan) and the braided F ring. Then on out
+  drifts and shrinks as you head out. The rings are its own: each ring (C,
+  B, A, F) sweeps as one sheet of ice from its place round Saturn down to the
+  stretch under your feet, in the same colours. And you skate on them: hold
+  right to build up speed, ease off to glide, push back to brake. The gaps
+  between the rings are open to the stars, and you jump them by yourself at
+  the edge (or jump whenever you like with Space, ↑ or a tap): the Maxwell
+  Gap, the Cassini Division (wide: you need speed), the Encke Gap (with
+  little ravioli-shaped Pan in it), the Keeler Gap, and the gap out to the
+  braided F ring. Too slow and you drop through, and go back for another
+  run-up. At the end of the F ring you launch off. Then on out
   through the faint E ring from moon to moon: Mimas (the space-station
   lookalike), Enceladus (spraying water from its south pole), Tethys and its
   little companions Telesto and Calypso, Dione with Helene and Polydeuces,
