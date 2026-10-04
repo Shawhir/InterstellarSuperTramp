@@ -383,7 +383,8 @@ you off: the run, straight through Jupiter, and on to Europa and its ocean.
   down into it, and climb away as its pull holds you back, Jupiter shrinking
   and its big moons wheeling round it, with Europa growing ahead. Then
   Europa slides up out of sight above you, the view turns right over (you
-  stay upright, Jupiter swings round into the sky), and you drift down
+  stay upright, and the one Jupiter you just left swings round into its
+  place in Europa's sky), and you drift down
   feet first onto the ice and land, the same way you land on every world:
   Europa's gravity is only about a seventh of Earth's.
 - **Europa.** You land on its ice: double ridges, chaos terrain, a water
