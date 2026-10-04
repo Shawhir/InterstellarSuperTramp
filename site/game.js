@@ -7927,6 +7927,7 @@
   let carry = null;
   function startGame(lv = level, from = null) {
     if (snd) { snd.init(); snd.music.start(); }
+    stopped = false; $('carry-on').hidden = true;
     tilt.zero = null;
     // Level 5 starts from the belt world you reached at the end of level 3
     if (lv === 5) l5Start = (from && level === 3 && landedOn) || BELT_WORLDS.ceres;
@@ -7969,7 +7970,48 @@
   const L6_TIME_MEDALS = [[120, 'gold'], [180, 'silver'], [260, 'bronze']];
   const START_BODY = { 1: 'Earth', 2: 'the Moon', 3: 'Mars', 4: 'Venus', 6: 'the hollow Earth' };
   // go: carrying straight on into the next level, so no results screen
+  // ---- Stop whenever you like ---------------------------------------------------
+  // The whole game freezes where it is, and you get your score so far (the
+  // whole trip, if you've come straight on from earlier worlds) to post, with
+  // the choice to carry on exactly where you were.
+  let stopped = false;
+  function stopRun() {
+    if (state !== 'play' || stopped || fx.climb || fx.burrow) return;
+    stopped = true; state = 'won';
+    keys.left = keys.right = false;
+    document.body.classList.remove('playing');
+    const list = routeStars(), got = list.filter((s) => s.taken).length, total = list.length;
+    const c = carry || { time: 0, got: 0, total: 0, falls: 0 };
+    const trail = [...(carry && carry.trail ? carry.trail : [level === 5 ? l5Start.name : START_BODY[level]])];
+    lastRun = { mode, timeMs: (c.time + playTime) * 1000, stars: c.got + got, total: c.total + total, falls: c.falls + falls, score: Math.round(score) };
+    lastWin = { time: c.time + playTime, got: c.got + got, total: c.total + total, falls: c.falls + falls, trail };
+    const R = rec(), newScore = score > (R.bestScore || 0);
+    if (newScore) { R.bestScore = score; saveBests(); }
+    const where = fx.run ? layerName() : hud.layer.textContent.replace(/\s*×.*$/, '');
+    $('won-title').firstChild.nodeValue = 'Stopped: ';
+    $('won-dest').textContent = `${where}, ${hud.alt.textContent}`;
+    $('won-mode').textContent = MODES[mode].name + (conspiracy ? ' · 👁 Conspiracy' : '') + ' · ' + trail.join(' to ');
+    $('won-score').textContent = fmtScore(score);
+    $('won-score-new').hidden = !newScore;
+    $('won-stats').textContent = `Time ${fmtTime(c.time + playTime)} · geoms ${c.got + got} / ${c.total + total} · falls ${c.falls + falls}. Post your score as it stands, or carry on from right where you were.`;
+    $('medals').innerHTML = '';
+    for (const id of ['to-l2', 'to-l3', 'to-l4', 'to-l5', 'to-surface']) $(id).hidden = true;
+    $('carry-on').hidden = false;
+    $('again').textContent = 'Start this level again';
+    offerPost();
+    $('won').hidden = false;
+    sfx.tier();
+  }
+  function carryOn() {
+    if (!stopped) return;
+    stopped = false; state = 'play';
+    $('won').hidden = true; $('carry-on').hidden = true;
+    document.body.classList.add('playing');
+    last = performance.now();
+    canvas.focus();
+  }
   function win(go = false) {
+    $('won-title').firstChild.nodeValue = 'You made it to ';
     buzz([30, 60, 30, 60, 90]);
     state = 'won';
     document.body.classList.remove('playing');
@@ -8251,6 +8293,8 @@
   const jingle = () => { if (snd) { snd.init(); snd.sfx.jingle(mode); } };
   document.querySelectorAll('.mode').forEach((btn) => btn.addEventListener('click', () => { mode = btn.dataset.mode; jingle(); startGame(1); }));
   $('again').addEventListener('click', () => startGame(level));
+  $('stop').addEventListener('click', (e) => { e.currentTarget.blur(); stopRun(); });
+  $('carry-on').addEventListener('click', () => { jingle(); carryOn(); });
   $('to-l2').addEventListener('click', () => { jingle(); startGame(2, { score, mult, ...(lastWin || { time: 0, got: 0, total: 0, falls: 0 }) }); });
   $('l2-start').addEventListener('click', () => { jingle(); startGame(2); });
   $('to-l3').addEventListener('click', () => { jingle(); startGame(3, { score, mult, ...(lastWin || { time: 0, got: 0, total: 0, falls: 0 }) }); });
@@ -8281,6 +8325,7 @@
   }
   // Back to the title: the Earth turns behind it again
   function toTitle() {
+    stopped = false; $('carry-on').hidden = true;
     document.body.classList.remove('run');
     level = 1; route = null; flipK = 0; useTiers();
     reset(Math.floor(Math.random() * 1e9));
@@ -8398,6 +8443,7 @@
   window.addEventListener('keydown', (e) => {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     if (!$('board').hidden) return;
+    if (e.code === 'Escape') { if (state === 'play') stopRun(); else if (stopped && !mustPost) carryOn(); e.preventDefault(); return; }
     if (FLIPMAP[e.code] && state === 'play' && level === 3 && flipK > 0.5) { keys[FLIPMAP[e.code]] = true; e.preventDefault(); return; }
     if (KEYMAP[e.code] && state === 'title') {
       // On the title screen, left/right picks the mode that Space will start.
@@ -8412,6 +8458,7 @@
       if (state === 'tour') { if (!e.repeat && intro.tT > 0.5) beginZoom(); return; }
       if (state === 'descend') return;
       if (state === 'won' && mustPost) return; // post your score first
+      if (stopped && !$('won').hidden) { if (!e.repeat) carryOn(); return; }
       if (state === 'title') { if (!e.repeat) { jingle(); startGame(1); } return; }
       if (state === 'won' && !$('won').hidden) { if (!e.repeat) { jingle(); startGame(level); } return; }
     }
@@ -8448,7 +8495,7 @@
     last = t;
     checkSize();
     if (snd) snd.beat();
-    update(dt);
+    if (!stopped) update(dt);
     render();
     requestAnimationFrame(frame);
   }

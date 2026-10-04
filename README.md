@@ -27,6 +27,12 @@ Chrome: ⋮ menu). It then launches full screen with its own icon, like an app.
 |---|---|---|
 | Walk / steer | ← → or A D | ◀ ▶, or tap TILT and lean the phone |
 | Hop on | walk up to a trampoline or launch pad and you hop on by yourself | |
+| Stop and record your score | Esc | STOP (top right) |
+
+Stop whenever you like: the game freezes where it is and you get your score so
+far (the whole trip, if you've come straight on from earlier worlds), with the
+time, geoms and falls, to post to the scoreboard. Then carry on from right where
+you were (Carry on, Space or Esc), start the level again, or go back to the menu.
 
 Tilt steering uses the phone's motion sensor. The angle you hold the phone at when
 you switch it on counts as level. It works when the game is opened from its own web
