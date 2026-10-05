@@ -4350,6 +4350,9 @@
     venus: { glow: '255,230,160', body: '#efd9a0', spots: '#dcc07a' },
     mercury: { glow: '220,215,210', body: '#a9a39c', spots: '#7f7973' },
     titan: { glow: '240,170,70', body: '#d99a3a', spots: '#c07a2a' },
+    neptune: { glow: '90,140,255', body: '#3f63d8', spots: '#2a4196' },
+    uranus: { glow: '160,230,240', body: '#a6dce4', spots: '#8cc6d0' },
+    pluto: { glow: '230,210,190', body: '#d8c0a2', spots: '#9a7a5c' },
   };
   function drawPlanet(type, x, y, r, alpha = 1, moons = 1) {
     const P = PLANET[type] || PLANET.moon;
@@ -4369,6 +4372,19 @@
         ctx.fillStyle = i % 2 ? '#f7ead0' : '#dcc07a';
         ctx.fillRect(x - r, y + i * r * 0.28 + Math.sin(clock * 0.3 + i) * r * 0.05, r * 2, r * 0.14);
       }
+    } else if (type === 'neptune') {
+      // Deep blue, banded, with a dark storm like the Great Dark Spot Voyager 2 saw in 1989
+      for (let i = -3; i <= 3; i++) { ctx.fillStyle = i % 2 ? 'rgba(30,50,140,0.3)' : 'rgba(140,180,255,0.18)'; ctx.fillRect(x - r, y + i * r * 0.26 - r * 0.05, r * 2, r * 0.1); }
+      ctx.fillStyle = 'rgba(15,25,80,0.7)'; ctx.beginPath(); ctx.ellipse(x - r * 0.25, y + r * 0.2, r * 0.22, r * 0.12, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(x - r * 0.1, y + r * 0.05, r * 0.25, Math.max(1, r * 0.04));
+    } else if (type === 'uranus') {
+      // Pale and almost featureless, tipped right over on its side
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.arc(x - r * 0.15, y - r * 0.1, r * 0.55, 0, TAU); ctx.fill();
+    } else if (type === 'pluto') {
+      // The big pale heart, Tombaugh Regio, that New Horizons found in 2015
+      ctx.fillStyle = 'rgba(150,110,80,0.4)'; ctx.beginPath(); ctx.arc(x + r * 0.3, y - r * 0.35, r * 0.45, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#f4ecdc'; ctx.beginPath(); ctx.arc(x - r * 0.12, y + r * 0.05, r * 0.24, 0, TAU); ctx.arc(x + r * 0.2, y + r * 0.05, r * 0.24, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x - r * 0.34, y + r * 0.12); ctx.lineTo(x + r * 0.04, y + r * 0.55); ctx.lineTo(x + r * 0.42, y + r * 0.12); ctx.fill();
     } else if (type === 'titan') {
       // Smooth orange haze all over: no surface to see from out here, just
       // bands of smog, a darker north, and a thin blue haze layer at the edge
@@ -4402,6 +4418,7 @@
     ctx.beginPath(); ctx.arc(x + r * 0.35, y + r * 0.35, r * 1.05, 0, TAU); ctx.arc(x - r * 0.2, y - r * 0.2, r * 1.05, 0, TAU, true); ctx.fill('evenodd');
     ctx.restore();
     if (type === 'mars' && moons > 0.02) drawMarsMoons(x, y, r, alpha * moons);
+    if (type === 'uranus') { ctx.save(); ctx.globalAlpha = alpha * 0.6; ctx.strokeStyle = '#dff6ff'; ctx.lineWidth = Math.max(1, r * 0.03); ctx.beginPath(); ctx.ellipse(x, y, r * 0.35, r * 1.7, 0.15, 0, TAU); ctx.stroke(); ctx.restore(); }
   }
   // Phobos laps Mars in under 8 hours, close in; Deimos takes 30 hours, further out.
   // Each passes behind the planet on the far half of its orbit.
@@ -8946,15 +8963,25 @@
   // you, an old lander and its flag on the skyline, and the Earth rising
   // over it (like Apollo 8's famous "Earthrise" photo). Tap and you lift off
   // and fly to Earth, past the Space Station and satellites, and straight in.
-  const TOUR = 5.6;      // seconds of flight before the zoom to the ground
+  const PLAN_T = 6.4;    // seconds in from interstellar space, past the planets
+  const TOUR = PLAN_T + 5.6; // then on to Earth, before the zoom to the ground
   const zoomFrom = () => (Math.min(W, H) * 0.2) / R0;
   const smooth = (k) => k * k * k * (k * (k * 6 - 15) + 10);
+  // In from interstellar space: past the edge of the Sun's bubble, then the
+  // planets from the outside in, then the Moon and the satellites round Earth
   const FLYBY = [
-    { kind: 'iss', t: 3.9, x: 0.11, y: -0.09, r: 26, label: 'SPACE STATION' },
-    { kind: 'sat', t: 4.7, x: -0.12, y: 0.07, r: 12 },
-    { kind: 'sat', t: 5.6, x: 0.12, y: 0.09, r: 12 },
-    { kind: 'sat', t: 6.3, x: -0.1, y: -0.11, r: 10 },
-    { kind: 'sat', t: 7.0, x: 0.09, y: -0.1, r: 10 },
+    { kind: 'pluto', t: 1.5, x: 0.1, y: 0.08, r: 16, label: 'PLUTO' },
+    { kind: 'neptune', t: 2.4, x: -0.13, y: -0.06, r: 52, label: 'NEPTUNE' },
+    { kind: 'uranus', t: 3.2, x: 0.14, y: 0.06, r: 52, label: 'URANUS' },
+    { kind: 'saturn', t: 4.1, x: -0.15, y: 0.07, r: 70, label: 'SATURN' },
+    { kind: 'jupiter', t: 5.0, x: 0.15, y: -0.07, r: 96, label: 'JUPITER' },
+    { kind: 'mars', t: 5.9, x: -0.11, y: -0.08, r: 30, label: 'MARS' },
+    { kind: 'moon', t: PLAN_T + 2.4, x: 0.13, y: 0.1, r: 40, label: 'THE MOON' },
+    { kind: 'iss', t: PLAN_T + 3.9, x: 0.11, y: -0.09, r: 26, label: 'SPACE STATION' },
+    { kind: 'sat', t: PLAN_T + 4.7, x: -0.12, y: 0.07, r: 12 },
+    { kind: 'sat', t: PLAN_T + 5.6, x: 0.12, y: 0.09, r: 12 },
+    { kind: 'sat', t: PLAN_T + 6.3, x: -0.1, y: -0.11, r: 10 },
+    { kind: 'sat', t: PLAN_T + 7.0, x: 0.09, y: -0.1, r: 10 },
   ];
   function flyDepth(t, tp) { return Math.max(0.04, (tp - t) * 0.9 + 0.28); }
   function drawSatellite(kind, x, y, r) {
@@ -8978,7 +9005,10 @@
     if (a <= 0) return;
     ctx.globalAlpha = a;
     if (f.kind === 'iss' || f.kind === 'sat') drawSatellite(f.kind, x, y, r);
-    else drawPlanet(f.kind, x, y, r);
+    else if (f.kind === 'moon') drawMoonGlobe(x, y, r, clock * 0.04 - 0.2, -0.3);
+    else if (f.kind === 'saturn') drawSaturn(x, y, r, a);
+    else if (f.kind === 'jupiter') drawJupiter(x, y, r, 0.3, a);
+    else drawPlanet(f.kind, x, y, r, a);
     if (f.label && r > 6 && r < 260) {
       ctx.globalAlpha = a * clamp((r - 6) / 10, 0, 1);
       ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
@@ -8987,11 +9017,82 @@
     }
     ctx.globalAlpha = 1;
   }
-  // Earth: rising over the Moon at first, then gliding to the middle and
-  // growing until it becomes the game world
+  // Earth: a blue dot far ahead once the planets are past, growing until it
+  // becomes the game world
   function tourEarth(t) {
-    const k = smooth(clamp(t / TOUR, 0, 1)), target = R0 * zoomFrom(), r0 = Math.min(W, H) * 0.09;
-    return { x: lerp(W * 0.7, W / 2, k), y: lerp(H * 0.72, H * 0.46 + target, k), r: Math.exp(lerp(Math.log(r0), Math.log(target), k)) };
+    const k = smooth(clamp((t - PLAN_T + 0.6) / (TOUR - PLAN_T + 0.6), 0, 1)), target = R0 * zoomFrom(), r0 = 2;
+    return { x: lerp(W * 0.5, W / 2, k), y: lerp(H * 0.48, H * 0.46 + target, k), r: Math.exp(lerp(Math.log(r0), Math.log(target), k)) };
+  }
+  // Interstellar space: the Milky Way across the sky, glowing clouds of gas,
+  // galaxies far beyond it, and the Sun just one bright star among them
+  const DEEP = (() => {
+    const r = mulberry32(2026), band = [], galaxies = [];
+    for (let i = 0; i < 520; i++) { const u = r(), v = (r() + r() + r() - 1.5) * 0.16; band.push({ u, v, s: r() < 0.1 ? 2 : 1, c: r() < 0.2 ? '#ffe6c0' : r() < 0.3 ? '#c8dcff' : '#ffffff', tw: r() * TAU }); }
+    for (let i = 0; i < 3; i++) galaxies.push({ x: 0.1 + r() * 0.8, y: 0.08 + r() * 0.25, s: 6 + r() * 8, rot: r() * TAU, tilt: 0.3 + r() * 0.5 });
+    return { band, galaxies };
+  })();
+  function drawDeepSky(fade) {
+    if (fade <= 0) return;
+    ctx.save(); ctx.globalAlpha = fade;
+    // The Milky Way: a band of light right across the sky, with a dark lane of dust
+    const ang = -0.38, L = Math.hypot(W, H);
+    ctx.translate(W / 2, H * 0.48); ctx.rotate(ang);
+    for (const [w, a] of [[0.36, 0.05], [0.22, 0.07], [0.12, 0.08]]) { const g = ctx.createLinearGradient(0, -H * w, 0, H * w); g.addColorStop(0, 'rgba(150,140,200,0)'); g.addColorStop(0.5, `rgba(200,190,235,${a})`); g.addColorStop(1, 'rgba(150,140,200,0)'); ctx.fillStyle = g; ctx.fillRect(-L / 2, -H * w, L, H * w * 2); }
+    { const g = ctx.createLinearGradient(0, -H * 0.05, 0, H * 0.07); g.addColorStop(0, 'rgba(4,4,12,0)'); g.addColorStop(0.5, 'rgba(4,4,12,0.28)'); g.addColorStop(1, 'rgba(4,4,12,0)'); ctx.fillStyle = g; ctx.fillRect(-L * 0.4, -H * 0.05, L * 0.8, H * 0.12); }
+    for (const st of DEEP.band) { ctx.globalAlpha = fade * (0.45 + 0.45 * Math.sin(clock * 1.5 + st.tw)); px((st.u - 0.5) * L, st.v * H, st.s, st.s, st.c); }
+    ctx.restore();
+    ctx.save(); ctx.globalAlpha = fade;
+    // Nebulae: clouds of glowing gas where new stars are being born
+    ctx.globalCompositeOperation = 'lighter';
+    for (const [x, y, r, c] of [[0.18, 0.7, 0.22, '255,90,160'], [0.82, 0.22, 0.18, '90,170,255'], [0.72, 0.78, 0.14, '120,255,200']]) {
+      const g = ctx.createRadialGradient(W * x, H * y, 0, W * x, H * y, Math.max(W, H) * r);
+      g.addColorStop(0, `rgba(${c},0.16)`); g.addColorStop(0.5, `rgba(${c},0.06)`); g.addColorStop(1, `rgba(${c},0)`);
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    // Other galaxies, far beyond our own
+    for (const gx of DEEP.galaxies) {
+      ctx.save(); ctx.translate(gx.x * W, gx.y * H); ctx.rotate(gx.rot + clock * 0.01); ctx.scale(1, gx.tilt);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, gx.s); g.addColorStop(0, 'rgba(255,240,210,0.8)'); g.addColorStop(1, 'rgba(180,170,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, gx.s, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(200,200,255,0.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, gx.s * 0.7, 0, 2.4); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, gx.s * 0.7, Math.PI, Math.PI + 2.4); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  // The Sun, seen from out beyond the planets: brighter as you come in
+  function drawFarSun(t) {
+    const k = clamp(t / PLAN_T, 0, 1), x = W * 0.8, y = H * 0.2, r = lerp(2, 9, k * k);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 8); g.addColorStop(0, 'rgba(255,250,225,0.95)'); g.addColorStop(0.2, 'rgba(255,230,160,0.4)'); g.addColorStop(1, 'rgba(255,220,140,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 8, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#fffdf0'; ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    if (state === 'splash' || t < 1) { ctx.globalAlpha = state === 'splash' ? 0.7 : 0.7 * (1 - t); ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#ffe6a0'; ctx.fillText('THE SUN', x, y + 22); ctx.textAlign = 'start'; ctx.globalAlpha = 1; }
+  }
+  // Voyager 1, drifting on out: in interstellar space since 2012, carrying a
+  // golden record of sounds and pictures of Earth
+  function drawVoyager(t) {
+    const x = ((clock * 9 + W * 0.25) % (W + 200)) - 100, y = H * 0.7 + Math.sin(clock * 0.3) * 6, s = W < 480 ? 0.8 : 1;
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.rotate(-0.2);
+    ctx.fillStyle = '#e8e8f0'; ctx.beginPath(); ctx.ellipse(0, 0, 14, 5, 0, 0, TAU); ctx.fill();
+    px(-3, 4, 6, 6, '#9aa3b5'); px(4, 6, 4, 4, '#e0b040');
+    ctx.strokeStyle = '#c9ced9'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, 8); ctx.lineTo(-26, 16); ctx.moveTo(0, 8); ctx.lineTo(22, 20); ctx.stroke();
+    ctx.restore();
+    ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(200,220,255,0.7)';
+    ctx.fillText('VOYAGER 1', x, y - 14); ctx.textAlign = 'start';
+  }
+  // The heliopause: the edge of the bubble the Sun's wind blows round the
+  // planets. Voyager 1 crossed it in 2012, Voyager 2 in 2018
+  function drawHeliopause(t) {
+    const k = (t - 0.2) / 1.3;
+    if (k <= 0 || k > 1.2) return;
+    const r = Math.hypot(W, H) * 0.08 / Math.max(0.05, 1 - k), a = clamp(1 - k, 0, 1) * clamp(k * 4, 0, 1);
+    ctx.save(); ctx.globalAlpha = a;
+    const g = ctx.createRadialGradient(W / 2, H * 0.48, r * 0.92, W / 2, H * 0.48, r * 1.05);
+    g.addColorStop(0, 'rgba(120,200,255,0)'); g.addColorStop(0.7, 'rgba(140,210,255,0.35)'); g.addColorStop(1, 'rgba(120,200,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(W / 2, H * 0.48, r * 1.05, 0, TAU); ctx.fill();
+    ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#bfe8ff';
+    if (r < Math.max(W, H) * 0.7) { ctx.fillText('THE HELIOPAUSE', W / 2, H * 0.48 - r - 10); ctx.font = '6px "Press Start 2P", monospace'; ctx.fillText("WHERE THE SUN'S WIND ENDS", W / 2, H * 0.48 - r + 4); }
+    ctx.textAlign = 'start'; ctx.restore();
   }
   function drawTourScene(t, titleAlpha) {
     const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -9004,13 +9105,16 @@
       px(W / 2 + dx * W * k, H * 0.48 + dy * H * k, st.s, st.s * (1 + sp * 1.5), '#ffffff');
     }
     ctx.globalAlpha = 1;
-    // Earth (half in shadow, as from the Moon), then the Moon's horizon in front
+    // Out in interstellar space at first; the Milky Way fades as the Sun's
+    // light takes over, deep among the planets
+    drawDeepSky(1 - 0.6 * smooth(clamp((t - 2) / 4, 0, 1)));
+    drawFarSun(t);
+    if (state === 'splash') drawVoyager(t);
+    drawHeliopause(t);
+    // Earth, far ahead, once the planets are past
     const E = tourEarth(t);
-    drawGlobe(E.x, E.y, E.r, clock * 0.05 + 0.4, 1, 0.3);
-    // The Moon below you, turning slowly; as you lift off it drops away
-    const lift = smooth(clamp(t / 2.8, 0, 1)), mr = Math.max(W, H) * lerp(0.85, 0.5, lift);
-    drawMoonGlobe(W / 2, lerp(H * 0.74, H * 1.2, lift) + mr * 0.97, mr, clock * 0.04 - 0.2, lerp(-0.55, -0.2, lift));
-    if (state === 'tour' && t > 1.4 && E.r < 70) { ctx.globalAlpha = clamp((t - 1.4) * 2, 0, 1); ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,210,255,0.9)'; ctx.fillText('EARTH', E.x, E.y - E.r - 12); ctx.textAlign = 'start'; ctx.globalAlpha = 1; }
+    if (t > PLAN_T - 0.6) drawGlobe(E.x, E.y, E.r, clock * 0.05 + 0.4, clamp((t - PLAN_T + 0.6) * 2, 0, 1), 0.3);
+    if (state === 'tour' && t > PLAN_T && E.r < 70) { ctx.globalAlpha = clamp((t - PLAN_T) * 2, 0, 1); ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(160,210,255,0.9)'; ctx.fillText('EARTH', E.x, E.y - E.r - 12); ctx.textAlign = 'start'; ctx.globalAlpha = 1; }
     for (const f of FLYBY) drawFlyby(f, t);
     if (titleAlpha > 0) {
       ctx.save(); ctx.translate(0, -(1 - titleAlpha) * H * 0.4);
