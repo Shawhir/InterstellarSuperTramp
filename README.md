@@ -438,27 +438,21 @@ Reach the seafloor of Europa at the end of level 5 and carry straight on
   tiny bit of Jupiter's speed to fling you on faster (Cassini did this in
   2000). Then the long cruise, the years ticking by (Cassini took three and
   a half, arriving in 2004).
-- **Saturn, side on.** You arrive right in the ring plane beside Saturn:
-  its huge curved edge fills the left of the view, the rings edge-on across
-  it, and the ice you skate on runs on from just past its cloud tops (the
-  faint D ring, then the C ring). As you skate out it shrinks and settles
-  into the sky, the rings opening up as you see them from a little above.
-  From there Saturn hangs in the sky behind you in the classic
-  view, level, seen from just above the ring plane: the banded gold planet
-  with its rings round it (C, B, the
-  Cassini Division, A, the Encke Gap, F), the rings' shadow across it. It
-  drifts and shrinks as you head out. The rings are its own: each ring (C,
-  B, A, F) sweeps as one sheet of ice from its place round Saturn down to the
-  stretch under your feet, in the same colours. And you skate on them: hold
-  right to build up speed, ease off to glide, push back to brake. The gaps
-  between the rings are open to the stars, and you jump them by yourself at
-  the edge (or jump whenever you like with Space, ↑ or a tap): the Maxwell
-  Gap, the Cassini Division (wide: you need speed), the Encke Gap (with
-  little ravioli-shaped Pan in it), the Keeler Gap, and the gap out to the
-  braided F ring. Too slow and you drop through, and go back for another
-  run-up. Going flat out leaves speed lines and ghosts of you behind.
-- **Off the edge.** At the end of the F ring, the very edge of the rings
-  (marked), you launch off. Jump right at the last moment for a PERFECT
+- **Round Saturn's rings.** Saturn in the middle, its rings seen from a
+  little above, the classic view (C ring with the Maxwell Gap, B, the
+  Cassini Division, A with the Encke and Keeler Gaps, the narrow F ring),
+  with flecks of ice going round in them, the inner rings faster than the
+  outer. You hop off the spacecraft onto the C ring at the left and skate
+  round the near side of the rings to the right, spiralling out ring by
+  ring: each stretch of ice is a stretch of the real ring, and each gap you
+  jump is the real gap, named as you pass (Pan sits in the Encke Gap). Hold
+  right to build up speed, ease off to glide, push back to brake; you jump
+  the gaps by yourself at the edge (or whenever you like with Space, ↑ or a
+  tap). Too slow and you drop through, and go back for another run-up.
+  Going flat out leaves speed lines and ghosts of you behind.
+- **Off the edge.** At the end of the F ring, round on the right, the very
+  edge of the rings (marked), you launch off out to the right; Saturn and
+  its rings drift along behind you, shrinking as you head out. Jump right at the last moment for a PERFECT
   LAUNCH: higher, faster, in slow motion. The camera pulls back while you
   fly. Press jump in the air to flip (as many as you can fit in before you
   land; land halfway through one and you wobble).
