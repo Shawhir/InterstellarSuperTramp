@@ -77,14 +77,20 @@ says so if that happens.
   from a bouncy major tune near Earth, to a brighter lead in the sky, to a slow
   minor drift with echo in space, and speeds up with the bounce multiplier.
   Music and sound effects have separate on/off buttons.
-- Intro: on the Moon, drawn as a pixel globe from a real map: the dark seas
-  in their true places (Ocean of Storms, Sea of Rains, Sea of Tranquillity,
-  Sea of Crises and the rest), big craters like Tycho and Copernicus with
-  their bright rays, and the seas labelled, with the Apollo 11 site marked.
-  It turns slowly beneath you as Earth rises over its edge. Tap and you lift
-  off and fly to Earth, past the Space Station and satellites, and straight
-  in: the globe becomes the game world as space fades to blue sky. Tap during
-  the flight to skip to the zoom.
+- Intro: out in interstellar space, beyond the planets: the Milky Way right
+  across the sky with a dark lane of dust, glowing clouds of gas where stars
+  are born, other galaxies far off, the Sun just one bright star among the
+  rest, and Voyager 1 drifting by (it's been in interstellar space since
+  2012). A comet writes the title. Tap and you fly in towards the Sun:
+  through the heliopause (the edge of the bubble the Sun's wind blows round
+  the planets, which Voyager 1 crossed in 2012 and Voyager 2 in 2018), then
+  past the planets from the outside in, each labelled as it streams by:
+  Pluto with its pale heart, Neptune with a dark storm, Uranus tipped on its
+  side with its faint rings, Saturn, Jupiter and Mars. Then Earth, a blue dot
+  ahead, grows past the Moon (a pixel globe from a real map, its seas and
+  big craters in their true places), the Space Station and satellites, and
+  straight in: the globe becomes the game world as space fades to blue sky.
+  Tap during the flight to skip to the zoom.
 - Climbing out to the next world (the Moon from Earth, Mars or Venus from the
   Moon, and daylight from the hollow Earth): the world you're heading for
   grows in the sky as you climb, then slides up out of sight above you. Your
@@ -457,7 +463,8 @@ steering with ← → as everywhere else. No rocks.
   the rings) the inner rings overtake and the outer ones fall behind. The
   puffs above you slide past at a different speed from the one you're on:
   hop along your ring, and bounce when one comes over.
-- **The layers.** The C ring (you start on its edge), the B ring (biggest
+- **The layers.** Each ring is several layers deep (27 layers of rings in
+  all). The C ring (you start on its edge), the B ring (biggest
   and brightest, with dark spokes sweeping round it), the Cassini Division
   (a gap with only a thin ringlet's few wisps of ice in it), the A ring, the
   Encke Gap (catch little ravioli-shaped Pan as it comes round), the A
@@ -470,7 +477,9 @@ steering with ← → as everywhere else. No rocks.
   space-station lookalike), Enceladus (land while its jets spray and they
   launch you: GEYSER!), Tethys with Telesto and Calypso, Dione with Helene
   and Polydeuces (the little moons sharing their orbits wander about their
-  spots), and Rhea, with wisps of E ring ice in between.
+  spots), and Rhea, with wisps of E ring ice in between. Then the long way
+  out to Titan, more than twice as far from Saturn as Rhea, with only the odd
+  wisp of ice to bounce on.
 - **Titan.** Titan grows in the sky the whole way (a smooth orange haze
   ball with a thin blue haze layer at its edge). At the top its pull takes
   you, the view turns over, and you come down through the orange haze
