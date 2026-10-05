@@ -7588,6 +7588,8 @@
     const ringHalf = (back) => {
       ctx.save();
       if (clipX !== null) { ctx.beginPath(); ctx.rect(-r * 3, -r * 3, clipX - x + r * 3, r * 6); ctx.clip(); }
+      // (the whole ring goes behind; the near half again only where it crosses in front of the planet)
+      if (!back) { ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.clip(); }
       for (const [a, b, col] of RINGS) {
         ctx.fillStyle = col; ctx.beginPath();
         if (back) { ctx.ellipse(0, 0, r * b, r * b * E, 0, 0, TAU); ctx.ellipse(0, 0, r * a, r * a * E, 0, TAU, 0, true); }
@@ -7788,15 +7790,15 @@
   const R7_E = 0.34, R7_PHI0 = 0.97 * Math.PI, R7_PHI1 = 0.1 * Math.PI;
   const R7_RHO = [[200, 1.24], [1500, 1.44], [1620, 1.46], [2000, 1.52], [4300, 1.95], [4820, 2.02], [5900, 2.19], [6160, 2.2], [6650, 2.255], [6730, 2.262], [6800, 2.27], [6980, 2.32], [7700, 2.34]];
   const r7Rho = (x) => { if (x <= R7_RHO[0][0]) return R7_RHO[0][1]; for (let i = 1; i < R7_RHO.length; i++) if (x <= R7_RHO[i][0]) { const [a, ra] = R7_RHO[i - 1], [b, rb] = R7_RHO[i]; return lerp(ra, rb, (x - a) / (b - a)); } return R7_RHO[R7_RHO.length - 1][1]; };
-  const r7Rad = () => Math.min(W, H) * 0.55;
+  const r7Rad = () => Math.min(W, H) * 2.75;
   // A point on the rings (Saturn's middle at 0, 0)
   const r7Ring = (x) => { const ph = lerp(R7_PHI0, R7_PHI1, clamp((x - 200) / (F_END - 200), 0, 1)), rr = r7Rho(x) * r7Rad(); return [Math.cos(ph) * rr, Math.sin(ph) * rr * R7_E]; };
   // Off the edge: on out to the right, picking up speed on the screen as the
   // view opens out, rising a little at first the way you were heading
-  const r7Off = (d) => { const u = d < 500 ? 0.2 * d + 0.8 * d * d / 1000 : 300 + (d - 500); return [u, u < 600 ? 0.75 * (u - u * u / 1200) : 225]; };
+  const r7Off = (d) => { const u = d; return [u, u < 600 ? 0.75 * (u - u * u / 1200) : 225]; };
   // Where a point x along your way, y up from it, is drawn
   function r7P(x, y) {
-    const ys = lerp(0.45, 1, smooth(clamp((x - (F_END - 200)) / 600, 0, 1)));
+    const ys = lerp(0.8, 1, smooth(clamp((x - (F_END - 200)) / 600, 0, 1)));
     if (x <= F_END) { const [a, b] = r7Ring(x); return [a, b + y * ys]; }
     const [fx, fy] = r7Ring(F_END), [u, h] = r7Off(x - F_END);
     return [fx + u, fy - h + y * ys];
@@ -7804,9 +7806,10 @@
   // Saturn and its rings once you've left them: drifting along after you and
   // shrinking as you head out (too far away to fall behind quickly)
   function r7Sat(x) {
-    const u = x > F_END ? r7Off(x - F_END)[0] : 0, fx = r7Ring(F_END)[0];
-    // (it stays a little way back on your left, smaller and smaller)
-    return [fx + u - lerp(fx, W * 0.42, smooth(clamp(u / 3000, 0, 1))), -u * 0.04, 1 / (1 + u / 2500)];
+    const u = x > F_END ? r7Off(x - F_END)[0] : 0, fx = r7Ring(F_END)[0], sc = 1 / (1 + u / 500);
+    // (it stays a little way back on your left, smaller and smaller, the edge
+    // of its rings never far behind you)
+    return [fx + u - (fx * sc + W * 0.35 * (1 - sc)), -u * 0.04, sc];
   }
   function r7Cam(Z, zoom) {
     const [ppx, ppy] = r7P(Z.x, Z.y), S = r7Sat(Z.x), kb = clamp(1 - (Z.x > F_END ? r7Off(Z.x - F_END)[0] : 0) / 700, 0, 1);
@@ -8018,10 +8021,12 @@
     drawSaturnBig(Sx, Sy, R * sc, R7_E, null, 0.5);
     // Ice in the rings, going round: the inner rings faster than the outer
     // (the closer to Saturn, the faster things orbit)
-    for (let i = 0; i < 420; i++) {
+    // (scattered round the stretch of rings in view, which is all you can see of them)
+    const phc = Math.atan2((Z.cy - Sy) / R7_E, Z.cx - Sx), win = clamp(vw / (R * sc * 1.6), 0.05, 3.2);
+    for (let i = 0; i < 700; i++) {
       const rho = 1.25 + hash3(i, 7, 1) * 1.09;
       if ((rho > 1.44 && rho < 1.46) || (rho > 1.95 && rho < 2.02) || (rho > 2.27 && rho < 2.32)) continue;
-      const ph = hash3(i, 3, 9) * TAU + clock * 0.12 * Math.pow(1.5 / rho, 1.5);
+      const ph = phc + ((((hash3(i, 3, 9) * win + clock * 0.05 * Math.pow(1.5 / rho, 1.5)) % win) + win) % win) - win / 2;
       if (Math.sin(ph) < 0) continue; // the far side is behind Saturn, mostly
       const x = Sx + Math.cos(ph) * rho * R * sc, y = Sy + Math.sin(ph) * rho * R * sc * R7_E;
       if (Math.abs(x - Z.cx) > vw * 0.6 || Math.abs(y - Z.cy) > vh * 0.6) continue;
