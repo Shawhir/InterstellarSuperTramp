@@ -448,27 +448,29 @@ Carry straight on from level 7, or start from the title screen. It plays
 like every other world: Saturn is the round world in the middle (seen from
 above its north pole, with the six-sided hexagon storm round the pole, and
 its night side in shadow), and the rings are the layers you bounce out
-through, on chunks of their ice, steering with ← → as everywhere else.
+through, bouncing on glittering puffs of their ice (the rings are mostly
+specks and pebbles of ice, so up close a clump of them is a wobbly cloud),
+steering with ← → as everywhere else. No rocks.
 
 - **The rings go round.** Every ring turns at its own speed: the closer to
   Saturn, the faster things orbit, so (seen going round with the middle of
   the rings) the inner rings overtake and the outer ones fall behind. The
-  chunks above you slide past at a different speed from the one you're on:
+  puffs above you slide past at a different speed from the one you're on:
   hop along your ring, and bounce when one comes over.
 - **The layers.** The C ring (you start on its edge), the B ring (biggest
   and brightest, with dark spokes sweeping round it), the Cassini Division
-  (a gap with only a thin ringlet's few chunks in it), the A ring, the
+  (a gap with only a thin ringlet's few wisps of ice in it), the A ring, the
   Encke Gap (catch little ravioli-shaped Pan as it comes round), the A
   ring's edge by the Keeler Gap, and the narrow F ring with its shepherd
   moons Prometheus and Pandora to bounce on too. Saturn's shadow lies
-  across the rings on its night side. Loose snowballs of ring ice crumble
-  when you bounce on them.
+  across the rings on its night side. Wispy clumps of ice scatter when you
+  bounce on them.
 - **The moons.** Then out through the faint E ring, one moon per layer:
   Janus and Epimetheus (sharing an orbit, swapping places), Mimas (the
   space-station lookalike), Enceladus (land while its jets spray and they
   launch you: GEYSER!), Tethys with Telesto and Calypso, Dione with Helene
   and Polydeuces (the little moons sharing their orbits wander about their
-  spots), and Rhea, with snowballs of E ring ice in between.
+  spots), and Rhea, with wisps of E ring ice in between.
 - **Titan.** Titan grows in the sky the whole way (a smooth orange haze
   ball with a thin blue haze layer at its edge). At the top its pull takes
   you, the view turns over, and you come down through the orange haze

@@ -218,17 +218,17 @@
   // ---- Level 8: Saturn's rings, round and round, out to Titan ----------------
   // Saturn is the world in the middle and its rings are the layers you climb:
   // you start on the C ring, the closest to Saturn, and bounce out from ring
-  // to ring on chunks of their ice. The rings go round, the inner ones faster
-  // than the outer ones, so the chunks above you slide past at a different
+  // to ring on puffs of their ice. The rings go round, the inner ones faster
+  // than the outer ones, so the puffs above you slide past at a different
   // speed from the one you're on: time your bounce for one coming over.
   // Then the moons, one after another, out to Titan. (km: from Saturn's middle.)
   const L8_TIERS = [
     { km: 74500, type: 'ringice', layer: 'The C ring', g: 0.3 },
-    { km: 84000, type: 'ringice', layer: 'The C ring', g: 0.3, note: "The C ring, the closest of the main rings to Saturn. Every ring goes round Saturn, and the closer in, the faster: the inner rings overtake, the outer ones fall behind. Bounce when a chunk of the next ring comes over you." },
+    { km: 84000, type: 'ringice', layer: 'The C ring', g: 0.3, note: "The C ring, the closest of the main rings to Saturn. Every ring goes round Saturn, and the closer in, the faster: the inner rings overtake, the outer ones fall behind. Bounce when a puff of the next ring's ice comes over you." },
     { km: 95000, type: 'ringice', layer: 'The B ring', g: 0.31, note: 'The B ring: the biggest, brightest and most packed ring of all. Its chunks of water ice go from specks of dust to boulders as big as a house.' },
     { km: 103000, type: 'ringice', layer: 'The B ring', g: 0.31, note: "Dark 'spokes' sometimes sweep round the B ring, probably specks of dust lifted by electric charge. Voyager spotted them in 1980." },
-    { km: 112000, type: 'ringice', layer: 'The B ring', g: 0.32, note: 'Loose snowballs of ring ice crumble when you bounce on them. Ring particles stick together and break apart all the time.' },
-    { km: 119500, type: 'ringlet', layer: 'The Cassini Division', g: 0.32, note: "The Cassini Division: a gap about 4,800 km wide, spotted by Giovanni Cassini in 1675. It isn't quite empty: a thin ringlet runs through it, with only a few chunks to bounce on." },
+    { km: 112000, type: 'ringice', layer: 'The B ring', g: 0.32, note: "Up close the rings are specks and pebbles of water ice, mostly no bigger than a house and many as small as dust. The wispy clumps scatter when you bounce on them: ring particles stick together and break apart all the time." },
+    { km: 119500, type: 'ringlet', layer: 'The Cassini Division', g: 0.32, note: "The Cassini Division: a gap about 4,800 km wide, spotted by Giovanni Cassini in 1675. It isn't quite empty: a thin ringlet runs through it, with only a few wisps of ice to bounce on." },
     { km: 125000, type: 'ringice', layer: 'The A ring', g: 0.33, note: 'The A ring. At the end of its mission in 2017, the Cassini spacecraft dived between Saturn and its rings 22 times, then plunged into Saturn.' },
     { km: 133600, type: 'pan', layer: 'The Encke Gap', g: 0.33, note: 'The Encke Gap, swept clear by the little moon Pan as it goes round. Pan is shaped like a ravioli. Catch it as it comes past!' },
     { km: 136500, type: 'ringice', layer: 'The A ring', g: 0.33, note: 'Near the edge of the A ring, the tiny moon Daphnis keeps the Keeler Gap clear, and raises waves in the ring as it goes.' },
@@ -1327,8 +1327,9 @@
     lastTier = p.tier;
     sfx.boing(p.tier, player.speed);
     buzz(12);
-    const puff = p.type === 'cloud' || p.type === 'balloon' || p.type === 'nlc' || p.type === 'cloudm' ? '#ffffff' : '#ffd23f';
-    if (p.type === 'cloud' || p.type === 'nlc' || p.type === 'cloudm') {
+    const icy = p.type === 'ringice' || p.type === 'snowball' || p.type === 'ringlet';
+    const puff = icy ? '#eef6ff' : p.type === 'cloud' || p.type === 'balloon' || p.type === 'nlc' || p.type === 'cloudm' ? '#ffffff' : '#ffd23f';
+    if (p.type === 'cloud' || p.type === 'nlc' || p.type === 'cloudm' || icy) {
       const n = 7 + Math.round(p.hit * 4);
       for (let i = 0; i < n; i++) {
         const side = i % 2 ? 1 : -1;
@@ -1374,7 +1375,7 @@
       }
       if (conspiracy && p.tier > 0 && !TIERS[p.tier].note && !TIERS[p.tier].fact && (fx.fileGap = (fx.fileGap || 0) + 1) % 2 === 1) nextFile();
       else if (TIERS[p.tier].note) toast(TIERS[p.tier].note);
-      else if (p.tier === 0) toast(level === 8 ? "Boing! Saturn's gravity out here at the rings is gentle. Bounce out ring by ring: wait for a chunk of the next ring to come over you." : level === 7 ? "Boing! Europa's gravity is only about a seventh of Earth's. Up you go, past the plumes, to where the spacecraft swings by." : level === 6 ? 'Boing! Up you go, out of Pellucidar. Follow the arrow up through the caverns.' : level === 5 ? `Boing! ${l5Start.name}'s gravity is tiny: a few percent of Earth's. Up through the outer belt to the mass drivers!` : level === 4 ? 'Boing! Venus pulls almost as hard as Earth. Head up, sunward: watch for flare warnings and get in the shade.' : level === 3 ? "Boing! Mars's gravity is just over a third of Earth's. Follow the arrow up through the clouds." : level === 2 ? 'Boing! Low gravity: you float. Follow the arrow up to the rockets.' : 'Boing! Steer toward the arrow to reach the clouds.');
+      else if (p.tier === 0) toast(level === 8 ? "Boing! Saturn's gravity out here at the rings is gentle. Bounce out ring by ring: wait for a puff of the next ring's ice to come over you." : level === 7 ? "Boing! Europa's gravity is only about a seventh of Earth's. Up you go, past the plumes, to where the spacecraft swings by." : level === 6 ? 'Boing! Up you go, out of Pellucidar. Follow the arrow up through the caverns.' : level === 5 ? `Boing! ${l5Start.name}'s gravity is tiny: a few percent of Earth's. Up through the outer belt to the mass drivers!` : level === 4 ? 'Boing! Venus pulls almost as hard as Earth. Head up, sunward: watch for flare warnings and get in the shade.' : level === 3 ? "Boing! Mars's gravity is just over a third of Earth's. Follow the arrow up through the clouds." : level === 2 ? 'Boing! Low gravity: you float. Follow the arrow up to the rockets.' : 'Boing! Steer toward the arrow to reach the clouds.');
       if (TIERS[p.tier].visitor) fx.visitor = { kind: TIERS[p.tier].visitor, t: 0, told: false, dir: Math.random() < 0.5 ? -1 : 1 };
     }
     if (level === 3 && p.main && (p.tier === FLIP || p.type === 'outpost') && player.field < FIELD_MAX) meetBeing(p);
@@ -2014,7 +2015,7 @@
     }
     // Flaming meteors streak across, like in the drawing
     fx.meteorT -= dt;
-    if (fx.meteorT <= 0 && k >= 2 && lastTier < TOP && (level === 2 || (flipK < 0.05 && k < FLIP))) {
+    if (fx.meteorT <= 0 && k >= 2 && lastTier < TOP && level !== 8 && (level === 2 || (flipK < 0.05 && k < FLIP))) {
       fx.meteorT = 5 + Math.random() * 5;
       const side = Math.random() < 0.5 ? -1 : 1;
       const R = player.r + 40 + Math.random() * 190;
@@ -7704,10 +7705,11 @@
       // Its night side
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(shA); ctx.fillStyle = 'rgba(0,0,10,0.45)'; ctx.beginPath(); ctx.arc(0, 0, RS8, Math.PI, TAU); ctx.fill(); ctx.restore();
     }
-    // The C ring's edge under your feet: packed chunks of ice
-    if (rmin < R0 + 10) for (let i = -40; i <= 40; i++) {
-      const a = -theta + (i * 22) / R0, h = hash3(Math.round(a * 1000), 5, 3);
-      at(a + theta, R0, () => { px(-10, -2 - h * 4, 18 + h * 8, 6 + h * 4, h > 0.5 ? '#d9cdb4' : '#bfb196'); px(-10, -2 - h * 4, 18 + h * 8, 2, '#f4ecdc'); }, 30);
+    // The C ring's edge under your feet, glinting
+    if (rmin < R0 + 10) {
+      ctx.strokeStyle = 'rgba(236,228,210,0.95)'; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(cx, cy, R0 - 5, 0, TAU); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, R0 - 1, 0, TAU); ctx.stroke();
+      for (let i = -30; i <= 30; i++) { const a = Math.round(-theta * R0 / 18) * 18 / R0 + (i * 18) / R0; if (Math.sin(clock * 3 + i * 1.7 + a * 50) > 0.6) at(a + theta, R0, () => { px(-1, -4, 3, 1, '#ffffff'); px(0, -5, 1, 3, '#ffffff'); }, 20); }
     }
     // The gaps' names, along them
     ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
@@ -7738,17 +7740,35 @@
     px(-r * 0.5, 0, r, 2, 'rgba(255,255,255,0.7)');
     if (label) { ctx.font = `${r > 30 ? 8 : 6}px "Press Start 2P", monospace`; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.9)'; ctx.fillText(label.toUpperCase(), 0, -12); ctx.textAlign = 'start'; }
   };
+  // A puff of ring ice: the rings are mostly specks and pebbles of water ice,
+  // so up close a clump of them is a glittering, wobbly cloud to bounce on
+  const iceCloud = (p, w, sq, o = {}) => {
+    const spring = Math.exp(-4.5 * p.jig) * Math.cos(17 * p.jig) * p.hit, breath = Math.sin(clock * 1.6 + p.spin) * 0.03;
+    ctx.scale(1 + spring * 0.22 + breath, 1 - spring * 0.32 - breath * 0.6);
+    const hgt = o.thin ? 0.6 : 1, a = o.alpha || 1;
+    const bulge = (i) => 1 + spring * 0.18 * (i % 2 ? 1 : -1) + Math.sin(clock * 2.3 + p.spin + i * 1.7) * 0.04;
+    const puffs = [[-w * 0.32, 14, 13], [-w * 0.1, 9, 17], [w * 0.14, 11, 15], [w * 0.34, 15, 11]].map(([x, y, r], i) => [x, y * hgt, r * bulge(i) * (o.thin ? 0.75 : 1)]);
+    ctx.globalAlpha *= a;
+    ctx.fillStyle = o.shade || 'rgba(170,200,230,0.85)';
+    for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x, y + 4, r, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = o.base || 'rgba(240,248,255,0.95)';
+    for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); }
+    // Glints of ice catching the faint sunlight
+    for (let i = 0; i < 6; i++) { const t = Math.sin(clock * 3 + i * 2.1 + p.spin * 7); if (t > 0.4) { const gx = -w * 0.38 + ((i * 0.37 + p.spin) % 1) * w * 0.76, gy = 2 + (i % 3) * 7 * hgt; px(gx - 1, gy, 3, 1, '#ffffff'); px(gx, gy - 1, 1, 3, '#ffffff'); } }
+    ctx.globalAlpha /= a;
+  };
   Object.assign(L2_PLATS, {
-    ringice: (p, w, sq) => { ctx.scale(1 + sq * 0.1, 1 - sq * 0.12); lump(w, 28, Math.round(p.spin * 10), '#e8dfc9', '#ffffff'); px(-w * 0.2, 10, 8, 6, 'rgba(150,130,100,0.5)'); },
+    ringice: (p, w, sq) => iceCloud(p, w, sq),
     snowball: (p, w, sq) => {
+      // Looser, wispier: it scatters once you've bounced off it
       if (p.breakAt) ctx.translate((Math.random() - 0.5) * 3, 0);
-      ctx.scale(1 + sq * 0.12, 1 - sq * 0.15); lump(w, 30, Math.round(p.spin * 10), '#eef4fb', '#ffffff');
-      ctx.strokeStyle = 'rgba(80,110,150,0.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-8, 4); ctx.lineTo(-2, 14); ctx.lineTo(-7, 24); ctx.moveTo(7, 5); ctx.lineTo(12, 16); ctx.stroke();
+      iceCloud(p, w, sq, { base: 'rgba(228,240,255,0.75)', shade: 'rgba(160,190,225,0.6)', alpha: p.breakAt ? 0.6 : 1 });
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.setLineDash([3, 4]); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 10, w * 0.42, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); ctx.setLineDash([]);
     },
-    ringlet: (p, w, sq) => { ctx.scale(1, 1 - sq * 0.15); lump(w, 18, Math.round(p.spin * 10), '#d8ccb0', '#fffaf0'); },
-    pan: (p, w, sq) => { ctx.scale(1 + sq * 0.1, 1 - sq * 0.12); ctx.fillStyle = '#c9c0b0'; ctx.beginPath(); ctx.ellipse(0, 14, w / 2, 14, 0, 0, TAU); ctx.fill(); px(-w / 2 - 4, 12, w + 8, 4, '#e6ddcc'); ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.9)'; ctx.fillText('PAN', 0, -10); ctx.textAlign = 'start'; },
-    shepherd: (p, w, sq) => { ctx.scale(1 + sq * 0.1, 1 - sq * 0.12); lump(w, 36, Math.round(p.spin * 10), '#c9c0b0', '#efe6d4'); ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.9)'; ctx.fillText(p.name.toUpperCase(), 0, -10); ctx.textAlign = 'start'; },
-    coorb: (p, w, sq) => { ctx.scale(1 + sq * 0.1, 1 - sq * 0.12); lump(w, 40, p.name === 'janus' ? 3 : 8, L8_MOONS[p.name][1], '#f2ead8'); ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.9)'; ctx.fillText(p.name.toUpperCase(), 0, -10); ctx.textAlign = 'start'; },
+    ringlet: (p, w, sq) => iceCloud(p, w, sq, { thin: true, base: 'rgba(236,228,210,0.95)', shade: 'rgba(190,175,150,0.8)' }),
+    pan: (p, w, sq) => { ctx.scale(1 + sq * 0.1, 1 - sq * 0.12); ctx.fillStyle = '#d8d0c0'; ctx.beginPath(); ctx.ellipse(0, 12, w / 2.6, 11, 0, 0, TAU); ctx.fill(); ctx.fillStyle = '#efe8da'; ctx.beginPath(); ctx.ellipse(0, 11, w / 2, 3, 0, 0, TAU); ctx.fill(); px(-w * 0.25, 1, w * 0.5, 2, '#ffffff'); ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.9)'; ctx.fillText('PAN', 0, -10); ctx.textAlign = 'start'; },
+    shepherd: (p, w, sq) => { ctx.scale(1 + sq * 0.08, 1 - sq * 0.1); moonBall(p, 20, L8_MOONS[p.name][1], p.name); },
+    coorb: (p, w, sq) => { ctx.scale(1 + sq * 0.08, 1 - sq * 0.1); moonBall(p, L8_MOONS[p.name][0], L8_MOONS[p.name][1], p.name); },
     trojan: (p, w, sq) => { ctx.scale(1 + sq * 0.1, 1 - sq * 0.12); moonBall(p, 14, '#d8d4cc', p.name); },
     mimas: (p, w, sq) => { ctx.scale(1 + sq * 0.06, 1 - sq * 0.08); moonBall(p, L8_MOONS.mimas[0], L8_MOONS.mimas[1], 'Mimas'); },
     tethys: (p, w, sq) => { ctx.scale(1 + sq * 0.06, 1 - sq * 0.08); moonBall(p, L8_MOONS.tethys[0], L8_MOONS.tethys[1], 'Tethys'); },
