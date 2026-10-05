@@ -222,29 +222,34 @@
   // than the outer ones, so the puffs above you slide past at a different
   // speed from the one you're on: time your bounce for one coming over.
   // Then the moons, one after another, out to Titan. (km: from Saturn's middle.)
-  const L8_TIERS = [
-    { km: 74500, type: 'ringice', layer: 'The C ring', g: 0.3 },
-    { km: 84000, type: 'ringice', layer: 'The C ring', g: 0.3, note: "The C ring, the closest of the main rings to Saturn. Every ring goes round Saturn, and the closer in, the faster: the inner rings overtake, the outer ones fall behind. Bounce when a puff of the next ring's ice comes over you." },
-    { km: 95000, type: 'ringice', layer: 'The B ring', g: 0.31, note: 'The B ring: the biggest, brightest and most packed ring of all. Its chunks of water ice go from specks of dust to boulders as big as a house.' },
-    { km: 103000, type: 'ringice', layer: 'The B ring', g: 0.31, note: "Dark 'spokes' sometimes sweep round the B ring, probably specks of dust lifted by electric charge. Voyager spotted them in 1980." },
-    { km: 112000, type: 'ringice', layer: 'The B ring', g: 0.32, note: "Up close the rings are specks and pebbles of water ice, mostly no bigger than a house and many as small as dust. The wispy clumps scatter when you bounce on them: ring particles stick together and break apart all the time." },
-    { km: 119500, type: 'ringlet', layer: 'The Cassini Division', g: 0.32, note: "The Cassini Division: a gap about 4,800 km wide, spotted by Giovanni Cassini in 1675. It isn't quite empty: a thin ringlet runs through it, with only a few wisps of ice to bounce on." },
-    { km: 125000, type: 'ringice', layer: 'The A ring', g: 0.33, note: 'The A ring. At the end of its mission in 2017, the Cassini spacecraft dived between Saturn and its rings 22 times, then plunged into Saturn.' },
-    { km: 133600, type: 'pan', layer: 'The Encke Gap', g: 0.33, note: 'The Encke Gap, swept clear by the little moon Pan as it goes round. Pan is shaped like a ravioli. Catch it as it comes past!' },
-    { km: 136500, type: 'ringice', layer: 'The A ring', g: 0.33, note: 'Near the edge of the A ring, the tiny moon Daphnis keeps the Keeler Gap clear, and raises waves in the ring as it goes.' },
-    { km: 140200, type: 'fring', layer: 'The F ring', g: 0.34, note: "The F ring: narrow and twisted into braids, kept in line by two 'shepherd' moons, Prometheus and Pandora. They go round with it: bounce on them too." },
-    { km: 151500, type: 'coorb', layer: 'Janus and Epimetheus', g: 0.35, note: 'Janus and Epimetheus share almost the same orbit. Every four years the inner one catches up and they swap orbits, without ever passing each other. Here they swap places: time it.' },
-    { km: 185500, type: 'mimas', layer: 'Mimas', g: 0.36, note: "Mimas: its giant Herschel crater makes it look a lot like a certain moon-sized space station from the films. That's no moon... oh wait, it is." },
-    { km: 238000, type: 'enceladus', layer: 'Enceladus', g: 0.37, note: "Enceladus, the shiniest thing in the Solar System. Jets of water spray from cracks at its south pole, out of an ocean under its ice. Land while they're spraying and they'll launch you!" },
-    { km: 294700, type: 'tethys', layer: 'Tethys', g: 0.38, note: "Tethys, almost all water ice, with a canyon running most of the way round it. Little Telesto and Calypso share its orbit, one ahead and one behind." },
-    { km: 377400, type: 'dione', layer: 'Dione', g: 0.38, note: "Dione: icy, with long bright cliffs of ice. Helene and Polydeuces share its orbit, the way Tethys has its two companions." },
-    { km: 527100, type: 'rhea', layer: 'Rhea', g: 0.39, note: "Rhea, Saturn's second-biggest moon: a ball of ice and rock about 1,500 km across. Titan's next!" },
-    { km: 1221900, type: 'titan', layer: 'Titan', g: 0.14 },
-  ];
+  // Built layer by layer: each ring is several layers deep, the moons one each,
+  // then the long way out past Rhea to Titan
+  const L8_TIERS = (() => {
+    const T = [{ km: 74500, type: 'ringice', layer: 'The C ring', g: 0.3 }];
+    const add = (layer, type, n, km0, km1, g, notes = []) => { for (let i = 0; i < n; i++) T.push({ km: Math.round(km0 + ((km1 - km0) * (i + 1)) / n), type, layer, g, note: notes[i] }); };
+    add('The C ring', 'ringice', 3, 74500, 92000, 0.3, ["The C ring, the closest of the main rings to Saturn. Every ring goes round Saturn, and the closer in, the faster: the inner rings overtake, the outer ones fall behind. Bounce when a puff of the next ring's ice comes over you."]);
+    add('The B ring', 'ringice', 9, 92000, 117500, 0.31, ['The B ring: the biggest, brightest and most packed ring of all. Its chunks of water ice go from specks of dust to boulders as big as a house.', , , "Dark 'spokes' sometimes sweep round the B ring, probably specks of dust lifted by electric charge. Voyager spotted them in 1980.", , , "Up close the rings are specks and pebbles of water ice, mostly no bigger than a house and many as small as dust. The wispy clumps scatter when you bounce on them: ring particles stick together and break apart all the time."]);
+    add('The Cassini Division', 'ringlet', 3, 117500, 122000, 0.32, ["The Cassini Division: a gap about 4,800 km wide, spotted by Giovanni Cassini in 1675. It isn't quite empty: a thin ringlet runs through it, with only a few wisps of ice to bounce on."]);
+    add('The A ring', 'ringice', 3, 122000, 133400, 0.33, ['The A ring. At the end of its mission in 2017, the Cassini spacecraft dived between Saturn and its rings 22 times, then plunged into Saturn.']);
+    add('The Encke Gap', 'pan', 3, 133400, 133700, 0.33, ['The Encke Gap, swept clear by the little moon Pan as it goes round. Pan is shaped like a ravioli. Catch it as it comes past!']);
+    add('The A ring', 'ringice', 3, 133700, 136800, 0.33, ['Near the edge of the A ring, the tiny moon Daphnis keeps the Keeler Gap clear, and raises waves in the ring as it goes.']);
+    add('The F ring', 'fring', 3, 138000, 140400, 0.34, ["The F ring: narrow and twisted into braids, kept in line by two 'shepherd' moons, Prometheus and Pandora. They go round with it: bounce on them too."]);
+    add('Janus and Epimetheus', 'coorb', 1, 140400, 151500, 0.35, ['Janus and Epimetheus share almost the same orbit. Every four years the inner one catches up and they swap orbits, without ever passing each other. Here they swap places: time it.']);
+    add('Mimas', 'mimas', 1, 151500, 185500, 0.36, ["Mimas: its giant Herschel crater makes it look a lot like a certain moon-sized space station from the films. That's no moon... oh wait, it is."]);
+    add('Enceladus', 'enceladus', 1, 185500, 238000, 0.37, ["Enceladus, the shiniest thing in the Solar System. Jets of water spray from cracks at its south pole, out of an ocean under its ice. Land while they're spraying and they'll launch you!"]);
+    add('Tethys', 'tethys', 1, 238000, 294700, 0.38, ["Tethys, almost all water ice, with a canyon running most of the way round it. Little Telesto and Calypso share its orbit, one ahead and one behind."]);
+    add('Dione', 'dione', 1, 294700, 377400, 0.38, ["Dione: icy, with long bright cliffs of ice. Helene and Polydeuces share its orbit, the way Tethys has its two companions."]);
+    add('Rhea', 'rhea', 1, 377400, 527100, 0.39, ["Rhea, Saturn's second-biggest moon: a ball of ice and rock about 1,500 km across. Titan's next!"]);
+    add('Out to Titan', 'outer', 5, 527100, 1150000, 0.4, ["Titan is about 1.2 million km from Saturn, more than twice as far out as Rhea. The E ring has thinned away to nothing out here: just the odd wisp of ice to bounce on, and Titan growing ahead."]);
+    T.push({ km: 1221900, type: 'titan', layer: 'Titan', g: 0.14 });
+    return T;
+  })();
+  // Where the rings end and the moons begin, and the middle of each ring
+  const L8_RINGS = 27, L8_TIER = { cTop: 3, bTop: 12, cassini: [13, 15], aTop: 18, encke: [19, 21], keeler: 24, f: [25, 27] };
   // How fast each ring goes round, as seen going round with the middle of the
   // rings (px/s along it): the inner rings overtake, the outer ones fall behind,
   // because the closer to Saturn, the faster things orbit
-  const L8_SPIN = [0, 120, 90, 60, 30, 0, -30, -60, -90, -120];
+  const L8_SPIN = Array.from({ length: 28 }, (_, k) => (k === 0 ? 0 : Math.round(120 - (240 * (k - 1)) / 26)));
   // Saturn's moons as platforms: [radius, colour]
   const L8_MOONS = { mimas: [46, '#b4b0aa'], enceladus: [48, '#f6f9ff'], tethys: [60, '#e2e2e6'], dione: [60, '#d0d0d6'], rhea: [72, '#c9c4bc'], janus: [24, '#c8c2b6'], epimetheus: [20, '#bdb6a8'], telesto: [12, '#d8d4cc'], calypso: [12, '#d8d4cc'], helene: [14, '#d8d4cc'], polydeuces: [10, '#d8d4cc'], pan: [16, '#c9c0b0'], prometheus: [20, '#c9c0b0'], pandora: [20, '#c9c0b0'] };
   // When Enceladus's jets are spraying (they do vary: brighter when it's
@@ -995,11 +1000,13 @@
     mk(0, -0.7, 'ringice');
     let prevA = 0.55;
     for (let k = 1; k <= TOP; k++) {
-      const R = tierR(k), t = T[k], orbit = (L8_SPIN[k] || 0) / R;
+      // (the thin ringlets in the gaps run a little apart from their neighbours,
+      // so their few wisps come round to you sooner)
+      const R = tierR(k), t = T[k], thin = t.type === 'ringlet' || t.type === 'pan', orbit = ((L8_SPIN[k] || 0) + (thin ? (k % 2 ? 80 : -80) : 0)) / R;
       if (k === TOP) { const d = mk(k, prevA + (170 * (rnd() < 0.5 ? -1 : 1)) / R); d.main = true; d.dest = true; break; }
-      if (k <= 9) {
+      if (k <= L8_RINGS) {
         // A whole ring of chunks, going round together; sparse in the gaps
-        const gap = t.type === 'ringlet' ? 760 : t.type === 'pan' ? 900 : t.type === 'fring' ? 520 : 480;
+        const gap = t.type === 'ringlet' ? 560 : t.type === 'pan' ? 620 : t.type === 'fring' ? 520 : 480;
         const n = Math.max(6, Math.round((TAU * R) / gap));
         for (let i = 0; i < n; i++) {
           const a = prevA + (i * TAU) / n + ((rnd() - 0.5) * gap * 0.4) / R;
@@ -1009,12 +1016,13 @@
           if (rnd() < 0.12) stars.push({ a, R: R + 150, taken: false, orbit });
         }
         // Pan in the Encke Gap; Prometheus and Pandora either side of the F ring
-        if (t.type === 'pan') { const pn = mk(k, prevA + 0.4, 'pan'); pn.orbit = 40 / R; pn.name = 'pan'; }
-        if (t.type === 'fring') for (const [nm, da, v] of [['prometheus', 0.5, -60], ['pandora', -0.6, -150]]) { const sp = mk(k, prevA + da, 'shepherd'); sp.orbit = v / R; sp.name = nm; sp.sway = 30 / R; sp.freq = 0.8; sp.phase = rnd() * TAU; }
+        if (t.type === 'pan' && k === L8_TIER.encke[0] + 1) { const pn = mk(k, prevA + 0.4, 'pan'); pn.orbit = 40 / R; pn.name = 'pan'; }
+        if (t.type === 'fring' && k === L8_TIER.f[0] + 1) for (const [nm, da, v] of [['prometheus', 0.5, -60], ['pandora', -0.6, -150]]) { const sp = mk(k, prevA + da, 'shepherd'); sp.orbit = v / R; sp.name = nm; sp.sway = 30 / R; sp.freq = 0.8; sp.phase = rnd() * TAU; }
       } else {
         // The moons, each with a little company
         const a = prevA + ((140 + rnd() * 120) * (rnd() < 0.6 ? 1 : -1)) / R;
-        if (t.type === 'coorb') {
+        if (t.type === 'outer') { const m = mk(k, a, 'ringice'); m.main = true; m.sway = 60 / R; m.freq = 0.3; m.phase = rnd() * TAU; }
+        else if (t.type === 'coorb') {
           // Janus and Epimetheus, swapping places
           for (const [nm, ph] of [['janus', 0], ['epimetheus', Math.PI]]) { const c = mk(k, a, 'coorb'); c.name = nm; c.sway = 150 / R; c.freq = 0.5; c.phase = ph; c.main = nm === 'janus'; }
         } else {
@@ -1260,6 +1268,7 @@
     sfx.tier();
   }
   function land(p) {
+    const again = p === player.lastPlat; // bouncing on the same thing again: no new bonus for that
     player.hopLock = 0; // an auto-hop holds your steering until you land
     if (p === world.issPlat && !player.suit && p.ride.state === 'near') { dock(p); return; }
     if ((level === 2 || level === 3) && p.tier === 0 && !p.back && p.route !== route) chooseRoute(p.route);
@@ -1340,7 +1349,7 @@
     ring(-theta, p.R, puff);
     addShake(2 + player.speed * 1.5);
     addScore(10 * (p.tier + 1), -theta, p.R + 60);
-    if (off < 10 && p.tier > 0) {
+    if (off < 10 && p.tier > 0 && !again) {
       addScore(100);
       spawnGeoms(3, -theta, p.R);
       pop('PERFECT!', '#52e07a');
@@ -7636,15 +7645,22 @@
   // ---- Level 8: Saturn's rings ------------------------------------------------
   const RS8 = R0 * 0.8; // Saturn's cloud tops, just inside the C ring
   // The rings, as bands round Saturn: [inner, outer, colour, which ring turns them]
-  const l8Bands = () => [
-    [R0 - 56, tierR(1) + 125, [150, 136, 116], 1, 0.75],
-    [tierR(1) + 125, tierR(4) + 125, [236, 222, 190], 3, 0.95],
-    [tierR(5) - 14, tierR(5) + 8, [200, 186, 160], 5, 0.7],
-    [tierR(5) + 125, tierR(7) - 50, [214, 196, 162], 6, 0.9],
-    [tierR(7) + 36, tierR(8) + 70, [214, 196, 162], 8, 0.9],
-    [tierR(8) + 82, tierR(8) + 125, [214, 196, 162], 8, 0.9],
-    [tierR(9) - 16, tierR(9) + 6, [246, 238, 220], 9, 0.95],
-  ];
+  const l8Bands = () => {
+    const T8 = L8_TIER;
+    return [
+      [R0 - 56, tierR(T8.cTop) + 125, [150, 136, 116], 2, 0.75],
+      [tierR(T8.cTop) + 125, tierR(T8.bTop) + 125, [236, 222, 190], 8, 0.95],
+      [tierR(T8.cassini[0] + 1) - 14, tierR(T8.cassini[0] + 1) + 8, [200, 186, 160], 14, 0.7],
+      [tierR(T8.cassini[1]) + 125, tierR(T8.aTop) + 125, [214, 196, 162], 17, 0.9],
+      // (the Encke Gap: dark, with only faint ringlets)
+      [tierR(T8.encke[0]) - 10, tierR(T8.encke[0]) + 4, [200, 186, 160], 19, 0.4],
+      [tierR(T8.encke[1]) - 10, tierR(T8.encke[1]) + 4, [200, 186, 160], 21, 0.4],
+      [tierR(T8.encke[1]) + 125, tierR(T8.keeler) + 70, [214, 196, 162], 23, 0.9],
+      [tierR(T8.keeler) + 82, tierR(T8.keeler) + 125, [214, 196, 162], 24, 0.9],
+      // The F ring: narrow, braided strands
+      ...[0, 1, 2].map((i) => [tierR(T8.f[0] + i) - 10, tierR(T8.f[0] + i) + 4, [246, 238, 220], T8.f[0] + i, 0.95]),
+    ];
+  };
   function updateSaturn8(dt) {
     // Loose snowballs break up a moment after you bounce off them, and
     // another drifts along into their place a few seconds later
@@ -7670,7 +7686,7 @@
     const rmin = Math.max(0, cam.r - Math.hypot(W, H) / (cam.zoom || 1)), rmax = cam.r + Math.hypot(W, H) / (cam.zoom || 1);
     const shA = Math.PI + theta; // Saturn's shadow, lying across the rings on its night side
     // The faint E ring, out among the moons
-    if (rmax > tierR(9)) { const eg = ctx.createRadialGradient(cx, cy, tierR(9), cx, cy, tierR(15)); eg.addColorStop(0, 'rgba(150,190,240,0.07)'); eg.addColorStop(0.5, 'rgba(150,190,240,0.05)'); eg.addColorStop(1, 'rgba(150,190,240,0)'); ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(cx, cy, tierR(15), 0, TAU); ctx.arc(cx, cy, tierR(9) + 20, 0, TAU, true); ctx.fill(); }
+    if (rmax > tierR(L8_RINGS)) { const eg = ctx.createRadialGradient(cx, cy, tierR(L8_RINGS), cx, cy, tierR(L8_RINGS + 9)); eg.addColorStop(0, 'rgba(150,190,240,0.07)'); eg.addColorStop(0.5, 'rgba(150,190,240,0.05)'); eg.addColorStop(1, 'rgba(150,190,240,0)'); ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(cx, cy, tierR(L8_RINGS + 9), 0, TAU); ctx.arc(cx, cy, tierR(L8_RINGS) + 20, 0, TAU, true); ctx.fill(); }
     // The rings: each band, with fine ringlets in it
     for (const [r0, r1, c, , al] of l8Bands()) {
       if (r1 < rmin || r0 > rmax) continue;
@@ -7700,11 +7716,11 @@
       }
     }
     // Spokes sweeping round the B ring
-    { const [r0, r1] = l8Bands()[1], om = L8_SPIN[3] / ((r0 + r1) / 2);
+    { const [r0, r1] = l8Bands()[1], om = L8_SPIN[8] / ((r0 + r1) / 2);
       if (r1 > rmin && r0 < rmax) for (let i = 0; i < 6; i++) { const a = i * 1.05 + om * clock + theta, w = 0.05 + 0.02 * Math.sin(clock * 0.3 + i); ctx.fillStyle = 'rgba(70,60,50,0.22)'; ctx.beginPath(); ctx.arc(cx, cy, r1 - 20, a - Math.PI / 2 - w, a - Math.PI / 2 + w); ctx.arc(cx, cy, r0 + 40, a - Math.PI / 2 + w * 0.6, a - Math.PI / 2 - w * 0.6, true); ctx.fill(); } }
     // Saturn's shadow across the rings
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(shA);
-    ctx.fillStyle = 'rgba(0,0,8,0.5)'; ctx.fillRect(-RS8 * 0.96, -tierR(9) - 30, RS8 * 1.92, tierR(9) + 30);
+    ctx.fillStyle = 'rgba(0,0,8,0.5)'; ctx.fillRect(-RS8 * 0.96, -tierR(L8_RINGS) - 30, RS8 * 1.92, tierR(L8_RINGS) + 30);
     ctx.restore();
     // Saturn, from above its north pole
     if (rmin < RS8 + 10) {
@@ -7730,7 +7746,7 @@
     }
     // The gaps' names, along them
     ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center';
-    for (const [r, name] of [[tierR(5) - 60, 'CASSINI DIVISION'], [tierR(7), 'ENCKE GAP'], [tierR(8) + 76, 'KEELER GAP']]) {
+    for (const [r, name] of [[tierR(L8_TIER.cassini[0]) - 40, 'CASSINI DIVISION'], [tierR(L8_TIER.cassini[1]) + 60, 'CASSINI DIVISION'], [tierR(L8_TIER.encke[0] + 1) + 60, 'ENCKE GAP'], [tierR(L8_TIER.keeler) + 76, 'KEELER GAP']]) {
       if (r < rmin || r > rmax) continue;
       for (let i = 0; i < 8; i++) at((i * TAU) / 8 + 0.2 + theta, r, () => { ctx.fillStyle = 'rgba(200,220,255,0.55)'; ctx.fillText(name, 0, 4); }, 120);
     }
@@ -9295,7 +9311,7 @@
   const L6_TIME_MEDALS = [[120, 'gold'], [180, 'silver'], [260, 'bronze']];
   const START_BODY = { 1: 'Earth', 2: 'the Moon', 3: 'Mars', 4: 'Venus', 6: 'the hollow Earth', 7: 'Europa', 8: "Saturn's rings" };
   const L7_TIME_MEDALS = [[100, 'gold'], [150, 'silver'], [220, 'bronze']];
-  const L8_TIME_MEDALS = [[110, 'gold'], [160, 'silver'], [240, 'bronze']];
+  const L8_TIME_MEDALS = [[200, 'gold'], [290, 'silver'], [400, 'bronze']];
   // go: carrying straight on into the next level, so no results screen
   // ---- Stop whenever you like ---------------------------------------------------
   // The whole game freezes where it is, and you get your score so far (the
@@ -9348,7 +9364,7 @@
     addShake(10);
     for (let i = 0; i < 5; i++) burst(-theta + (i - 2) * 0.004, player.r, ['#ffd23f', '#52e07a', '#e0433b', '#3f6fd8', '#ffffff'][i], 14, 300);
     sfx.win();
-    const timeBonus = Math.max(0, Math.round(([0, 180, 240, 300, 300, 330, 400, 300, 420][level] - playTime) * 100));
+    const timeBonus = Math.max(0, Math.round(([0, 180, 240, 300, 300, 330, 400, 300, 600][level] - playTime) * 100));
     const bonus = [0, 10000, 15000, 20000, 25000, 30000, 20000, 30000, 40000][level] + timeBonus;
     addScore(bonus);
     const list = routeStars();

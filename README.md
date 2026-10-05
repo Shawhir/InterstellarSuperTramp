@@ -463,7 +463,8 @@ steering with ← → as everywhere else. No rocks.
   the rings) the inner rings overtake and the outer ones fall behind. The
   puffs above you slide past at a different speed from the one you're on:
   hop along your ring, and bounce when one comes over.
-- **The layers.** The C ring (you start on its edge), the B ring (biggest
+- **The layers.** Each ring is several layers deep (27 layers of rings in
+  all). The C ring (you start on its edge), the B ring (biggest
   and brightest, with dark spokes sweeping round it), the Cassini Division
   (a gap with only a thin ringlet's few wisps of ice in it), the A ring, the
   Encke Gap (catch little ravioli-shaped Pan as it comes round), the A
@@ -476,7 +477,9 @@ steering with ← → as everywhere else. No rocks.
   space-station lookalike), Enceladus (land while its jets spray and they
   launch you: GEYSER!), Tethys with Telesto and Calypso, Dione with Helene
   and Polydeuces (the little moons sharing their orbits wander about their
-  spots), and Rhea, with wisps of E ring ice in between.
+  spots), and Rhea, with wisps of E ring ice in between. Then the long way
+  out to Titan, more than twice as far from Saturn as Rhea, with only the odd
+  wisp of ice to bounce on.
 - **Titan.** Titan grows in the sky the whole way (a smooth orange haze
   ball with a thin blue haze layer at its edge). At the top its pull takes
   you, the view turns over, and you come down through the orange haze
