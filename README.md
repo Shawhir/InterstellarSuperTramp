@@ -454,32 +454,38 @@ Carry straight on from level 7, or start from the title screen. It plays
 like every other world: Saturn is the round world in the middle (seen from
 above its north pole, with the six-sided hexagon storm round the pole, and
 its night side in shadow), and the rings are the layers you bounce out
-through, bouncing on glittering puffs of their ice (the rings are mostly
-specks and pebbles of ice, so up close a clump of them is a wobbly cloud),
-steering with ← → as everywhere else. No rocks.
+through, 27 of them, steering with ← → as everywhere else. Every ring turns
+at its own speed (the closer to Saturn, the faster things orbit), so what's
+above you slides past at a different speed from what you're on: wait for
+something to come over, then bounce. And each part of the rings has what
+really happens there, as seen by Voyager and Cassini:
 
-- **The rings go round.** Every ring turns at its own speed: the closer to
-  Saturn, the faster things orbit, so (seen going round with the middle of
-  the rings) the inner rings overtake and the outer ones fall behind. The
-  puffs above you slide past at a different speed from the one you're on:
-  hop along your ring, and bounce when one comes over.
-- **The layers.** Each ring is several layers deep (27 layers of rings in
-  all). The C ring (you start on its edge), the B ring (biggest
-  and brightest, with dark spokes sweeping round it), the Cassini Division
-  (a gap with only a thin ringlet's few wisps of ice in it), the A ring, the
-  Encke Gap (catch little ravioli-shaped Pan as it comes round), the A
-  ring's edge by the Keeler Gap, and the narrow F ring with its shepherd
-  moons Prometheus and Pandora to bounce on too. Saturn's shadow lies
-  across the rings on its night side. Wispy clumps of ice scatter when you
-  bounce on them.
-- **The moons.** Then out through the faint E ring, one moon per layer:
-  Janus and Epimetheus (sharing an orbit, swapping places), Mimas (the
-  space-station lookalike), Enceladus (land while its jets spray and they
-  launch you: GEYSER!), Tethys with Telesto and Calypso, Dione with Helene
-  and Polydeuces (the little moons sharing their orbits wander about their
-  spots), and Rhea, with wisps of E ring ice in between. Then the long way
-  out to Titan, more than twice as far from Saturn as Rhea, with only the odd
-  wisp of ice to bounce on.
+- **The C ring:** you bounce on rafts of ice pebbles. Blue streams of
+  "ring rain" (charged ice grains dragged down into Saturn along its
+  magnetic field: the rings are slowly losing ice) pull you down if you
+  fly into one.
+- **The B ring:** the ice keeps clumping into slanting rafts that hold for
+  a few seconds, then get torn apart, and gather again (self-gravity wakes,
+  which really do form and break up in hours). Dark spokes sweep round.
+- **The Cassini Division** and **the Encke Gap:** only thin ringlets to
+  bounce on (and Pan, in the Encke Gap).
+- **The A ring:** spiral waves raised by the moons' pull, so you bounce on
+  crests that rise and fall as they pass, and "propellers": moonlets too
+  small to see, stirring up propeller-shaped wakes, named after aviators
+  (Blériot, Earhart, Santos-Dumont) as the real ones are.
+- **The Keeler Gap:** Daphnis raises tall waves on the ring's edge as it
+  passes (up to about 1.5 km tall), and Peggy sits at the edge: a bright
+  clump that might be a tiny moon being born.
+- **The F ring:** braided strands, with streamers pulled out of it by
+  Prometheus that swing out and snap back, and the shepherd moons to
+  bounce on too.
+- **The moons:** Janus and Epimetheus (swapping places, on their own faint
+  ring of dust), Mimas with little Methone and Anthe, Enceladus (land
+  while its jets spray and they launch you: GEYSER!) with Pallene, Tethys
+  with Telesto and Calypso, Dione with Helene and Polydeuces, then Rhea.
+- **Out to Titan:** more than twice as far from Saturn as Rhea, past the
+  spacecraft that really came this way: Pioneer 11, Voyager 1, Voyager 2
+  (on to Uranus), Cassini and the Huygens probe.
 - **Titan.** Titan grows in the sky the whole way (a smooth orange haze
   ball with a thin blue haze layer at its edge). At the top its pull takes
   you, the view turns over, and you come down through the orange haze
