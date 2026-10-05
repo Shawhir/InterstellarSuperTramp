@@ -408,7 +408,7 @@ you off: the run, straight through Jupiter, and on to Europa and its ocean.
   Dinkinesh's moon, the Hildas, Jupiter's insides, Europa's ocean and Europa
   Clipper (launched 2024, arriving 2030).
 
-## Level 7: Europa to Titan, by way of Saturn's rings
+## Level 7: Europa to Saturn
 
 Reach the seafloor of Europa at the end of level 5 and carry straight on
 (score and all), or start from the title screen.
@@ -438,40 +438,46 @@ Reach the seafloor of Europa at the end of level 5 and carry straight on
   tiny bit of Jupiter's speed to fling you on faster (Cassini did this in
   2000). Then the long cruise, the years ticking by (Cassini took three and
   a half, arriving in 2004).
-- **Round Saturn's rings.** Saturn in the middle, its rings seen from a
-  little above, the classic view (C ring with the Maxwell Gap, B, the
-  Cassini Division, A with the Encke and Keeler Gaps, the narrow F ring),
-  with flecks of ice going round in them, the inner rings faster than the
-  outer. You hop off the spacecraft onto the C ring at the left and skate
-  round the near side of the rings to the right, spiralling out ring by
-  ring: each stretch of ice is a stretch of the real ring, and each gap you
-  jump is the real gap, named as you pass (Pan sits in the Encke Gap). Hold
-  right to build up speed, ease off to glide, push back to brake; you jump
-  the gaps by yourself at the edge (or whenever you like with Space, ↑ or a
-  tap). Too slow and you drop through, and go back for another run-up.
-  Going flat out leaves speed lines and ghosts of you behind.
-- **Off the edge.** At the end of the F ring, round on the right, the very
-  edge of the rings (marked), you launch off out to the right; Saturn and
-  its rings drift along behind you, shrinking as you head out. Jump right at the last moment for a PERFECT
-  LAUNCH: higher, faster, in slow motion. The camera pulls back while you
-  fly. Press jump in the air to flip (as many as you can fit in before you
-  land; land halfway through one and you wobble).
-- **On to Titan.** Out through the faint E ring, from moon to moon, chaining
-  bounces for more each time:
-  - snowballs of loose ring ice, which fall apart after one bounce;
-  - Janus and Epimetheus, which really do share an orbit and swap every four
-    years: here they swap up and down, so time the hop;
-  - Mimas (the space-station lookalike);
-  - Enceladus, south pole up, whose jets come and go: land while they spray
-    and they launch you (GEYSER!);
-  - Tethys and Dione, each with two little Trojan moons (Telesto and
-    Calypso, Helene and Polydeuces) wandering back and forth about their
-    spots;
-  - Rhea, and then Titan. Over Titan a parachute pops open, like the Huygens
-    probe's in 2005, and you drift down through its orange haze to land.
+- **Into Saturn's pull.** At the end of the cruise you see Saturn and its
+  rings whole, from above, and the view closes in on the C ring until
+  you're standing on it: that's level 8, carried straight on, score and all.
 
-  Fall off and you're back on the last moon you landed on. Each ring and moon
-  has a note, and the HUD shows how far out from Saturn you are.
+## Level 8: Saturn's rings to Titan
+
+Carry straight on from level 7, or start from the title screen. It plays
+like every other world: Saturn is the round world in the middle (seen from
+above its north pole, with the six-sided hexagon storm round the pole, and
+its night side in shadow), and the rings are the layers you bounce out
+through, on chunks of their ice, steering with ← → as everywhere else.
+
+- **The rings go round.** Every ring turns at its own speed: the closer to
+  Saturn, the faster things orbit, so (seen going round with the middle of
+  the rings) the inner rings overtake and the outer ones fall behind. The
+  chunks above you slide past at a different speed from the one you're on:
+  hop along your ring, and bounce when one comes over.
+- **The layers.** The C ring (you start on its edge), the B ring (biggest
+  and brightest, with dark spokes sweeping round it), the Cassini Division
+  (a gap with only a thin ringlet's few chunks in it), the A ring, the
+  Encke Gap (catch little ravioli-shaped Pan as it comes round), the A
+  ring's edge by the Keeler Gap, and the narrow F ring with its shepherd
+  moons Prometheus and Pandora to bounce on too. Saturn's shadow lies
+  across the rings on its night side. Loose snowballs of ring ice crumble
+  when you bounce on them.
+- **The moons.** Then out through the faint E ring, one moon per layer:
+  Janus and Epimetheus (sharing an orbit, swapping places), Mimas (the
+  space-station lookalike), Enceladus (land while its jets spray and they
+  launch you: GEYSER!), Tethys with Telesto and Calypso, Dione with Helene
+  and Polydeuces (the little moons sharing their orbits wander about their
+  spots), and Rhea, with snowballs of E ring ice in between.
+- **Titan.** Titan grows in the sky the whole way (a smooth orange haze
+  ball with a thin blue haze layer at its edge). At the top its pull takes
+  you, the view turns over, and you come down through the orange haze
+  under a parachute, like the Huygens probe in 2005, onto a plain of
+  rounded ice pebbles by a dark methane lake, with Saturn faint through
+  the haze.
+
+Each ring and moon has one note the first time you reach it; miss a bounce
+and you drop back a layer, as on every world.
 
 ## Secret: conspiracy mode
 
