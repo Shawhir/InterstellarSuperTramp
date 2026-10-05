@@ -7582,13 +7582,17 @@
   function drawSaturnBig(x, y, r, E = 0.2, clipX = null, dark = 0.55) {
     const T = 0;
     ctx.save(); ctx.translate(x, y); ctx.rotate(T);
-    const RINGS = [[1.24, 1.52, 'rgba(150,135,115,0.45)'], [1.52, 1.95, 'rgba(238,224,192,0.95)'], [1.95, 2.02, 'rgba(10,10,20,0.35)'], [2.02, 2.27, 'rgba(214,198,166,0.92)'], [2.19, 2.2, 'rgba(10,10,20,0.6)'], [2.32, 2.34, 'rgba(240,230,210,0.8)']];
+    // The rings, in Saturn radii: D (faint), C (with the Maxwell Gap), B, the
+    // Cassini Division, A (with the Encke and Keeler Gaps), and the narrow F
+    const RINGS = [[1.11, 1.236, 'rgba(150,135,115,0.16)'], [1.24, 1.44, 'rgba(165,150,128,0.62)'], [1.46, 1.52, 'rgba(165,150,128,0.62)'], [1.52, 1.95, 'rgba(240,226,194,0.97)'], [1.95, 2.02, 'rgba(120,110,95,0.12)'], [2.02, 2.19, 'rgba(216,200,168,0.95)'], [2.2, 2.255, 'rgba(216,200,168,0.95)'], [2.262, 2.27, 'rgba(216,200,168,0.95)'], [2.32, 2.34, 'rgba(244,234,214,0.92)']];
     const ringHalf = (back) => {
       ctx.save();
       if (clipX !== null) { ctx.beginPath(); ctx.rect(-r * 3, -r * 3, clipX - x + r * 3, r * 6); ctx.clip(); }
+      // (the whole ring goes behind; the near half again only where it crosses in front of the planet)
+      if (!back) { ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.clip(); }
       for (const [a, b, col] of RINGS) {
         ctx.fillStyle = col; ctx.beginPath();
-        if (back) { ctx.ellipse(0, 0, r * b, r * b * E, 0, Math.PI, TAU); ctx.ellipse(0, 0, r * a, r * a * E, 0, TAU, Math.PI, true); }
+        if (back) { ctx.ellipse(0, 0, r * b, r * b * E, 0, 0, TAU); ctx.ellipse(0, 0, r * a, r * a * E, 0, TAU, 0, true); }
         else { ctx.ellipse(0, 0, r * b, r * b * E, 0, 0, Math.PI); ctx.ellipse(0, 0, r * a, r * a * E, 0, Math.PI, 0, true); }
         ctx.fill();
         // fine ringlets
@@ -7613,42 +7617,6 @@
     ringHalf(false);
     ctx.restore();
     if (r > 30) { ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.75)'; ctx.fillText('SATURN', x, y - r * 1.25); ctx.textAlign = 'start'; }
-  }
-  // The ring sheet: for each ring, the region between its inner and outer
-  // edges, from where they run round Saturn's far side (the ellipse) to where
-  // they cross the band you hop along (x from x0 to x1)
-  const SHEET = [
-    [200, 2000, 1.24, 1.52, [150, 135, 115], 0.45], [2000, 4300, 1.52, 1.95, [238, 224, 192], 0.85],
-    [4820, 5900, 2.02, 2.19, [214, 198, 166], 0.8], [6160, 6800, 2.2, 2.27, [214, 198, 166], 0.8], [6980, 7700, 2.32, 2.34, [240, 230, 210], 0.75],
-  ];
-  function drawRingSheet(SX, plane, sx, sy, sr) {
-    const E = 0.2, arc = 0.55, n = 10;
-    const ell = (rho, phi) => [sx + Math.cos(phi) * rho * sr, sy + Math.sin(phi) * rho * sr * E];
-    for (const [x0, x1, r0, r1, c, a] of SHEET) {
-      if (c[0] < 50) continue; // the gaps: just empty, the stars showing through
-      const f0 = [SX(x0), plane], f1 = [SX(x1), plane];
-      if (Math.max(f0[0], f1[0]) < -400 && Math.max(ell(r0, 0)[0], ell(r1, 0)[0]) < -40) continue;
-      // From the far side round the back (top), out to the right-hand tip,
-      // round the near side a little, then sweeping down to the band
-      const g = ctx.createLinearGradient(0, sy, 0, plane);
-      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${a * 0.7})`); g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},${a})`);
-      ctx.fillStyle = g; ctx.beginPath();
-      for (let i = 0; i <= n; i++) { const [x, y] = ell(r1, -0.15 + (i / n) * (arc + 0.15)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-      const e1 = ell(r1, arc), e0 = ell(r0, arc);
-      ctx.bezierCurveTo(e1[0] + (f1[0] - e1[0]) * 0.2, lerp(e1[1], plane, 0.7), f1[0], lerp(e1[1], plane, 0.9), f1[0], f1[1]);
-      ctx.lineTo(f0[0], f0[1]);
-      ctx.bezierCurveTo(f0[0], lerp(e0[1], plane, 0.9), e0[0] + (f0[0] - e0[0]) * 0.2, lerp(e0[1], plane, 0.7), e0[0], e0[1]);
-      for (let i = n; i >= 0; i--) { const [x, y] = ell(r0, -0.15 + (i / n) * (arc + 0.15)); ctx.lineTo(x, y); }
-      ctx.closePath(); ctx.fill();
-    }
-    // Ringlets running along the sheet, so it reads as rings, not a blob
-    ctx.strokeStyle = 'rgba(255,250,235,0.12)'; ctx.lineWidth = 1;
-    for (const [x0, x1, r0, r1] of SHEET.slice(0, 7)) for (let q = 0.25; q < 1; q += 0.25) {
-      const rr = lerp(r0, r1, q), fx0 = SX(lerp(x0, x1, q)), e = ell(rr, arc);
-      ctx.beginPath();
-      for (let i = 0; i <= n; i++) { const [x, y] = ell(rr, -0.15 + (i / n) * (arc + 0.15)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-      ctx.bezierCurveTo(e[0] + (fx0 - e[0]) * 0.2, lerp(e[1], plane, 0.7), fx0, lerp(e[1], plane, 0.9), fx0, plane); ctx.stroke();
-    }
   }
   // ---- Level 7: the slingshot round Jupiter, then across Saturn's rings --------
   // The things every frame needs while the world itself is paused
@@ -7717,7 +7685,7 @@
       [SL_APP, 'GRAVITY ASSIST', "Swinging close round Jupiter, the spacecraft steals a tiny bit of Jupiter's speed round the Sun and gets flung on faster. Cassini did this in 2000 on its way to Saturn, saving years of travel."],
       [SL_SWING, 'FLUNG ON!', "Off towards Saturn, faster than before. (Jupiter slows down a tiny, tiny bit in exchange: far too little to ever notice.)"],
       [SL_LEAVE, '3½ YEARS LATER...', 'Cassini took three and a half years to get from Jupiter to Saturn. It arrived in 2004 and went round Saturn for 13 years.'],
-      [SL_ARR + 0.6, 'SATURN', "Saturn's rings, side on. Jump off the spacecraft and bounce across them, and on from moon to moon, all the way out to Titan!"],
+      [SL_ARR + 0.6, 'SATURN', "Saturn and its rings! Hop off onto the C ring and skate round them to the right, out ring by ring, then off the edge and on from moon to moon to Titan."],
     ];
     while (S.told < notes.length && S.t >= notes[S.told][0]) { const [, a, b] = notes[S.told++]; banner(a, S.told === 3 ? 'THE LONG CRUISE' : S.told === 4 ? 'JUMP ACROSS TO TITAN' : 'ROUND JUPITER'); toast(b, 6); sfx.tier(); }
     if (S.t >= SL_ARR && !S.Z) S.Z = buildRings7();
@@ -7740,7 +7708,7 @@
     if (t >= SL_ARR) {
       // Arriving: Saturn's rings, side on, coming up to meet you
       const k = clamp((t - SL_ARR) / (SL_END - SL_ARR), 0, 1), z = Math.exp(lerp(Math.log(0.05), 0, smooth(k)));
-      const Z = S.Z, ax = W * R7_ANCHOR0, ay = H * 0.66;
+      const Z = S.Z, [ax, ay] = r7Screen(Z, Z.x, 0);
       drawRings7(Z, { zoom: z, ax, ay, noPlayer: true, streak: (1 - k) * 2 });
       const C = [W * 0.6, H * 0.42], e = smooth(k), x = lerp(C[0], ax, e), y = lerp(C[1], ay, e);
       drawRide(x, y + 4); drawSprite('stand', x, y, false, 1, 1, 1, SUIT); if (conspiracy) drawFoilHat(x, y, 0);
@@ -7815,7 +7783,43 @@
   // When the jets of Enceladus are spraying (they do vary: they're brighter when
   // it's furthest from Saturn, on its slightly oval orbit)
   const r7Jets = () => Math.sin(clock * TAU / 4) > -0.25;
-  const R7_ANCHOR0 = 0.55; // where you are across the screen at first, to leave room for Saturn
+  // Saturn in the middle, its rings seen from a little above: you skate round
+  // the near side of them from the left, spiralling out ring by ring (each
+  // stretch of ice is a stretch of the real ring, each gap the real gap), and
+  // launch off the F ring out to the right, towards the moons
+  const R7_E = 0.34, R7_PHI0 = 0.97 * Math.PI, R7_PHI1 = 0.1 * Math.PI;
+  const R7_RHO = [[200, 1.24], [1500, 1.44], [1620, 1.46], [2000, 1.52], [4300, 1.95], [4820, 2.02], [5900, 2.19], [6160, 2.2], [6650, 2.255], [6730, 2.262], [6800, 2.27], [6980, 2.32], [7700, 2.34]];
+  const r7Rho = (x) => { if (x <= R7_RHO[0][0]) return R7_RHO[0][1]; for (let i = 1; i < R7_RHO.length; i++) if (x <= R7_RHO[i][0]) { const [a, ra] = R7_RHO[i - 1], [b, rb] = R7_RHO[i]; return lerp(ra, rb, (x - a) / (b - a)); } return R7_RHO[R7_RHO.length - 1][1]; };
+  const r7Rad = () => Math.min(W, H) * 2.75;
+  // A point on the rings (Saturn's middle at 0, 0)
+  const r7Ring = (x) => { const ph = lerp(R7_PHI0, R7_PHI1, clamp((x - 200) / (F_END - 200), 0, 1)), rr = r7Rho(x) * r7Rad(); return [Math.cos(ph) * rr, Math.sin(ph) * rr * R7_E]; };
+  // Off the edge: on out to the right, picking up speed on the screen as the
+  // view opens out, rising a little at first the way you were heading
+  const r7Off = (d) => { const u = d; return [u, u < 600 ? 0.75 * (u - u * u / 1200) : 225]; };
+  // Where a point x along your way, y up from it, is drawn
+  function r7P(x, y) {
+    const ys = lerp(0.8, 1, smooth(clamp((x - (F_END - 200)) / 600, 0, 1)));
+    if (x <= F_END) { const [a, b] = r7Ring(x); return [a, b + y * ys]; }
+    const [fx, fy] = r7Ring(F_END), [u, h] = r7Off(x - F_END);
+    return [fx + u, fy - h + y * ys];
+  }
+  // Saturn and its rings once you've left them: drifting along after you and
+  // shrinking as you head out (too far away to fall behind quickly)
+  function r7Sat(x) {
+    const u = x > F_END ? r7Off(x - F_END)[0] : 0, fx = r7Ring(F_END)[0], sc = 1 / (1 + u / 500);
+    // (it stays a little way back on your left, smaller and smaller, the edge
+    // of its rings never far behind you)
+    return [fx + u - (fx * sc + W * 0.35 * (1 - sc)), -u * 0.04, sc];
+  }
+  function r7Cam(Z, zoom) {
+    const [ppx, ppy] = r7P(Z.x, Z.y), S = r7Sat(Z.x), kb = clamp(1 - (Z.x > F_END ? r7Off(Z.x - F_END)[0] : 0) / 700, 0, 1);
+    // (off the rings, steady on the way you're going rather than every bounce, like before)
+    const by = r7P(Z.x, Math.min(0, Z.y + 160))[1] - H * 0.16 / zoom;
+    let tx = lerp(ppx + W * 0.12, ppx + (S[0] - ppx) * 0.4, kb), ty = lerp(by, ppy + (S[1] - ppy) * 0.4, kb);
+    tx = clamp(tx, ppx - W * 0.3 / zoom, ppx + W * 0.3 / zoom); ty = clamp(ty, ppy - H * 0.2 / zoom, ppy + H * 0.25 / zoom);
+    return [tx, ty];
+  }
+  const r7Screen = (Z, x, y) => { const [a, b] = r7P(x, y); return [W / 2 + (a - Z.cx) * Z.zoom, H / 2 + (b - Z.cy) * Z.zoom]; };
   function buildRings7() {
     const plats = [], geoms = [];
     const chunk = (x, w) => plats.push({ x, w, top: -(8 + Math.random() * 22), kind: 'chunk', zone: 7, ph: Math.random() * TAU, shape: Array.from({ length: 9 }, () => 0.75 + Math.random() * 0.25) });
@@ -7838,8 +7842,10 @@
     for (const [a, b] of R7_SURF) for (let x = a + 300; x < b - 200; x += 420 + Math.random() * 300) geoms.push({ x, y: -30, taken: false });
     for (let i = 0; i < R7_SURF.length - 1; i++) { const g0 = R7_SURF[i][1], g1 = R7_SURF[i + 1][0]; geoms.push({ x: (g0 + g1) / 2, y: -150, taken: false }); }
     for (let i = 0; i < plats.length - 1; i++) if (Math.random() < 0.6) geoms.push({ x: (plats[i].x + plats[i + 1].x) / 2, y: -230, taken: false });
-    const x0 = SAT_LIMB + W * 0.4;
-    return { plats, geoms, x: x0, y: 0, vx: 0, vy: 0, ground: true, mode: 'skate', camX: x0 - W * R7_ANCHOR0, anchor: R7_ANCHOR0, camY: 0, zone: -1, seen: {}, cleared: {}, last: null, standT: 0, probeT: 0, done: false, doneT: 0, bits: [], squash: 0, warned: false, skate: 0, wantJump: false, startX: x0, slow: 0, zoom: 1, flip: 0, flips: 0, chain: 0, chute: false, edgeHint: false, seenKind: {} };
+    const x0 = 420;
+    const Z = { plats, geoms, x: x0, y: 0, vx: 0, vy: 0, ground: true, mode: 'skate', camX: 0, cx: 0, cy: 0, camY: 0, zone: -1, seen: {}, cleared: {}, last: null, standT: 0, probeT: 0, done: false, doneT: 0, bits: [], squash: 0, warned: false, skate: 0, wantJump: false, startX: x0, slow: 0, zoom: 1, flip: 0, flips: 0, chain: 0, chute: false, edgeHint: false, seenKind: {} };
+    [Z.cx, Z.cy] = r7Cam(Z, 1); Z.camX = Z.cx;
+    return Z;
   }
   const r7Top = (p) => p.top + (p.kind === 'chunk' || p.kind === 'crumble' ? Math.sin(clock * 1.3 + p.ph) * 3 : p.kind === 'swap' ? Math.cos(clock * TAU / 5 + p.ph) * 55 : 0);
   const r7Surf = (x) => R7_SURF.find(([a, b]) => x >= a && x <= b);
@@ -7983,9 +7989,7 @@
     // The camera pulls back while you fly, and closes in again when you land
     const zoomTo = Z.done ? 1.15 : Z.chute ? 1.1 : Z.mode === 'hop' || !Z.ground ? clamp(1 + Z.y / 900, 0.72, 1) : 1;
     Z.zoom += (zoomTo - Z.zoom) * Math.min(1, dt * 2.5);
-    Z.anchor = lerp(R7_ANCHOR0, 0.38, smooth(clamp((Z.x - Z.startX) / 900, 0, 1)));
-    Z.camX += (Z.x - W * Z.anchor - Z.camX) * Math.min(1, dt * 6);
-    Z.camY += (Math.min(0, Z.y + 160) - Z.camY) * Math.min(1, dt * 4);
+    { const [tx, ty] = r7Cam(Z, Z.zoom); Z.cx += (tx - Z.cx) * Math.min(1, dt * 5); Z.cy += (ty - Z.cy) * Math.min(1, dt * 5); Z.camX = Z.cx; }
     if (snd) snd.music.set({ tierF: 13 + TOP + clamp(Z.x / TITAN_X, 0, 1) * 4, speed: 1 + Math.abs(Z.vx) / 1000, won: state === 'won', belt: state === 'play' });
     // How far out from Saturn's middle you are
     const marks = [[SAT_LIMB, 60300], [200, 74500], [F_END, 140200], [8330, 151450], [8860, 185500], [9480, 238000], [10420, 294700], [11360, 377400], [12280, 527100], [TITAN_X, 1221900]];
@@ -8004,65 +8008,46 @@
     for (const st of world.sky) { const x = (((st.x * W - Z.camX * 0.05) % W) + W) % W; ctx.fillRect(x, st.y * H, st.s + streak * 20, st.s); }
     if (shake > 0 && !o.zoom) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
     if (o.zoom) { ctx.translate(o.ax, o.ay); ctx.scale(o.zoom, o.zoom); ctx.translate(-o.ax, -o.ay); }
-    else if (Z.zoom && Math.abs(Z.zoom - 1) > 0.002) { const ax = W * (Z.anchor || 0.38), ay = H * 0.6; ctx.translate(ax, ay); ctx.scale(Z.zoom, Z.zoom); ctx.translate(-ax, -ay); }
-    const SX = (wx) => wx - Z.camX, SY = (wy) => H * 0.66 + (wy - Z.camY), plane = SY(0);
-    // Saturn, the whole planet and its rings, hanging in the sky behind; it
-    // drifts slowly and shrinks as you head out towards Titan. The rings you're
-    // on are its own: each one sweeps from its place round Saturn down to the
-    // stretch of ring under your feet, as one sheet of ice seen from just above
-    // At first you're right in the ring plane beside Saturn: its huge curved
-    // edge on your left, the rings edge-on across it, and the ice you skate on
-    // running on from just past its cloud tops. As you head out it shrinks
-    // and settles into the sky, seen from a little above the rings.
-    {
-      const k = clamp(Z.x / TITAN_X, 0, 1), b = smooth(clamp((Z.x - Z.startX) / 1700, 0, 1));
-      const fr = Math.min(W, H) * lerp(0.26, 0.11, k), fx_ = lerp(W * 0.36, W * 0.16, k) - Z.camX * 0.02, fy = plane - H * lerp(0.36, 0.42, k);
-      // (so big it slides away slower than the ice under you)
-      const cam0 = Z.startX - W * R7_ANCHOR0, limb = SAT_LIMB - cam0 - Math.max(0, Z.camX - cam0) * 0.15;
-      const nr = H * 1.3, nx = limb - nr;
-      const sr = Math.exp(lerp(Math.log(nr), Math.log(fr), b)), sx = lerp(nx, fx_, b), sy = lerp(plane, fy, b);
-      drawSaturnBig(sx, sy, sr, lerp(0.025, 0.2, b), null, lerp(0.12, 0.55, b));
-      { const sa = smooth(clamp((b - 0.55) / 0.45, 0, 1)); if (sa > 0.01) { ctx.globalAlpha = sa; drawRingSheet(SX, plane, sx, sy, sr); ctx.globalAlpha = 1; } }
-      // The faint, dusty D ring between Saturn and the C ring
-      const d0 = lerp(limb, sx + sr, b) + 6, d1 = SX(200);
-      if (d1 > d0 + 10) { ctx.fillStyle = 'rgba(150,135,115,0.28)'; ctx.fillRect(d0, plane - 2, d1 - d0, 10); ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(220,210,190,0.6)'; ctx.fillText('D RING', (d0 + d1) / 2, plane + 26); ctx.textAlign = 'start'; }
+    const zm = Z.zoom || 1;
+    ctx.translate(W / 2, H / 2); ctx.scale(zm, zm); ctx.translate(-Z.cx, -Z.cy);
+    const vw = W / zm / (o.zoom || 1), vh = H / zm / (o.zoom || 1);
+    const R = r7Rad(), [Sx, Sy, sc] = r7Sat(Z.x);
+    // A point on the rings as they're drawn now (drifting after you once you've left them)
+    const RP = (x, up = 0) => { const [a, b] = r7Ring(x); return [Sx + a * sc, Sy + b * sc - up]; };
+    // The faint E ring, out round Enceladus's orbit
+    ctx.strokeStyle = 'rgba(170,205,240,0.014)';
+    for (let k = 0; k < 6; k++) { ctx.lineWidth = R * sc * 0.5; ctx.beginPath(); ctx.ellipse(Sx, Sy, R * sc * (3.2 + k * 0.6), R * sc * (3.2 + k * 0.6) * R7_E, 0, 0, TAU); ctx.stroke(); }
+    // Saturn and its rings: the rings are what you skate on
+    drawSaturnBig(Sx, Sy, R * sc, R7_E, null, 0.5);
+    // Ice in the rings, going round: the inner rings faster than the outer
+    // (the closer to Saturn, the faster things orbit)
+    // (scattered round the stretch of rings in view, which is all you can see of them)
+    const phc = Math.atan2((Z.cy - Sy) / R7_E, Z.cx - Sx), win = clamp(vw / (R * sc * 1.6), 0.05, 3.2);
+    for (let i = 0; i < 700; i++) {
+      const rho = 1.25 + hash3(i, 7, 1) * 1.09;
+      if ((rho > 1.44 && rho < 1.46) || (rho > 1.95 && rho < 2.02) || (rho > 2.27 && rho < 2.32)) continue;
+      const ph = phc + ((((hash3(i, 3, 9) * win + clock * 0.05 * Math.pow(1.5 / rho, 1.5)) % win) + win) % win) - win / 2;
+      if (Math.sin(ph) < 0) continue; // the far side is behind Saturn, mostly
+      const x = Sx + Math.cos(ph) * rho * R * sc, y = Sy + Math.sin(ph) * rho * R * sc * R7_E;
+      if (Math.abs(x - Z.cx) > vw * 0.6 || Math.abs(y - Z.cy) > vh * 0.6) continue;
+      px(x, y, 2, 1 + (i % 2), i % 5 ? 'rgba(255,250,236,0.55)' : 'rgba(255,255,255,0.9)');
     }
-    // The ring surfaces you skate on: the near edge of the ice, with the gaps
-    // between them open to the stars; past the F ring, the faint E ring
-    {
-      // The E ring: a soft haze, thickest round Enceladus's orbit, fading in past the F ring
-      const eg = ctx.createLinearGradient(0, plane - 60, 0, plane + 60);
-      eg.addColorStop(0, 'rgba(160,200,240,0)'); eg.addColorStop(0.5, 'rgba(170,205,240,0.1)'); eg.addColorStop(1, 'rgba(160,200,240,0)');
-      ctx.fillStyle = eg;
-      for (let i = 0; i < 10; i++) { ctx.globalAlpha = (i + 1) / 10; ctx.fillRect(SX(F_END + i * 60), plane - 60, 60, 120); }
-      ctx.globalAlpha = 1; ctx.fillRect(SX(F_END + 600), plane - 60, Math.max(0, SX(TITAN_X + 1500) - SX(F_END + 600)), 120);
-    }
-    for (const [a, b, zone] of R7_SURF) {
-      const x0 = SX(a), x1 = SX(b);
-      if (x1 < -40 || x0 > W / (o.zoom || 1) + W) continue;
-      ctx.fillStyle = R7_ICE[zone]; ctx.fillRect(x0, plane - 4, x1 - x0, 16);
-      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(x0, plane - 4, x1 - x0, 3);
-      ctx.fillStyle = 'rgba(0,0,10,0.35)'; ctx.fillRect(x0, plane + 8, x1 - x0, 4);
-      for (let wx = Math.ceil((Math.max(a, Z.camX - 100)) / 26) * 26; wx < Math.min(b, Z.camX + W / (o.zoom || 1) + 100); wx += 26) px(SX(wx) + hash3(wx, 3, 1) * 20, plane + 1 + hash3(1, wx, 5) * 8, 2 + (hash3(wx, 2, 2) * 4 | 0), 2, 'rgba(255,250,240,0.6)');
-      // Rounded ends where the ice stops at a gap
-      ctx.fillStyle = R7_ICE[zone]; ctx.beginPath(); ctx.arc(x0, plane + 4, 8, 0, TAU); ctx.arc(x1, plane + 4, 8, 0, TAU); ctx.fill();
-    }
-    // The gaps' names, under the edge
-    ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(200,220,255,0.65)';
-    for (let i = 0; i < R7_SURF.length - 1; i++) { const g0 = R7_SURF[i][1], g1 = R7_SURF[i + 1][0], name = R7_GAPS[g0]; if (name) { const x = SX((g0 + g1) / 2); if (x > -100 && x < W + 100) ctx.fillText(name.replace('the ', '').toUpperCase(), x, plane + 30); } }
+    // The gaps' names, just out past each one
+    ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(200,220,255,0.75)';
+    for (let i = 0; i < R7_SURF.length - 1; i++) { const g0 = R7_SURF[i][1], g1 = R7_SURF[i + 1][0], name = R7_GAPS[g0]; if (name) { const [x, y] = RP((g0 + g1) / 2); ctx.fillText(name.replace('the ', '').toUpperCase(), x, y + 22); } }
     // The very edge of the rings, where you launch off
-    { const x = SX(F_END); if (x > -60 && x < W + 200) { const k = 0.5 + 0.5 * Math.sin(clock * 6); ctx.fillStyle = `rgba(255,210,63,${0.5 + k * 0.4})`; ctx.fillRect(x - 3, plane - 34, 4, 30); ctx.beginPath(); ctx.moveTo(x + 1, plane - 34); ctx.lineTo(x + 22, plane - 28); ctx.lineTo(x + 1, plane - 22); ctx.fill(); ctx.font = '7px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillText('THE EDGE', x, plane - 42); ctx.textAlign = 'start'; } }
+    { const [x, y] = RP(F_END), k = 0.5 + 0.5 * Math.sin(clock * 6); ctx.fillStyle = `rgba(255,210,63,${0.5 + k * 0.4})`; ctx.fillRect(x - 2, y - 30, 4, 30); ctx.beginPath(); ctx.moveTo(x + 2, y - 30); ctx.lineTo(x + 22, y - 24); ctx.lineTo(x + 2, y - 18); ctx.fill(); ctx.fillText('THE EDGE', x, y - 38); }
     // Pan, in the Encke Gap
-    { const x = SX(6030), y = plane + 4 + Math.sin(clock) * 4; if (x > -60 && x < W + 60) { ctx.fillStyle = '#c9c0b0'; ctx.beginPath(); ctx.ellipse(x, y, 16, 9, 0, 0, TAU); ctx.fill(); px(x - 19, y - 1, 38, 3, '#e6ddcc'); } }
+    { const [x, y0] = RP(6030), y = y0 + Math.sin(clock) * 2; ctx.fillStyle = '#c9c0b0'; ctx.beginPath(); ctx.ellipse(x, y, 9, 5, 0, 0, TAU); ctx.fill(); px(x - 11, y - 1, 22, 2, '#e6ddcc'); ctx.font = '6px "Press Start 2P", monospace'; ctx.fillStyle = 'rgba(255,245,220,0.8)'; ctx.fillText('PAN', x, y - 9); }
     ctx.textAlign = 'start';
     // Little moons and the big moons, out past the rings
     for (const p of Z.plats) {
-      const x = SX(p.x), y = SY(r7Top(p));
-      if (x < -p.w * 2 - 300 || x > W / (o.zoom || 1) + W + 300) continue;
+      const [x, y] = r7P(p.x, r7Top(p));
+      if (Math.abs(x - Z.cx) > vw / 2 + p.w + 300) continue;
       if (p.kind === 'swap') {
         // Janus and Epimetheus, trading places
         const other = Z.plats.find((q) => q.kind === 'swap' && q !== p);
-        if (p.name === 'janus' && other) { ctx.strokeStyle = 'rgba(200,220,255,0.3)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 30, y + 14); ctx.quadraticCurveTo((x + SX(other.x)) / 2, (y + SY(r7Top(other))) / 2 - 40, SX(other.x) - 30, SY(r7Top(other)) + 14); ctx.stroke(); ctx.setLineDash([]); }
+        if (p.name === 'janus' && other) { ctx.strokeStyle = 'rgba(200,220,255,0.3)'; ctx.setLineDash([4, 6]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 30, y + 14); const [ox, oy] = r7P(other.x, r7Top(other)); ctx.quadraticCurveTo((x + ox) / 2, (y + oy) / 2 - 40, ox - 30, oy + 14); ctx.stroke(); ctx.setLineDash([]); }
         ctx.fillStyle = R7_MOONS[p.name].body; ctx.beginPath(); ctx.ellipse(x, y + 18, p.w / 2, 20, 0.2, 0, TAU); ctx.fill();
         ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.arc(x - 8, y + 20, 6, 0, TAU); ctx.arc(x + 10, y + 26, 4, 0, TAU); ctx.fill();
         px(x - p.w * 0.35, y, p.w * 0.7, 2, '#ffffff');
@@ -8089,7 +8074,7 @@
         ctx.fillStyle = '#d8d4cc'; ctx.beginPath(); ctx.ellipse(x, y + 16, p.w / 2, 18, 0, 0, TAU); ctx.fill();
         if (p.name) { ctx.font = '6px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,245,220,0.85)'; ctx.fillText(p.name.toUpperCase(), x, y - 10); ctx.textAlign = 'start'; }
       } else {
-        const M = R7_MOONS[p.name], R = p.R, cy0 = SY(0);
+        const M = R7_MOONS[p.name], R = p.R, cy0 = r7P(p.x, 0)[1];
         if (p.name === 'titan') { const hz = ctx.createRadialGradient(x, cy0, R * 0.9, x, cy0, R * 1.25); hz.addColorStop(0, 'rgba(240,170,70,0.6)'); hz.addColorStop(1, 'rgba(240,170,70,0)'); ctx.fillStyle = hz; ctx.beginPath(); ctx.arc(x, cy0, R * 1.25, 0, TAU); ctx.fill(); }
         ctx.fillStyle = M.body; ctx.beginPath(); ctx.arc(x, cy0, R, 0, TAU); ctx.fill();
         ctx.save(); ctx.beginPath(); ctx.arc(x, cy0, R, 0, TAU); ctx.clip();
@@ -8111,13 +8096,13 @@
         ctx.textAlign = 'start';
       }
     }
-    for (const g of Z.geoms) if (!g.taken) drawGeomAt(SX(g.x), SY(g.y));
+    for (const g of Z.geoms) if (!g.taken) { const [x, y] = r7P(g.x, g.y); drawGeomAt(x, y); }
     // The spacecraft you rode in on, flying off to go into orbit
-    if (Z.probeT < 3) { const k = Z.probeT / 3; ctx.globalAlpha = 1 - k; drawRide(SX(Z.startX) + k * 500, plane - k * 260 + 4); ctx.globalAlpha = 1; }
-    for (const q of Z.bits) { ctx.globalAlpha = 1 - q.t / q.life; px(SX(q.x) - 2, SY(q.y) - 2, 4, 4, q.c); }
+    if (Z.probeT < 3) { const k = Z.probeT / 3, [x, y] = r7P(Z.startX, 0); ctx.globalAlpha = 1 - k; drawRide(x + k * 500, y - k * 260 + 4); ctx.globalAlpha = 1; }
+    for (const q of Z.bits) { const [x, y] = r7P(q.x, q.y); ctx.globalAlpha = 1 - q.t / q.life; px(x - 2, y - 2, 4, 4, q.c); }
     ctx.globalAlpha = 1;
     if (!o.noPlayer) {
-      const x = SX(Z.x), y = SY(Z.y), sq = Z.squash;
+      const [x, y] = r7P(Z.x, Z.y), sq = Z.squash;
       const skating = Z.mode === 'skate' && Z.ground && !Z.done;
       const frame = Z.done || Z.standT > 0 ? 'stand' : skating ? (Math.abs(Z.vx) > 30 ? WALK_CYCLE[Math.floor(Z.skate / 40) % 4] : 'stand') : 'jump';
       const lean = skating ? clamp(Z.vx / 2200, -0.25, 0.3) : clamp(Z.vx / 3000, -0.15, 0.15);
@@ -8125,9 +8110,11 @@
       // Going flat out: speed lines and ghosts of you trailing behind
       if (skating && Math.abs(Z.vx) > 520) {
         const k = (Math.abs(Z.vx) - 520) / (R7_TOP - 520);
-        for (let i = 1; i <= 3; i++) drawSprite(frame, x - Z.vx * 0.025 * i, y, player.facing < 0, 1, 1, 0.22 * k * (1 - i / 4), SUIT, lean);
-        ctx.fillStyle = `rgba(230,240,255,${0.5 * k})`;
-        for (let i = 0; i < 7; i++) { const yy = y - 6 - ((i * 37) % 60), xx = ((x - (clock * Z.vx * 1.5 + i * 211) % (W * 0.8)) + W) % W; ctx.fillRect(xx, yy, 30 + k * 40, 2); }
+        for (let i = 1; i <= 3; i++) { const [gx, gy] = r7P(Z.x - Z.vx * 0.1 * i, Z.y); drawSprite(frame, gx, gy, player.facing < 0, 1, 1, 0.22 * k * (1 - i / 4), SUIT, lean); }
+        // along the way you're going
+        const [ax_, ay_] = r7P(Z.x + 20, 0), [bx_, by_] = r7P(Z.x - 20, 0), tl = Math.hypot(ax_ - bx_, ay_ - by_) || 1, tx = (ax_ - bx_) / tl, ty = (ay_ - by_) / tl;
+        ctx.strokeStyle = `rgba(230,240,255,${0.5 * k})`; ctx.lineWidth = 2;
+        for (let i = 0; i < 7; i++) { const back = 16 + ((clock * 500 + i * 53) % 110), side = ((i * 37) % 60) - 50, sx0 = x - tx * back - ty * side * 0.3, sy0 = y - ty * back + tx * side * 0.3 - 10; ctx.beginPath(); ctx.moveTo(sx0, sy0); ctx.lineTo(sx0 - tx * (14 + k * 22), sy0 - ty * (14 + k * 22)); ctx.stroke(); }
       }
       // A parachute over Titan, striped like the Huygens probe's
       if (Z.chute) {
